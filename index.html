@@ -1,0 +1,223 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Digest · 沉淀</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <section id="heroCover" class="hero-cover" aria-label="Digest 沉淀电影感封面">
+      <div class="hero-frame" aria-hidden="true"></div>
+      <svg class="hero-noise" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <filter id="heroFilmNoiseFilter">
+          <feTurbulence type="fractalNoise" baseFrequency="1.12" numOctaves="3" seed="17" stitchTiles="stitch"></feTurbulence>
+          <feColorMatrix type="saturate" values="0"></feColorMatrix>
+          <feComponentTransfer>
+            <feFuncA type="table" tableValues="0 0.08"></feFuncA>
+          </feComponentTransfer>
+        </filter>
+        <rect width="100" height="100" filter="url(#heroFilmNoiseFilter)"></rect>
+      </svg>
+      <div class="hero-cinematic-dim" aria-hidden="true"></div>
+      <div id="heroContent" class="hero-content">
+        <p class="hero-kicker">Cinematic Cover</p>
+        <h1 class="hero-title">Digest 沉淀</h1>
+        <p class="hero-subtitle">把信息噪声压进胶片颗粒，把认知结构留在光影之间。</p>
+        <button id="heroGhostBtn" class="hero-ghost-btn" type="button">开始内化</button>
+      </div>
+    </section>
+
+    <main id="appRoot" class="app app--hidden">
+      <div class="settings-shell">
+        <button id="settingsTrigger" class="settings-trigger" type="button" aria-label="打开 API Key 设置" aria-haspopup="dialog" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M19.41 12.97c.04-.32.06-.65.06-.97s-.02-.65-.07-.97l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a7.37 7.37 0 0 0-1.67-.97l-.38-2.65a.5.5 0 0 0-.49-.42h-4a.5.5 0 0 0-.49.42l-.38 2.65c-.6.24-1.16.56-1.67.97l-2.49-1a.5.5 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.64L4.6 11.03c-.05.32-.08.65-.08.97s.03.65.08.97l-2.11 1.65a.5.5 0 0 0-.12.64l2 3.46a.5.5 0 0 0 .6.22l2.49-1c.51.4 1.07.73 1.67.97l.38 2.65a.5.5 0 0 0 .49.42h4a.5.5 0 0 0 .49-.42l.38-2.65c.6-.24 1.16-.57 1.67-.97l2.49 1a.5.5 0 0 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64l-2.11-1.65ZM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Z"></path>
+          </svg>
+        </button>
+        <div id="settingsPanel" class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" aria-hidden="true">
+          <div class="settings-panel-card">
+            <div class="settings-panel-head">
+              <h2 id="settingsTitle">API Key 设置</h2>
+              <button id="settingsCloseBtn" class="settings-close-btn" type="button" aria-label="关闭设置">×</button>
+            </div>
+            <p class="settings-panel-subtitle">请填入你自己的 API Key，浏览器仅在本地保存，不会上传到其它位置。</p>
+            <label class="settings-field" for="apiKeyInput">
+              <span>API Key</span>
+              <input id="apiKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="sk-..." />
+            </label>
+            <div class="settings-panel-actions">
+              <button id="saveApiKeyBtn" class="settings-action-btn" type="button">保存 Key</button>
+            </div>
+            <p id="settingsStatus" class="settings-status" aria-live="polite">尚未检测到本地 API Key</p>
+          </div>
+        </div>
+      </div>
+
+      <header class="header">
+        <h1>Digest · 沉淀</h1>
+        <p>AI 驱动的知识内化工具</p>
+      </header>
+
+      <section class="input-panel">
+        <div class="source-switcher" role="tablist" aria-label="输入源切换">
+          <button class="source-switch-btn is-active" type="button" data-source-mode="paste">直接粘贴</button>
+          <button class="source-switch-btn" type="button" data-source-mode="url">网页 URL</button>
+          <button class="source-switch-btn" type="button" data-source-mode="markdown">Markdown</button>
+          <button class="source-switch-btn" type="button" data-source-mode="selection">网页选区</button>
+        </div>
+        <div id="sourcePanelPaste" class="source-panel is-active" data-source-panel="paste">
+          <label>
+            粘贴正文
+            <textarea id="inputText" placeholder="请粘贴你需要内化的文章内容..."></textarea>
+          </label>
+          <div id="inputLockTip" class="input-lock-tip" aria-hidden="true">已锁定，点击输入框可解锁</div>
+          <div class="source-panel-note">适合直接复制文章、笔记或长文本。你也可以切换到其它来源再一键写回这里。</div>
+        </div>
+        <div id="sourcePanelUrl" class="source-panel" data-source-panel="url">
+          <label>
+            网页 URL
+            <input id="sourceUrlInput" type="url" placeholder="https://example.com/article" autocomplete="off" spellcheck="false" />
+          </label>
+          <div class="source-panel-actions">
+            <button id="importUrlBtn" class="source-inline-btn" type="button">导入网页正文</button>
+            <button id="pasteFromUrlBtn" class="source-inline-btn" type="button">写入内化区</button>
+          </div>
+          <div id="sourceUrlStatus" class="source-panel-note">支持标准网页链接。若跨域直抓失败，会自动尝试文本镜像提取。</div>
+        </div>
+        <div id="sourcePanelMarkdown" class="source-panel" data-source-panel="markdown">
+          <label>
+            Markdown 文本
+            <textarea id="markdownInput" placeholder="# 标题\n\n- 列表\n- 段落\n\n输入 Markdown 后可一键转为适合内化的纯文本。"></textarea>
+          </label>
+          <div class="source-panel-actions">
+            <button id="convertMarkdownBtn" class="source-inline-btn" type="button">转换为纯文本</button>
+            <button id="pasteMarkdownBtn" class="source-inline-btn" type="button">写入内化区</button>
+          </div>
+          <div class="source-panel-note">会保留结构含义并尽量去掉 Markdown 标记，方便直接进入拆解。</div>
+        </div>
+        <div id="sourcePanelSelection" class="source-panel" data-source-panel="selection">
+          <div class="source-panel-note">先在当前页面选中一段文本，再点击导入即可；如果当前没有选区，会提示你重新选择。</div>
+          <div class="source-panel-actions">
+            <button id="importSelectionBtn" class="source-inline-btn" type="button">导入当前选区</button>
+            <button id="selectionToInputBtn" class="source-inline-btn" type="button">写入内化区</button>
+          </div>
+          <div id="selectionStatus" class="source-panel-note">选区内容会直接作为内化原文进入主输入框。</div>
+        </div>
+        <div class="quick-try" aria-label="一键体验快捷输入">
+          <button class="quick-try-btn" type="button" data-quick-try="short-video">样例：短视频如何重塑大脑？</button>
+          <button class="quick-try-btn" type="button" data-quick-try="fragmented-reading">样例：对抗碎片化阅读</button>
+        </div>
+        <button id="analyzeBtn" type="button">开始内化拆解</button>
+      </section>
+
+      <div id="loading" aria-live="polite">
+        <div class="loading-row">
+          <div class="loading-copy">
+            <div class="loading-label">正在显影内化结构</div>
+            <div class="loading-subtitle">GLM-4.7 正在拆分论点、抽取证据并重组为可沉淀的框架</div>
+            <ul id="agentTrace" class="agent-trace" aria-live="polite"></ul>
+          </div>
+          <div class="loading-dots" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+        <div class="loading-track" aria-hidden="true">
+          <div class="loading-fill"></div>
+        </div>
+      </div>
+
+      <section id="resultSection" class="result">
+        <div id="poster-area">
+          <h2>结果展示</h2>
+          <div class="cards">
+            <article class="card">
+              <div class="card-head">
+                <h3>核心论点</h3>
+                <button class="copy-btn" type="button" aria-label="复制核心论点">复制</button>
+              </div>
+              <p id="mainPointText" class="card-content">待生成...</p>
+            </article>
+            <article class="card">
+              <div class="card-head">
+                <h3>核心论据</h3>
+                <button class="copy-btn" type="button" aria-label="复制核心论据">复制</button>
+              </div>
+              <ul id="argumentsList" class="card-content">
+                <li>待生成...</li>
+              </ul>
+            </article>
+            <article class="card">
+              <div class="card-head">
+                <h3>认知框架</h3>
+                <button class="copy-btn" type="button" aria-label="复制认知框架">复制</button>
+              </div>
+              <p id="frameworkText" class="card-content">待生成...</p>
+            </article>
+            <article class="card">
+              <div class="card-head">
+                <h3>复习与反思</h3>
+                <button class="copy-btn" type="button" aria-label="复制复习与反思">复制</button>
+              </div>
+              <p id="questionText" class="card-content">待生成...</p>
+            </article>
+          </div>
+        </div>
+        <section id="qualityBoard" class="quality-board" aria-label="结果质量检查">
+          <div class="quality-header">
+            <div>
+              <h3 class="quality-title">质量检查</h3>
+              <p id="qualitySubtitle" class="quality-subtitle">生成后会自动检查结构是否完整、信息是否稳定，以及是否可能偏题。</p>
+            </div>
+            <div id="qualityScorePill" class="quality-score-pill">--</div>
+          </div>
+          <div class="quality-grid">
+            <div class="quality-metric">
+              <div class="quality-metric-label">
+                <span>完整度</span>
+                <span id="qualityCompletenessValue" class="quality-metric-value">--</span>
+              </div>
+              <div class="quality-bar"><span id="qualityCompletenessBar"></span></div>
+            </div>
+            <div class="quality-metric">
+              <div class="quality-metric-label">
+                <span>置信度</span>
+                <span id="qualityConfidenceValue" class="quality-metric-value">--</span>
+              </div>
+              <div class="quality-bar"><span id="qualityConfidenceBar"></span></div>
+            </div>
+            <div class="quality-metric">
+              <div class="quality-metric-label">
+                <span>偏题风险</span>
+                <span id="qualityTopicValue" class="quality-metric-value">--</span>
+              </div>
+              <div class="quality-bar"><span id="qualityTopicBar"></span></div>
+            </div>
+          </div>
+          <ul id="qualityChecklist" class="quality-list"></ul>
+        </section>
+        <div class="download-actions">
+          <button id="downloadBtn" class="download-btn" type="button">保存内化海报</button>
+          <button id="exportMdBtn" class="download-btn" type="button">复制内化笔记</button>
+        </div>
+      </section>
+
+      <section id="futureGraphSection">
+        <h2>知识积淀（30天愿景）</h2>
+        <button id="timeMachineBtn" type="button" aria-label="查看知识积淀轨迹">查看知识积淀轨迹</button>
+        <div id="graph-container"></div>
+        <div id="digestReviewBoard" class="review-board" aria-label="今日复习队列"></div>
+        <div id="digestArchive" class="digest-archive" aria-label="知识积淀卡片列表"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
+
+
