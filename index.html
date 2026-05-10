@@ -32,31 +32,6 @@
     </section>
 
     <main id="appRoot" class="app app--hidden">
-      <div class="settings-shell">
-        <button id="settingsTrigger" class="settings-trigger" type="button" aria-label="打开 API Key 设置" aria-haspopup="dialog" aria-expanded="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M19.41 12.97c.04-.32.06-.65.06-.97s-.02-.65-.07-.97l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.49 1a7.37 7.37 0 0 0-1.67-.97l-.38-2.65a.5.5 0 0 0-.49-.42h-4a.5.5 0 0 0-.49.42l-.38 2.65c-.6.24-1.16.56-1.67.97l-2.49-1a.5.5 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.64L4.6 11.03c-.05.32-.08.65-.08.97s.03.65.08.97l-2.11 1.65a.5.5 0 0 0-.12.64l2 3.46a.5.5 0 0 0 .6.22l2.49-1c.51.4 1.07.73 1.67.97l.38 2.65a.5.5 0 0 0 .49.42h4a.5.5 0 0 0 .49-.42l.38-2.65c.6-.24 1.16-.57 1.67-.97l2.49 1a.5.5 0 0 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64l-2.11-1.65ZM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Z"></path>
-          </svg>
-        </button>
-        <div id="settingsPanel" class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" aria-hidden="true">
-          <div class="settings-panel-card">
-            <div class="settings-panel-head">
-              <h2 id="settingsTitle">API Key 设置</h2>
-              <button id="settingsCloseBtn" class="settings-close-btn" type="button" aria-label="关闭设置">×</button>
-            </div>
-            <p class="settings-panel-subtitle">请填入你自己的 API Key，浏览器仅在本地保存，不会上传到其它位置。</p>
-            <label class="settings-field" for="apiKeyInput">
-              <span>API Key</span>
-              <input id="apiKeyInput" type="password" autocomplete="off" spellcheck="false" placeholder="sk-..." />
-            </label>
-            <div class="settings-panel-actions">
-              <button id="saveApiKeyBtn" class="settings-action-btn" type="button">保存 Key</button>
-            </div>
-            <p id="settingsStatus" class="settings-status" aria-live="polite">尚未检测到本地 API Key</p>
-          </div>
-        </div>
-      </div>
-
       <header class="header">
         <h1>Digest · 沉淀</h1>
         <p>AI 驱动的知识内化工具</p>
@@ -216,7 +191,7 @@
       </section>
     </main>
 
-    <script src="app.js"></script>
+    <script type="module" src="src/main.js"></script>
   </body>
 </html>
 

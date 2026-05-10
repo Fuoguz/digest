@@ -37,12 +37,6 @@
       const loadingLabel = loading ? loading.querySelector(".loading-label") : null;
       const loadingSubtitleText = loading ? loading.querySelector(".loading-subtitle") : null;
       const agentTrace = document.getElementById("agentTrace");
-      const settingsTrigger = document.getElementById("settingsTrigger");
-      const settingsPanel = document.getElementById("settingsPanel");
-      const settingsCloseBtn = document.getElementById("settingsCloseBtn");
-      const apiKeyInput = document.getElementById("apiKeyInput");
-      const saveApiKeyBtn = document.getElementById("saveApiKeyBtn");
-      const settingsStatus = document.getElementById("settingsStatus");
 
       let mainPointText = document.getElementById("mainPointText");
       let argumentsList = document.getElementById("argumentsList");
@@ -54,7 +48,6 @@
       let sourceMode = "paste";
 
       const DIGEST_STORAGE_KEY = "digest_nodes";
-      const API_KEY_STORAGE_KEY = "digest_api_key";
       const REVIEW_INTERVAL_DAYS = [1, 3, 7, 14, 30];
       let reviewFilter = "due";
       let digestQuery = "";
@@ -145,127 +138,6 @@
           }
         }
       ];
-
-      function getStoredApiKey() {
-        try {
-          return String(localStorage.getItem(API_KEY_STORAGE_KEY) || "").trim();
-        } catch (error) {
-          return "";
-        }
-      }
-
-      function setSettingsStatus(message, tone = "neutral") {
-        if (!settingsStatus) {
-          return;
-        }
-
-        settingsStatus.textContent = String(message || "");
-        settingsStatus.classList.remove("is-warning", "is-success");
-        if (tone === "warning") {
-          settingsStatus.classList.add("is-warning");
-        }
-        if (tone === "success") {
-          settingsStatus.classList.add("is-success");
-        }
-      }
-
-      function refreshApiKeyStatus() {
-        const storedKey = getStoredApiKey();
-        if (!storedKey) {
-          setSettingsStatus("尚未检测到本地 API Key", "warning");
-          return;
-        }
-
-        const suffix = storedKey.length > 4 ? storedKey.slice(-4) : storedKey;
-        setSettingsStatus(`已保存本地 API Key（结尾 ${suffix}）`, "success");
-      }
-
-      function openSettingsPanel() {
-        if (!settingsPanel) {
-          return;
-        }
-
-        settingsPanel.classList.add("is-open");
-        settingsPanel.setAttribute("aria-hidden", "false");
-        if (settingsTrigger) {
-          settingsTrigger.setAttribute("aria-expanded", "true");
-        }
-
-        refreshApiKeyStatus();
-        window.setTimeout(() => {
-          apiKeyInput?.focus();
-        }, 10);
-      }
-
-      function closeSettingsPanel() {
-        if (!settingsPanel) {
-          return;
-        }
-
-        settingsPanel.classList.remove("is-open");
-        settingsPanel.setAttribute("aria-hidden", "true");
-        if (settingsTrigger) {
-          settingsTrigger.setAttribute("aria-expanded", "false");
-          settingsTrigger.focus();
-        }
-      }
-
-      function saveApiKeyFromInput() {
-        const nextKey = String(apiKeyInput?.value || "").trim();
-        if (!nextKey) {
-          setSettingsStatus("请输入有效的 API Key", "warning");
-          return;
-        }
-
-        if (nextKey.length < 12) {
-          setSettingsStatus("Key 长度过短，请检查后再保存", "warning");
-          return;
-        }
-
-        try {
-          localStorage.setItem(API_KEY_STORAGE_KEY, nextKey);
-          if (apiKeyInput) {
-            apiKeyInput.value = "";
-          }
-          refreshApiKeyStatus();
-        } catch (error) {
-          setSettingsStatus("保存失败，请检查浏览器存储权限", "warning");
-        }
-      }
-
-      function initApiKeySettings() {
-        refreshApiKeyStatus();
-
-        settingsTrigger?.addEventListener("click", () => {
-          if (settingsPanel?.classList.contains("is-open")) {
-            closeSettingsPanel();
-            return;
-          }
-
-          openSettingsPanel();
-        });
-
-        settingsCloseBtn?.addEventListener("click", closeSettingsPanel);
-        saveApiKeyBtn?.addEventListener("click", saveApiKeyFromInput);
-        apiKeyInput?.addEventListener("keydown", (event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            saveApiKeyFromInput();
-          }
-        });
-
-        settingsPanel?.addEventListener("click", (event) => {
-          if (event.target === settingsPanel) {
-            closeSettingsPanel();
-          }
-        });
-
-        document.addEventListener("keydown", (event) => {
-          if (event.key === "Escape" && settingsPanel?.classList.contains("is-open")) {
-            closeSettingsPanel();
-          }
-        });
-      }
 
       function initDigestStorage() {
         try {
@@ -1197,13 +1069,6 @@
       }
 
       async function runAgentDigest(userInput) {
-        const apiKey = getStoredApiKey();
-        if (!apiKey) {
-          const missingKeyError = new Error("MISSING_API_KEY");
-          missingKeyError.code = "MISSING_API_KEY";
-          throw missingKeyError;
-        }
-
         const messages = [
           { role: "system", content: AGENT_SYSTEM_PROMPT },
           { role: "user", content: userInput }
@@ -1216,7 +1081,7 @@
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${apiKey}`
+              Authorization: `Bearer ${window.DIGEST_API_KEY || ""}`
             },
             body: JSON.stringify({
               model: AGENT_MODEL,
@@ -2242,18 +2107,9 @@
             renderGraph();
           }
         } catch (error) {
-          const missingApiKey = error?.code === "MISSING_API_KEY" || error?.message === "MISSING_API_KEY";
-
-          if (missingApiKey) {
-            pushAgentTrace("未检测到 API Key，请先在右上角设置中保存");
-            alert("请先在右上角设置中配置 API Key，再开始内化。");
-            openSettingsPanel();
-          } else {
-            console.error("内化拆解失败:", error);
-            pushAgentTrace("Agent 调用失败，请检查网络或模型返回格式");
-            alert("内化拆解失败，请检查 API 地址、密钥或返回格式。");
-          }
-
+          console.error("内化拆解失败:", error);
+          pushAgentTrace("Agent 调用失败，请检查网络或模型返回格式");
+          alert("内化拆解失败，请检查 API 地址、密钥或返回格式。");
           if (!hasDigestResult) {
             resultSection.classList.remove("is-visible");
             resetQualityBoard();
@@ -2338,7 +2194,6 @@
 
       setInputLockState(false);
       initDigestStorage();
-      initApiKeySettings();
       resetQualityBoard();
       resetAgentTrace();
       setSourceMode("paste");
