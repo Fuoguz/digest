@@ -305,13 +305,13 @@ export function triggerHeroEnter(refs, state) {
   }
 
   state.heroEnterTriggered = true;
+  refs.appRoot.classList.remove("app--hidden");
+  refs.appRoot.classList.add("app--revealing");
   refs.heroContent.classList.add("is-launching");
   refs.heroCover.classList.add("is-darkening");
 
   window.setTimeout(() => {
     refs.heroCover.classList.add("is-leaving");
-    refs.appRoot.classList.remove("app--hidden");
-    refs.appRoot.classList.add("app--revealing");
   }, 620);
 
   window.setTimeout(() => {

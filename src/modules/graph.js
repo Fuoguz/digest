@@ -366,10 +366,11 @@ export function clearGraph(controller) {
   controller.containerEl.innerHTML = "";
 }
 
-export function renderEmptyGraphState(controller, message = "知识宇宙等待点亮...") {
+export function renderEmptyGraphState(controller, message = "完成一次内化后，知识节点会在这里形成可连接的个人知识图谱。") {
   clearGraph(controller);
 
   const hint = document.createElement("div");
+  hint.className = "digest-graph-empty";
   hint.setAttribute("aria-live", "polite");
   hint.style.position = "absolute";
   hint.style.left = "50%";
@@ -386,7 +387,16 @@ export function renderEmptyGraphState(controller, message = "知识宇宙等待�
   hint.style.border = "1px solid oklch(0.91 0.008 95 / 0.9)";
   hint.style.backdropFilter = "blur(6px)";
   hint.style.webkitBackdropFilter = "blur(6px)";
-  hint.textContent = message;
+  hint.innerHTML = `
+    <p class="digest-graph-empty-kicker">Knowledge Graph Preview</p>
+    <h3>个人知识图谱等待生成</h3>
+    <p>${escapeHTML(message)}</p>
+    <div class="digest-graph-empty-flow">
+      <span>结构化摘要</span>
+      <span>知识节点</span>
+      <span>复习路径</span>
+    </div>
+  `;
 
   controller.containerEl.appendChild(hint);
 }

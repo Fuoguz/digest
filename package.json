@@ -1,0 +1,9 @@
+{
+  "name": "digest-learning-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/integration/storage-quality.smoke.mjs && node tests/integration/product-narrative.smoke.mjs"
+  }
+}
