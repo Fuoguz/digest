@@ -3,9 +3,12 @@
   "configurations": [
     {
       "name": "digest",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5180"],
-      "port": 5180
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server.js"],
+      "port": 5180,
+      "env": {
+        "DIGEST_NO_OPEN": "1"
+      }
     }
   ]
 }

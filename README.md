@@ -37,18 +37,34 @@ Notion AI 更像笔记软件里的 AI 编辑器，Obsidian 更像本地知识库
 
 ## 运行方式
 
-本项目是静态前端应用，但因为使用了 ES Modules，建议通过本地静态服务运行。
+> ⚠️ **不要直接双击 `index.html` 打开！**
+> 本项目使用 ES Modules，浏览器在 `file://` 协议下会出于安全策略拦截模块脚本，导致页面"点击无反应"。
+> 必须通过本地 `http://` 服务器运行。
+
+### 方式一：双击启动器（最简单，推荐）
+
+直接双击项目根目录的 **`启动Digest.bat`**，它会自动启动本地服务器并打开浏览器。
+（优先使用 Node.js，没有则回退到 Python。）
+
+### 方式二：命令行
 
 ```powershell
 cd C:\Users\11487\Desktop\digest
-python -m http.server 5176
+
+# 任选其一：
+npm start              # = node server.js（零依赖，会自动打开浏览器）
+node server.js
+python -m http.server 5180
 ```
 
 然后在浏览器打开：
 
 ```text
-http://127.0.0.1:5176/
+http://127.0.0.1:5180/
 ```
+
+> `server.js` 是一个零依赖的本地静态服务器（仅用 Node 内置模块），会把 `.js` 以正确的
+> `text/javascript` 类型返回，保证 ES Module 正常加载，并在启动后自动打开浏览器。
 
 如果需要真实调用 AI，可在页面加载前通过 `window.DIGEST_API_KEY`、`meta[name="digest-api-key"]` 或 `localStorage.digest_api_key` 配置密钥。没有密钥时，页面仍可用于产品展示、输入交互、知识图谱结构展示和本地功能演示。
 

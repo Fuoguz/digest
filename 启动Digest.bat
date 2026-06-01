@@ -1,32 +1,68 @@
 @echo off
-chcp 65001 >nul
+rem ============================================================
+rem  Digest - Local Launcher  (Digest 本地启动器)
+rem ------------------------------------------------------------
+rem  NOTE: This file is intentionally ASCII-only. cmd.exe parses
+rem  .bat files using the system ANSI/OEM codepage, so non-ASCII
+rem  (Chinese) text inside a UTF-8 .bat gets garbled and can break
+rem  parsing. Keep messages in ASCII for reliability.
+rem
+rem  It starts a local http:// server so the page (which uses ES
+rem  modules) works. Double-click this file to run.
+rem ============================================================
 cd /d "%~dp0"
-title Digest 沉淀 - 本地启动器
+title Digest - Local Launcher
 
 echo ============================================
-echo    Digest 沉淀 - 本地启动器
+echo    Digest  -  Local Launcher
 echo ============================================
 echo.
-echo  正在启动本地服务器并打开浏览器...
-echo  关闭本窗口即可停止服务器。
-echo.
 
-rem 2 秒后自动打开浏览器（给服务器留出启动时间）
-start "" /b cmd /c "timeout /t 2 >nul & start "" http://127.0.0.1:5180/"
+rem Prefer Node.js (most reliable; server.js auto-opens browser).
+rem Fall back to Python if Node is missing.
+rem goto-labels avoid the %errorlevel% delayed-expansion pitfall.
 
-rem 优先用 python，找不到再尝试 py 启动器
+where node >nul 2>nul
+if %errorlevel%==0 goto run_node
+
+where py >nul 2>nul
+if %errorlevel%==0 goto run_py
+
 where python >nul 2>nul
-if %errorlevel%==0 (
-    python -m http.server 5180
-) else (
-    where py >nul 2>nul
-    if %errorlevel%==0 (
-        py -m http.server 5180
-    ) else (
-        echo.
-        echo [错误] 未检测到 Python。请先安装 Python 3，或改用其它本地服务器。
-        echo 安装地址：https://www.python.org/downloads/
-        echo.
-        pause
-    )
-)
+if %errorlevel%==0 goto run_python
+
+echo [!] Node.js or Python not found - cannot start local server.
+echo.
+echo Please install Node.js, then double-click this file again:
+echo     https://nodejs.org/
+echo.
+pause
+goto end
+
+:run_node
+echo Found Node.js. Starting server (browser opens automatically)...
+echo Visit:  http://127.0.0.1:5180/
+echo Close this window to stop the server.
+echo.
+node "%~dp0server.js"
+goto end
+
+:run_py
+echo Found Python. Starting server...
+echo Visit:  http://127.0.0.1:5180/
+echo Close this window to stop the server.
+echo.
+start "" http://127.0.0.1:5180/
+py -m http.server 5180
+goto end
+
+:run_python
+echo Found Python. Starting server...
+echo Visit:  http://127.0.0.1:5180/
+echo Close this window to stop the server.
+echo.
+start "" http://127.0.0.1:5180/
+python -m http.server 5180
+goto end
+
+:end
