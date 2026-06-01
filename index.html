@@ -561,6 +561,77 @@
 
     </main>
 
-    <script type="module" src="src/main.js"></script>
+    <!--
+      兜底引导脚本（普通脚本，必定执行）。
+      作用：当核心 JS（ES Module）因 file:// 协议被浏览器安全策略拦截、未能加载时，
+      避免出现"点击开始内化毫无反应"的情况，转而给出清晰的原因与正确打开方式。
+      正常通过本地服务器访问时，main.js 会设置 window.__DIGEST_BOOTED__ = true，
+      本脚本检测到已启动则完全不介入。
+    -->
+    <script>
+      (function () {
+        function notBooted() {
+          return !window.__DIGEST_BOOTED__;
+        }
+
+        function showRunHint() {
+          if (document.getElementById("digestBootHint")) return;
+          var box = document.createElement("div");
+          box.id = "digestBootHint";
+          box.setAttribute("role", "alert");
+          box.style.cssText = [
+            "position:fixed",
+            "left:50%",
+            "bottom:22px",
+            "transform:translateX(-50%)",
+            "z-index:3000",
+            "width:min(92vw,560px)",
+            "padding:14px 18px",
+            "border-radius:12px",
+            "border:1px solid rgba(255,205,130,0.55)",
+            "background:rgba(22,17,10,0.94)",
+            "color:#ffe9c7",
+            "font:13px/1.7 'Plus Jakarta Sans','PingFang SC',sans-serif",
+            "box-shadow:0 18px 50px -18px rgba(0,0,0,0.85)",
+            "backdrop-filter:blur(8px)",
+            "text-align:left"
+          ].join(";");
+          box.innerHTML =
+            '<strong style="color:#ffd27a">⚠ 核心功能未加载（无法进入）</strong><br>' +
+            "你可能是<strong>直接双击打开</strong>了 index.html（地址栏是 file:// 开头）。" +
+            "浏览器出于安全限制会拦截这种方式下的模块化脚本，导致按钮无反应。<br>" +
+            '<strong style="color:#ffd27a">正确打开方式（任选其一）：</strong><br>' +
+            "① 双击项目里的 <code>启动Digest.bat</code>（推荐，自动开服务器并打开浏览器）；<br>" +
+            "② 在项目目录运行 <code>python -m http.server 5180</code>，再访问 " +
+            "<code>http://127.0.0.1:5180/</code>";
+          document.body.appendChild(box);
+        }
+
+        // 注意：这里【不拦截】hero 按钮点击。
+        // 如果核心模块正常加载，按钮由模块自身的处理器负责（正常进入）；
+        // 如果核心模块没加载（file:// 被拦截），点击本就没有处理器，
+        // 我们只在“点击后仍未启动”时补一个提示，绝不 preventDefault/stopPropagation，
+        // 避免误伤正常流程。
+        document.addEventListener("click", function (event) {
+          var target = event.target;
+          var btn = target && target.closest ? target.closest("#heroGhostBtn") : null;
+          if (!btn) return;
+          // 等待一帧：若模块处理器已让页面进入（booted=true），则什么都不做。
+          setTimeout(function () {
+            if (notBooted()) showRunHint();
+          }, 80);
+        });
+
+        // 安全网：页面加载完成后再等一小会儿；若核心模块仍未启动（多半是 file:// 拦截），主动提示。
+        window.addEventListener("load", function () {
+          setTimeout(function () {
+            if (notBooted()) showRunHint();
+          }, 1500);
+        });
+      })();
+    </script>
+
+    <!-- 加 ?v= 版本号：避免浏览器缓存旧版脚本，确保始终加载最新核心逻辑 -->
+    <script type="module" src="src/main.js?v=boot-2"></script>
   </body>
 </html>
