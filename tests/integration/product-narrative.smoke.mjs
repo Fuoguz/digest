@@ -6,6 +6,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const indexPath = resolve(root, "index.html");
 const readmePath = resolve(root, "README.md");
 const explanationPath = resolve(root, "PRODUCT_EXPLANATION.md");
+const mainPath = resolve(root, "src/main.js");
+const orchestratorPath = resolve(root, "src/app/orchestrator.js");
 
 function assert(condition, message) {
   if (!condition) {
@@ -19,6 +21,8 @@ function readUtf8(path) {
 
 const indexHtml = readUtf8(indexPath);
 const readme = readUtf8(readmePath);
+const mainJs = readUtf8(mainPath);
+const orchestratorJs = readUtf8(orchestratorPath);
 
 const requiredPageSignals = [
   "Digest 不是新的通用 AI 助手",
@@ -27,6 +31,8 @@ const requiredPageSignals = [
   "与通用 AI 工具的差异",
   "项目已有基础",
   "市场验证与商业化路径",
+  "配置 AI 服务",
+  "API Key",
   "知识节点沉淀",
   "主动回忆"
 ];
@@ -43,6 +49,22 @@ assert(
 assert(
   indexHtml.includes('class="loop-map"'),
   "index.html should include a named learning-loop visual component"
+);
+
+assert(
+  indexHtml.includes('id="apiKeyOpenBtn"') &&
+    indexHtml.includes('id="apiKeyModal"') &&
+    indexHtml.includes('id="apiKeyInput"') &&
+    indexHtml.includes('id="saveApiKeyBtn"'),
+  "index.html should include a visible API Key configuration flow for live demos"
+);
+
+assert(
+  indexHtml.includes("src/main.js?v=api-key-config-1") &&
+    mainJs.includes("orchestrator.js?v=api-key-config-1") &&
+    orchestratorJs.includes("ui.js?v=api-key-config-1") &&
+    orchestratorJs.includes("config.js?v=api-key-config-1"),
+  "API Key demo modules should be cache-busted so browsers do not reuse stale event-binding code"
 );
 
 assert(

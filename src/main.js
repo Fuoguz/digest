@@ -1,5 +1,5 @@
-import { getAgentRuntimeConfig } from "./app/config.js";
-import { createApp } from "./app/orchestrator.js";
+import { getAgentRuntimeConfig } from "./app/config.js?v=api-key-config-1";
+import { createApp } from "./app/orchestrator.js?v=api-key-config-1";
 
 // 启动核心应用。
 // 注意：本文件是 ES Module（被 index.html 以 <script type="module"> 引入）。

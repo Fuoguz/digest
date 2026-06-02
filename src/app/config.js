@@ -11,11 +11,44 @@ function readStorageValue(key) {
   }
 }
 
+function writeStorageValue(key, value) {
+  try {
+    localStorage.setItem(key, String(value || "").trim());
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function removeStorageValue(key) {
+  try {
+    localStorage.removeItem(key);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
 export function resolveApiKey() {
   const fromWindow = String(window.DIGEST_API_KEY || "").trim();
   const fromMeta = readMetaContent("digest-api-key");
   const fromStorage = readStorageValue("digest_api_key");
   return fromWindow || fromMeta || fromStorage || "";
+}
+
+export function saveApiKey(apiKey) {
+  const normalized = String(apiKey || "").trim();
+  if (!normalized) {
+    return false;
+  }
+
+  window.DIGEST_API_KEY = normalized;
+  return writeStorageValue("digest_api_key", normalized);
+}
+
+export function clearApiKey() {
+  window.DIGEST_API_KEY = "";
+  return removeStorageValue("digest_api_key");
 }
 
 export function getAgentRuntimeConfig() {

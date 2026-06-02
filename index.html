@@ -7,7 +7,7 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@300;400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=hero-enter-fix-1" />
+    <link rel="stylesheet" href="style.css?v=api-key-config-1" />
   </head>
   <body>
     <section id="heroCover" class="hero-cover" aria-label="Digest 沉淀 AI 知识工作台封面">
@@ -44,6 +44,10 @@
           <a href="#productIntro" class="app-nav-link">产品介绍</a>
           <a href="#foundation" class="app-nav-link">项目基础</a>
           <a href="#businessModel" class="app-nav-link">商业化</a>
+          <button id="apiKeyOpenBtn" class="app-nav-link app-nav-link--config" type="button">
+            配置 AI 服务
+            <span id="apiKeyPill" class="api-key-pill" aria-label="API Key 配置状态">未配置</span>
+          </button>
           <a href="#toolAnchor" class="app-nav-link app-nav-link--cta">立即体验</a>
         </div>
       </nav>
@@ -332,6 +336,13 @@
           <span>网页内容</span>
           <span>复习巩固</span>
         </div>
+        <div class="demo-key-callout">
+          <div>
+            <strong>演示前先配置 API Key</strong>
+            <span>密钥只保存在当前浏览器本地，用于现场调用 AI 生成摘要、复习问题和知识节点。</span>
+          </div>
+          <button id="apiKeyOpenInlineBtn" class="demo-key-btn" type="button">配置 AI 服务</button>
+        </div>
       </header>
 
       <section class="input-panel">
@@ -561,6 +572,27 @@
 
     </main>
 
+    <div id="apiKeyModal" class="api-key-modal" role="dialog" aria-modal="true" aria-labelledby="apiKeyModalTitle" hidden>
+      <div class="api-key-backdrop" data-api-key-close></div>
+      <section class="api-key-dialog" aria-describedby="apiKeyModalDesc">
+        <button id="apiKeyCloseBtn" class="api-key-close" type="button" aria-label="关闭 API Key 配置">×</button>
+        <p class="section-kicker">Demo Setup</p>
+        <h2 id="apiKeyModalTitle">配置 AI 服务</h2>
+        <p id="apiKeyModalDesc">
+          在这里填入 API Key，Digest 会保存到当前浏览器本地；刷新页面后仍可继续演示。请不要在投屏时展示完整密钥。
+        </p>
+        <label class="api-key-field">
+          API Key
+          <input id="apiKeyInput" type="password" placeholder="粘贴你的 API Key" autocomplete="off" spellcheck="false" />
+        </label>
+        <p id="apiKeyStatus" class="api-key-status" aria-live="polite">未配置 API Key 时，AI 内化分析无法真实调用模型。</p>
+        <div class="api-key-actions">
+          <button id="saveApiKeyBtn" class="api-key-primary" type="button">保存并用于演示</button>
+          <button id="clearApiKeyBtn" class="api-key-secondary" type="button">清除本地密钥</button>
+        </div>
+      </section>
+    </div>
+
     <!--
       兜底引导脚本（普通脚本，必定执行）。
       作用：当核心 JS（ES Module）因 file:// 协议被浏览器安全策略拦截、未能加载时，
@@ -632,6 +664,6 @@
     </script>
 
     <!-- 加 ?v= 版本号：避免浏览器缓存旧版脚本，确保始终加载最新核心逻辑 -->
-    <script type="module" src="src/main.js?v=boot-2"></script>
+    <script type="module" src="src/main.js?v=api-key-config-1"></script>
   </body>
 </html>

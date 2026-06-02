@@ -50,7 +50,16 @@ export function createUIRefs(root = document) {
     heroCover: root.getElementById("heroCover"),
     heroContent: root.getElementById("heroContent"),
     heroGhostBtn: root.getElementById("heroGhostBtn"),
-    appRoot: root.getElementById("appRoot")
+    appRoot: root.getElementById("appRoot"),
+    apiKeyOpenBtn: root.getElementById("apiKeyOpenBtn"),
+    apiKeyOpenInlineBtn: root.getElementById("apiKeyOpenInlineBtn"),
+    apiKeyPill: root.getElementById("apiKeyPill"),
+    apiKeyModal: root.getElementById("apiKeyModal"),
+    apiKeyInput: root.getElementById("apiKeyInput"),
+    saveApiKeyBtn: root.getElementById("saveApiKeyBtn"),
+    clearApiKeyBtn: root.getElementById("clearApiKeyBtn"),
+    apiKeyCloseBtn: root.getElementById("apiKeyCloseBtn"),
+    apiKeyStatus: root.getElementById("apiKeyStatus")
   };
 
   refs.mainPointText = root.getElementById("mainPointText");

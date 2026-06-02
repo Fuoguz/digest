@@ -2058,6 +2058,73 @@
         line-height: 1;
       }
 
+      .demo-key-callout {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 18px;
+        padding: 14px 16px;
+        border: 1px solid oklch(0.82 0.1 205 / 0.28);
+        border-radius: var(--radius-lg);
+        background:
+          linear-gradient(135deg, oklch(0.28 0.05 236 / 0.72), oklch(0.16 0.02 260 / 0.52));
+        box-shadow: inset 0 1px 0 oklch(0.96 0.02 250 / 0.08);
+      }
+
+      .demo-key-callout div {
+        display: grid;
+        gap: 3px;
+        min-width: 0;
+      }
+
+      .demo-key-callout strong {
+        color: var(--text-primary);
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      .demo-key-callout span {
+        color: var(--text-secondary);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .demo-key-btn {
+        flex: none;
+        min-height: 38px;
+        padding: 0 14px;
+        border: 1px solid oklch(0.82 0.1 205 / 0.44);
+        border-radius: var(--radius-pill);
+        background: oklch(0.32 0.08 220 / 0.42);
+        color: var(--text-primary);
+        font-family: "Plus Jakarta Sans", "PingFang SC", sans-serif;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        transition:
+          transform var(--dur-fast) var(--ease-hover),
+          border-color var(--dur-fast) var(--ease-hover),
+          background-color var(--dur-fast) var(--ease-hover);
+      }
+
+      .demo-key-btn:hover {
+        transform: translateY(-1px);
+        border-color: oklch(0.86 0.12 205 / 0.58);
+        background: oklch(0.38 0.1 220 / 0.5);
+      }
+
+      @media (max-width: 640px) {
+        .demo-key-callout {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .demo-key-btn {
+          width: 100%;
+        }
+      }
+
       .workflow-panel,
       .input-panel,
       #poster-area,
@@ -2595,10 +2662,15 @@
       }
 
       .app-nav-link {
+        appearance: none;
+        border: 0;
+        background: transparent;
         font-size: 13px;
         font-weight: 500;
         color: var(--text-secondary);
         text-decoration: none;
+        font-family: "Plus Jakarta Sans", "PingFang SC", sans-serif;
+        cursor: pointer;
         transition: color var(--dur-fast) var(--ease-hover);
       }
 
@@ -2623,6 +2695,42 @@
         background: oklch(0.56 0.11 250 / 0.36) !important;
         border-color: oklch(0.82 0.1 245 / 0.52) !important;
         transform: translateY(-1px);
+      }
+
+      .app-nav-link--config {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border: 1px solid oklch(0.72 0.06 248 / 0.24);
+        border-radius: var(--radius-pill);
+        background: oklch(0.2 0.024 260 / 0.42);
+        color: var(--text-primary);
+      }
+
+      .app-nav-link--config:hover {
+        color: var(--text-primary);
+        border-color: oklch(0.82 0.1 205 / 0.42);
+        background: oklch(0.3 0.04 250 / 0.5);
+      }
+
+      .api-key-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 18px;
+        padding: 3px 7px;
+        border-radius: var(--radius-pill);
+        background: oklch(0.54 0.08 42 / 0.22);
+        color: oklch(0.86 0.08 70);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        line-height: 1;
+      }
+
+      .api-key-pill.is-ready {
+        background: oklch(0.32 0.1 160 / 0.28);
+        color: oklch(0.8 0.15 160);
       }
 
       /* ── 共用 section-head ── */
@@ -3297,6 +3405,175 @@
         border-color: oklch(0.72 0.06 248 / 0.22);
         background: oklch(0.2 0.024 260 / 0.32);
         color: var(--text-tertiary);
+      }
+
+      /* ── API Key 演示配置弹窗 ── */
+      .api-key-modal[hidden] {
+        display: none;
+      }
+
+      .api-key-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 2600;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+      }
+
+      .api-key-backdrop {
+        position: absolute;
+        inset: 0;
+        background: oklch(0.04 0.015 260 / 0.68);
+        backdrop-filter: blur(10px);
+      }
+
+      .api-key-dialog {
+        position: relative;
+        z-index: 1;
+        width: min(92vw, 520px);
+        padding: 26px;
+        border: 1px solid oklch(0.78 0.1 248 / 0.32);
+        border-radius: var(--radius-lg);
+        background:
+          linear-gradient(180deg, oklch(0.23 0.026 255 / 0.98), oklch(0.14 0.02 260 / 0.98));
+        box-shadow:
+          0 1px 0 oklch(0.98 0.02 250 / 0.12) inset,
+          0 34px 90px -42px oklch(0.02 0.018 260 / 0.96);
+      }
+
+      .api-key-close {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        display: inline-grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid oklch(0.72 0.06 248 / 0.22);
+        border-radius: var(--radius-pill);
+        background: oklch(0.2 0.024 260 / 0.42);
+        color: var(--text-secondary);
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      .api-key-close:hover {
+        color: var(--text-primary);
+        border-color: oklch(0.82 0.1 205 / 0.42);
+      }
+
+      .api-key-dialog h2 {
+        margin: 8px 36px 0 0;
+        color: var(--text-primary);
+        font-family: "Space Grotesk", "Plus Jakarta Sans", "PingFang SC", sans-serif;
+        font-size: clamp(1.45rem, 3vw, 2rem);
+        line-height: 1.16;
+      }
+
+      .api-key-dialog p {
+        margin: 10px 0 0;
+        color: var(--text-secondary);
+        font-size: 13px;
+        line-height: 1.72;
+      }
+
+      .api-key-field {
+        display: grid;
+        gap: 8px;
+        margin-top: 18px;
+        color: var(--text-primary);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .api-key-field input {
+        width: 100%;
+        min-height: 48px;
+        padding: 0 14px;
+        border: 1px solid oklch(0.72 0.06 248 / 0.26);
+        border-radius: var(--radius-md);
+        background: oklch(0.11 0.018 260 / 0.78);
+        color: var(--text-primary);
+        font-family: "Space Grotesk", "Plus Jakarta Sans", monospace;
+        font-size: 14px;
+        outline: none;
+        transition:
+          border-color var(--dur-fast) var(--ease-hover),
+          box-shadow var(--dur-fast) var(--ease-hover);
+      }
+
+      .api-key-field input:focus {
+        border-color: oklch(0.82 0.1 205 / 0.58);
+        box-shadow: var(--shadow-focus);
+      }
+
+      .api-key-status {
+        min-height: 22px;
+      }
+
+      .api-key-status.is-error {
+        color: oklch(0.78 0.13 38);
+      }
+
+      .api-key-status.is-success {
+        color: oklch(0.8 0.15 160);
+      }
+
+      .api-key-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .api-key-primary,
+      .api-key-secondary {
+        min-height: 42px;
+        padding: 0 16px;
+        border-radius: var(--radius-pill);
+        font-family: "Plus Jakarta Sans", "PingFang SC", sans-serif;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+        transition:
+          transform var(--dur-fast) var(--ease-hover),
+          border-color var(--dur-fast) var(--ease-hover),
+          background-color var(--dur-fast) var(--ease-hover);
+      }
+
+      .api-key-primary {
+        border: 1px solid oklch(0.78 0.1 248 / 0.42);
+        background: linear-gradient(180deg, oklch(0.72 0.12 250 / 0.96), oklch(0.56 0.12 255 / 0.94));
+        color: oklch(0.99 0.006 250);
+      }
+
+      .api-key-secondary {
+        border: 1px solid oklch(0.72 0.06 248 / 0.24);
+        background: oklch(0.18 0.024 260 / 0.58);
+        color: var(--text-secondary);
+      }
+
+      .api-key-primary:hover,
+      .api-key-secondary:hover {
+        transform: translateY(-1px);
+      }
+
+      .api-key-secondary:hover {
+        color: var(--text-primary);
+        border-color: oklch(0.82 0.1 205 / 0.36);
+      }
+
+      @media (max-width: 480px) {
+        .api-key-dialog {
+          padding: 22px;
+        }
+
+        .api-key-primary,
+        .api-key-secondary {
+          width: 100%;
+        }
       }
 
       /* ── 页脚 ── */

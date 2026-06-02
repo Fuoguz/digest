@@ -1,4 +1,4 @@
-import { createAgentClient, runAgentDigest } from "../modules/api.js";
+import { createAgentClient, runAgentDigest } from "../modules/api.js?v=api-key-config-1";
 import {
   appendDigestNode,
   getDigestNodes,
@@ -6,8 +6,8 @@ import {
   normalizeDigestNode,
   searchLocalKnowledgeTool,
   updateDigestReview
-} from "../modules/storage.js";
-import { buildGraphDataFromNodes, createGraphController, playTimeMachine, renderGraph } from "../modules/graph.js";
+} from "../modules/storage.js?v=api-key-config-1";
+import { buildGraphDataFromNodes, createGraphController, playTimeMachine, renderGraph } from "../modules/graph.js?v=api-key-config-1";
 import {
   buildMarkdownFromCards,
   clearSourceFields,
@@ -28,12 +28,13 @@ import {
   triggerHeroEnter,
   writeSourceToMainInput,
   pushAgentTrace
-} from "../modules/ui.js";
-import { createSourceActions } from "./usecases/source-actions.js";
-import { createExportActions } from "./usecases/export-actions.js";
-import { createDigestActions } from "./usecases/digest-actions.js";
-import { createReviewActions } from "./usecases/review-actions.js";
-import { createIntroActions } from "./usecases/intro-actions.js";
+} from "../modules/ui.js?v=api-key-config-1";
+import { createSourceActions } from "./usecases/source-actions.js?v=api-key-config-1";
+import { createExportActions } from "./usecases/export-actions.js?v=api-key-config-1";
+import { createDigestActions } from "./usecases/digest-actions.js?v=api-key-config-1";
+import { createReviewActions } from "./usecases/review-actions.js?v=api-key-config-1";
+import { createIntroActions } from "./usecases/intro-actions.js?v=api-key-config-1";
+import { clearApiKey, resolveApiKey, saveApiKey } from "./config.js?v=api-key-config-1";
 
 const quickTryPresets = {
   "short-video":
@@ -124,10 +125,94 @@ export function createApp(runtimeConfig = {}) {
     renderGraph(graphController, graphData);
   }
 
+  function updateApiKeyStatus(message = "") {
+    const hasKey = Boolean(agentClient.apiKey || resolveApiKey());
+
+    if (refs.apiKeyPill) {
+      refs.apiKeyPill.textContent = hasKey ? "已配置" : "未配置";
+      refs.apiKeyPill.classList.toggle("is-ready", hasKey);
+    }
+
+    if (refs.apiKeyStatus) {
+      refs.apiKeyStatus.textContent =
+        message || (hasKey ? "已检测到 API Key，可以进行现场 AI 内化演示。" : "未配置 API Key 时，AI 内化分析无法真实调用模型。");
+      refs.apiKeyStatus.classList.toggle("is-success", hasKey && !message.includes("失败"));
+      refs.apiKeyStatus.classList.toggle("is-error", !hasKey || message.includes("失败") || message.includes("请输入"));
+    }
+  }
+
+  function openApiKeyModal() {
+    if (!refs.apiKeyModal) {
+      return;
+    }
+
+    refs.apiKeyModal.hidden = false;
+    if (refs.apiKeyInput) {
+      refs.apiKeyInput.value = agentClient.apiKey || resolveApiKey();
+      setTimeout(() => refs.apiKeyInput.focus(), 0);
+    }
+    updateApiKeyStatus();
+  }
+
+  function closeApiKeyModal() {
+    if (refs.apiKeyModal) {
+      refs.apiKeyModal.hidden = true;
+    }
+  }
+
+  function handleSaveApiKey() {
+    const apiKey = String(refs.apiKeyInput?.value || "").trim();
+    if (!apiKey) {
+      updateApiKeyStatus("请输入 API Key 后再保存。");
+      return;
+    }
+
+    const saved = saveApiKey(apiKey);
+    if (!saved) {
+      updateApiKeyStatus("保存失败：浏览器可能禁止了本地存储，请检查隐私模式或权限设置。");
+      return;
+    }
+
+    agentClient.apiKey = apiKey;
+    updateApiKeyStatus("API Key 已保存，本次演示可以直接调用 AI。");
+    setSourceStatus(refs, "API Key 已配置，可以开始 AI 内化分析。", false);
+    setTimeout(closeApiKeyModal, 520);
+  }
+
+  function handleClearApiKey() {
+    clearApiKey();
+    agentClient.apiKey = "";
+    if (refs.apiKeyInput) {
+      refs.apiKeyInput.value = "";
+    }
+    updateApiKeyStatus("已清除当前浏览器保存的 API Key。");
+    setSourceStatus(refs, "API Key 已清除，重新演示前请再次配置。", true);
+  }
+
 
   
 
   function bindEvents() {
+    refs.apiKeyOpenBtn?.addEventListener("click", openApiKeyModal);
+    refs.apiKeyOpenInlineBtn?.addEventListener("click", openApiKeyModal);
+    refs.apiKeyCloseBtn?.addEventListener("click", closeApiKeyModal);
+    refs.apiKeyModal?.addEventListener("click", (event) => {
+      if (event.target?.hasAttribute?.("data-api-key-close")) {
+        closeApiKeyModal();
+      }
+    });
+    refs.apiKeyInput?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleSaveApiKey();
+      }
+      if (event.key === "Escape") {
+        closeApiKeyModal();
+      }
+    });
+    refs.saveApiKeyBtn?.addEventListener("click", handleSaveApiKey);
+    refs.clearApiKeyBtn?.addEventListener("click", handleClearApiKey);
+
     refs.inputText.addEventListener("keydown", (event) => {
       const isSubmitShortcut = (event.ctrlKey || event.metaKey) && event.key === "Enter";
       if (isSubmitShortcut) {
@@ -281,10 +366,11 @@ export function createApp(runtimeConfig = {}) {
     }
 
     if (!agentClient.apiKey) {
-      pushAgentTrace(refs, "未检测到 API Key，请先在页面注入 DIGEST_API_KEY");
-      setSourceStatus(refs, "请先配置 API Key（window.DIGEST_API_KEY 或 meta digest-api-key）", true);
+      pushAgentTrace(refs, "未检测到 API Key，请点击页面右上角「配置 AI 服务」完成演示设置");
+      setSourceStatus(refs, "请先点击「配置 AI 服务」填写 API Key，再开始 AI 内化分析。", true);
     }
 
+    updateApiKeyStatus();
     renderKnowledgeViews();
     bindEvents();
   }
