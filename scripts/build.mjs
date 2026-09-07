@@ -16,6 +16,8 @@ const entries = [
   ['src/domain', 'src/domain'],
   ['src/data', 'src/data'],
   ['src/importers', 'src/importers'],
+  ['src/reader', 'src/reader'],
+  ['src/ai', 'src/ai'],
   ['vendor', 'vendor'],
   ['server.js', 'server.js'],
   ['package.json', 'package.json']

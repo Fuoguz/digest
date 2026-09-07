@@ -1,5 +1,9 @@
 # Digest · 沉淀
 
+> v0.2 当前进度：M1–M4 已实现；Review / Knowledge Graph 仍待后续阶段。下方旧版产品介绍保留作为历史背景，不代表新工作台已具备全部功能。当前验收与限制见 [M3/M4 交付记录](docs/V0.2_M3_M4_QA.md)。
+
+v0.2 使用 `npm install`、`npm start` 启动，`/` 为 Landing，`/app/library` 导入 TXT / Markdown / 文本型 PDF，点击资料进入 Reader。无需 AI 配置即可阅读；Analyze 时可连接 Developer AI Service（浏览器直连、Key 本地保存）。`npm test` 离线运行，`npm run build` 输出 dist。真实模型引用质量尚未完成验收。
+
 面向高校学生的 AI 知识内化与自主学习能力提升平台。
 
 ## 项目定位

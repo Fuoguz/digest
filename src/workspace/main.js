@@ -4,6 +4,7 @@ import { LEGACY_BACKUP_KEY, runLegacyMigration } from '../data/legacy-migration.
 import { extractTextFile, fileExtension } from '../importers/text.js';
 import { extractPdfFile } from '../importers/pdf.js';
 import { shellHTML, renderDashboard, renderLibrary, renderComingSoon } from './views.js';
+import { mountReader } from '../reader/reader.js';
 
 const root = document.querySelector('#app');
 const state = {
@@ -16,6 +17,8 @@ const state = {
 
 let db;
 let toastTimer;
+let disposeReader;
+let routeVersion = 0;
 
 function normalizedPath() {
   const path = window.location.pathname.replace(/\/+$/, '');
@@ -43,7 +46,10 @@ function updateNavigation(path) {
 }
 
 async function renderCurrent() {
+  const version = ++routeVersion;
+  disposeReader?.(); disposeReader = null;
   const path = normalizedPath();
+  document.body.classList.toggle('reader-open', path.startsWith('/app/reader/'));
   updateNavigation(path);
   const page = document.querySelector('#page-root');
   if (path === '/app/') page.innerHTML = renderDashboard(state);
@@ -53,6 +59,18 @@ async function renderCurrent() {
     if (source) source.value = state.filters.sourceType;
     const mode = page.querySelector('[data-mode-filter]');
     if (mode) mode.value = state.filters.readingMode;
+  } else if (path.startsWith('/app/reader/')) {
+    page.textContent = '正在打开资料…';
+    try {
+      const item = await getDocument(decodeURIComponent(path.slice('/app/reader/'.length)), db);
+      if (version !== routeVersion) return;
+      if (!item) { page.textContent = '未找到这份资料，请返回资料库。'; return; }
+      const dispose = await mountReader(page, item, db, () => version === routeVersion);
+      if (version === routeVersion) disposeReader = dispose;
+      else dispose();
+    } catch {
+      if (version === routeVersion) page.textContent = '资料加载失败，请刷新或返回资料库重试。';
+    }
   } else {
     const id = path.startsWith('/app/reader/') ? decodeURIComponent(path.split('/').pop()) : null;
     page.innerHTML = renderComingSoon(path, id ? await getDocument(id, db) : null);
