@@ -1,0 +1,123 @@
+import { AnalysisError } from "./schema.js";
+import {
+  DeveloperTransport,
+  readDeveloperConfig,
+} from "./developer-transport.js";
+import { el, button } from "../reader/dom.js";
+export function useProxy() {
+  return (
+    !["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) &&
+    localStorage.getItem("digest:ai-mode") !== "developer"
+  );
+}
+function accessDialog(signal) {
+  return new Promise((resolve, reject) => {
+    const dialog = el("dialog", "developer-dialog"),
+      form = el("form", "developer-form"),
+      title = el("h2", "", "加入 Digest 试用"),
+      info = el(
+        "p",
+        "",
+        "请输入邀请人提供的试用码。资料保存在此浏览器；分析时所选资料会发送至试用 AI 服务。",
+      ),
+      input = el("input", "core-input"),
+      status = el("p");
+    input.type = "password";
+    input.autocomplete = "off";
+    input.required = true;
+    input.maxLength = 256;
+    input.setAttribute("aria-label", "试用码");
+    const submit = el("button", "primary-action", "验证并继续");
+    submit.type = "submit";
+    let finished = false;
+    const end = (error) => {
+      if (finished) return;
+      finished = true;
+      signal?.removeEventListener("abort", abort);
+      dialog.close();
+      dialog.remove();
+      error ? reject(error) : resolve();
+    };
+    const abort = () => end(new DOMException("Cancelled", "AbortError"));
+    form.append(title, info, input, status, submit, button("取消", abort));
+    dialog.append(form);
+    document.body.append(dialog);
+    dialog.addEventListener("cancel", (e) => {
+      e.preventDefault();
+      abort();
+    });
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) {
+      abort();
+      return;
+    }
+    dialog.showModal();
+    input.focus();
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      submit.disabled = true;
+      try {
+        const response = await fetch("/api/access", {
+          method: "POST",
+          credentials: "same-origin",
+          signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: input.value }),
+        });
+        const data = await response.json();
+        input.value = "";
+        if (!response.ok) throw Error(data.message || "验证失败");
+        end();
+      } catch (error) {
+        status.textContent =
+          error.name === "AbortError" ? "验证已取消" : error.message;
+        status.setAttribute("role", "alert");
+      } finally {
+        submit.disabled = false;
+      }
+    });
+  });
+}
+export class ProxyTransport {
+  constructor(kind = "digest") {
+    this.kind = kind;
+  }
+  async request(messages, { signal } = {}) {
+    const call = () =>
+      fetch("/api/" + this.kind, {
+        method: "POST",
+        credentials: "same-origin",
+        signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages }),
+      });
+    try {
+      let response = await call();
+      if (response.status === 401) {
+        await accessDialog(signal);
+        response = await call();
+      }
+      const data = await response.json();
+      if (!response.ok)
+        throw new AnalysisError(
+          data.code || "proxy_error",
+          data.message || "试用 AI 暂时不可用，请重试",
+        );
+      if (typeof data.text !== "string")
+        throw new AnalysisError("empty_result", "AI 返回为空");
+      return data.text;
+    } catch (error) {
+      if (error instanceof AnalysisError || error.name === "AbortError")
+        throw error;
+      throw new AnalysisError(
+        "network_error",
+        "无法连接试用服务，请检查网络后重试",
+      );
+    }
+  }
+}
+export function createTransport(kind = "digest") {
+  return useProxy()
+    ? new ProxyTransport(kind)
+    : new DeveloperTransport(readDeveloperConfig());
+}

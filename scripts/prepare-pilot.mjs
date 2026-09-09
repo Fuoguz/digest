@@ -1,0 +1,12 @@
+import {cp,mkdir,writeFile} from 'node:fs/promises';
+import path from 'node:path';
+const root=path.resolve(import.meta.dirname,'..');
+const target=path.join(root,'.pilot-deploy');
+await mkdir(target,{recursive:true});
+for(const name of ['index.html','app','src','vendor','api','pilot','package.json','package-lock.json','vercel.json'])await cp(path.join(root,name),path.join(target,name),{recursive:true});
+await mkdir(path.join(target,'scripts'),{recursive:true});
+await cp(path.join(root,'scripts/build.mjs'),path.join(target,'scripts/build.mjs'));
+await mkdir(path.join(target,'.vercel'),{recursive:true});
+await cp(path.join(root,'.vercel/project.json'),path.join(target,'.vercel/project.json'));
+await writeFile(path.join(target,'.vercelignore'),'node_modules\ndist\n.vercel\n');
+console.log('Prepared isolated product upload in .pilot-deploy');

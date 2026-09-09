@@ -1,3 +1,4 @@
+import { createTransport, useProxy } from "../ai/proxy-transport.js";
 import { el, button, highlightQuote } from "./dom.js";
 import { documentSnapshot } from "../domain/evidence.js";
 import { READING_MODES, SOURCE_TYPES } from "../domain/documents.js";
@@ -416,7 +417,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     if (disposed || status === "analyzing" || !snapshot.source) return;
     setTab("ai");
     const config = readDeveloperConfig();
-    if (!config.endpoint || !config.model || !config.key) {
+    if (!useProxy() && (!config.endpoint || !config.model || !config.key)) {
       errorCode = "no_configuration";
       errorMessage =
         "阅读不需要配置 AI。若要分析，请先连接兼容 Chat Completions 的开发者服务。";
@@ -432,7 +433,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     try {
       const payload = await session.run(
         snapshot,
-        new DigestAIService(new DeveloperTransport(config)),
+        new DigestAIService(createTransport("digest")),
       );
       if (disposed || run !== runNumber) return;
       saved = { ...payload, stale: false };

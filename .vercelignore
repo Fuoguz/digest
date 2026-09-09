@@ -1,0 +1,17 @@
+*
+!index.html
+!app/
+!app/**
+!src/
+!src/**
+!vendor/
+!vendor/**
+!scripts/
+!scripts/build.mjs
+!api/
+!api/**
+!pilot/
+!pilot/**
+!package.json
+!package-lock.json
+!vercel.json

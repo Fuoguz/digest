@@ -148,7 +148,11 @@ export async function mountSettings(container, db, isCurrent) {
   const ai = el("section", "settings-section");
   ai.append(
     el("h2", "", "Developer AI Service"),
-    el("p", "", "当前为浏览器直连模式。仅点击分析或关系建议时发送所选资料。"),
+    el(
+      "p",
+      "",
+      "公网默认使用试用服务，无需 API Key；Developer 模式仅供开发者自行配置。仅分析或建议关系时发送所选资料。",
+    ),
     button("管理开发者服务", () => openAIConfiguration(), "secondary-action"),
     button(
       "移除本地 API Key",
@@ -164,6 +168,22 @@ export async function mountSettings(container, db, isCurrent) {
       "quiet-link",
     ),
   );
+  const mode = el("select", "core-input");
+  mode.setAttribute("aria-label", "AI 连接模式");
+  for (const [value, text] of [
+    ["proxy", "Pilot 同源服务（默认）"],
+    ["developer", "Developer 自行配置"],
+  ]) {
+    const option = el("option", "", text);
+    option.value = value;
+    mode.append(option);
+  }
+  mode.value = localStorage.getItem("digest:ai-mode") || "proxy";
+  mode.addEventListener("change", () => {
+    localStorage.setItem("digest:ai-mode", mode.value);
+    message(feedback, "连接模式已保存，本地开发地址始终使用 Developer 服务。");
+  });
+  ai.prepend(mode);
   root.append(
     feedback,
     data,

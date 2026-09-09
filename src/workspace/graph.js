@@ -1,3 +1,4 @@
+import { createTransport, useProxy } from "../ai/proxy-transport.js";
 import { LearningRepository } from "../data/learning-repository.js";
 import {
   sourceSignature,
@@ -188,7 +189,7 @@ export async function mountGraph(container, db, isCurrent) {
   async function suggest() {
     if (controller) return;
     const config = readDeveloperConfig();
-    if (!config.key || !config.model || !config.endpoint) {
+    if (!useProxy() && (!config.key || !config.model || !config.endpoint)) {
       openAIConfiguration();
       message(feedback, "配置后再次点击建议关系。");
       return;
@@ -230,7 +231,7 @@ export async function mountGraph(container, db, isCurrent) {
           .filter((a) => a.validationStatus === "matched")
           .map((a) => ({ id: a.id, quote: a.quote })),
       }));
-      const text = await new DeveloperTransport(config).request(
+      const text = await createTransport("relations").request(
         [
           {
             role: "system",
