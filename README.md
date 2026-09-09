@@ -1,93 +1,56 @@
 # Digest · 沉淀
 
-> v0.2 当前进度：M1–M4 已实现；Review / Knowledge Graph 仍待后续阶段。下方旧版产品介绍保留作为历史背景，不代表新工作台已具备全部功能。当前验收与限制见 [M3/M4 交付记录](docs/V0.2_M3_M4_QA.md)。
+面向高校学生的 AI 研读与复习工作台，将课程资料、论文、案例和政策文本转化为可追溯、可复习、可关联的长期知识资产。
 
-v0.2 使用 `npm install`、`npm start` 启动，`/` 为 Landing，`/app/library` 导入 TXT / Markdown / 文本型 PDF，点击资料进入 Reader。无需 AI 配置即可阅读；Analyze 时可连接 Developer AI Service（浏览器直连、Key 本地保存）。`npm test` 离线运行，`npm run build` 输出 dist。真实模型引用质量尚未完成验收。
+## v0.2 Core
 
-面向高校学生的 AI 知识内化与自主学习能力提升平台。
+- Library：导入文本、Markdown、带文本层的 PDF；搜索、标签/类型/模式筛选、收藏与待复习筛选。
+- Reader：四种研读模式；资料陈述、AI 推论、可复用洞见分别展示；点击可靠 Evidence 精确定位原文。
+- Review：从 Reader 选择问题，先回忆再揭示，可核查来源，Again / Hard / Good / Easy 按题安排下一次复习；暂停/恢复题目。
+- Knowledge Units：用户确认后沉淀知识点，保留 Document / Reading Result / Claim / Evidence；支持改名、取消沉淀。
+- Semantic Graph：AI 提议、用户确认/拒绝；只有确认关系入图。展示方向、类型、理由，支持搜索、标签筛选与来源核查；允许孤立节点。
+- Dashboard、全库搜索、设置与不含 Key 的 JSON 备份；可在空资料库恢复。
 
-## 项目定位
+当前真实模型验收待执行。自动测试和浏览器完整流程使用明确标记的 mock；它们验证交互、校验与持久化，不证明模型判断正确。详见 [真实模型验收](docs/V0.2_REAL_MODEL_ACCEPTANCE.md) 与 [发布报告](docs/V0.2_RELEASE_REPORT.md)。
 
-Digest 不是新的通用 AI 助手，而是把现有 AI 能力嵌入高校学生真实学习流程的学习工作台。它帮助学生完成从资料输入、结构化理解、主动回忆到知识沉淀的闭环，把一次阅读变成可复习、可关联、可长期积累的知识资产。
+## 运行
 
-适用场景包括课程资料整理、论文阅读、考试复习、课堂汇报、项目研究、法学案例材料整理、政策文本解读和新文科课程学习辅助。
+需要支持 ES Modules 的现代浏览器与 Node.js 22+（本次验收为 Node.js 24）。
 
-## 产品亮点
+    npm install
+    npm start
 
-- 多源内容输入：支持直接粘贴、网页 URL、Markdown 文本和页面选区。
-- AI 结构化摘要：生成核心观点、文章结构、论据和认知框架。
-- 主动回忆问题：基于材料生成复习问题，帮助学生从“看过”转向“记住并能讲出来”。
-- 知识节点沉淀：把每次阅读保存为可检索、可复习的知识节点。
-- 知识图谱展示：用 D3.js 展示知识节点之间的关联，适合答辩和项目展示。
-- 长期复习闭环：内置 1/3/7/14/30 天复习节奏，支持复习队列和知识回看。
-- 轻量前端实现：HTML、CSS、Vanilla JavaScript，无复杂构建链路，适合大学生团队维护。
+打开 http://127.0.0.1:5180/ 。官网在 `/`，工作台在 `/app/`。请使用 HTTP 服务，不要直接双击 HTML。
 
-## 和普通 AI 总结工具的区别
+    npm test
+    npm run build
 
-通用 AI 工具擅长回答问题，但通常停留在一次性对话；Digest 更关注学生学习后的长期保存、复习和知识关联。
+测试离线运行，不要求 AI Key。构建输出 `dist/`；部署时仅发布 dist，并将 `/app/*` 路由回退至 `app/index.html`。本地服务仅监听 loopback。
 
-Notion AI 更像笔记软件里的 AI 编辑器，Obsidian 更像本地知识库工具；Digest 的重点是把“AI 分析、知识节点、主动回忆、复习队列、知识图谱”合在一个高校学习流程里。
+## AI 配置
 
-## 当前项目基础
+资料导入与阅读不需要 AI 配置。点击 Reader 的分析按钮，或设置中的 Developer AI Service，填写兼容 OpenAI Chat Completions 的 endpoint / model / Key。服务必须允许浏览器 CORS，并支持 JSON 输出。一次分析请求，结构错误最多一次修复；关系建议为独立显式请求。
 
-- 前端页面原型：`index.html`、`style.css`、`src/main.js`
-- 应用编排：`src/app/orchestrator.js`
-- AI 协议与结构化输出：`src/modules/api.js`
-- 知识节点、标签和复习调度：`src/modules/storage.js`
-- 图谱渲染：`src/modules/graph.js`
-- UI 渲染与交互：`src/modules/ui.js`、`src/modules/ui-renderers.js`
-- 集成测试：`tests/integration/`
-- 轻量项目脚本：`package.json`
+Developer Mode 的 Key 保存在当前浏览器 localStorage；不会打包进代码或 JSON 备份。只有用户发起分析时才发送当前正文，关系建议只发送筛选后的知识点及可靠引文。Production API Proxy、账号和云同步未实现。
 
-## 运行方式
+## 数据与恢复
 
-> ⚠️ **不要直接双击 `index.html` 打开！**
-> 本项目使用 ES Modules，浏览器在 `file://` 协议下会出于安全策略拦截模块脚本，导致页面"点击无反应"。
-> 必须通过本地 `http://` 服务器运行。
+IndexedDB 数据仅属于当前浏览器与 origin（协议、主机、端口）。不同端口、localhost 与 127.0.0.1 不共享资料。请固定使用一个地址，并在设置中定期导出 JSON 备份。备份恢复只允许空资料库，失败不写入、不覆盖现有记录。
 
-### 方式一：双击启动器（最简单，推荐）
+旧 Demo 数据保留原 localStorage key；迁移只提取已有内容，缺原文标记 legacy_incomplete，不伪造依据、问题或图谱。迁移备份路径继续保留。
 
-直接双击项目根目录的 **`启动Digest.bat`**，它会自动启动本地服务器并打开浏览器。
-（优先使用 Node.js，没有则回退到 Python。）
+## 开发结构
 
-### 方式二：命令行
+- `src/workspace/`：路由、Dashboard/Library、Review、Graph、Search/Settings。
+- `src/reader/`：原文/AI 双栏、安全文本渲染、Evidence、学习动作。
+- `src/ai/`：四模式 runtime schema、一次研读服务、DeveloperTransport、取消控制。
+- `src/domain/`：Document、Evidence、复习调度、关系校验。
+- `src/data/`：IndexedDB、原子研读/学习事务、备份、旧数据迁移。
+- `src/importers/`、`src/styles/`、`vendor/`：文本/PDF、设计系统、本地 D3/PDF.js。
+- `tests/unit/`：离线关键逻辑；`tests/fixtures/`：明确隔离的 mock，不进入构建。
 
-```powershell
-cd C:\Users\11487\Desktop\digest
+独立浏览器 QA：运行 `node tests/fixtures/mock-ai-server.mjs` 后访问 http://127.0.0.1:5185/app/ ，仅在此测试 origin 配置 `http://127.0.0.1:5185/success/v1`、任意 mock 模型名和 `fixture-only`。不得将 mock 结果称为真实模型验收。
 
-# 任选其一：
-npm start              # = node server.js（零依赖，会自动打开浏览器）
-node server.js
-python -m http.server 5180
-```
+## 边界
 
-然后在浏览器打开：
-
-```text
-http://127.0.0.1:5180/
-```
-
-> `server.js` 是一个零依赖的本地静态服务器（仅用 Node 内置模块），会把 `.js` 以正确的
-> `text/javascript` 类型返回，保证 ES Module 正常加载，并在启动后自动打开浏览器。
-
-如果需要真实调用 AI，打开页面后点击右上角的“配置 AI 服务”，粘贴 API Key 并保存即可。密钥只保存在当前浏览器本地；没有密钥时，页面仍可用于产品展示、输入交互、知识图谱结构展示和本地功能演示。
-
-## 测试方式
-
-```powershell
-npm test
-```
-
-测试会检查知识节点、结构化输出、质量评估、API Key 本地配置链路，以及页面和文档是否覆盖答辩需要的产品定位、差异化、学习闭环、项目基础和商业化表达。
-
-## 商业化思路
-
-Digest 可以先做校内 MVP 验证，围绕期末复习、论文阅读、课堂汇报和项目调研获取种子用户。后续可采用“基础功能免费 + 学生专业版订阅 + 高校/机构合作”的路径：
-
-- 学生专业版：更大知识库容量、间隔复习提醒、学习报告导出、团队协作笔记。
-- 高校合作版：接入课程资料库、图书馆资源和教务学习档案。
-- 垂直学科版：法学案例整理、政策文本解读、考研政治材料分析、新文科课程辅助。
-
-## 答辩一句话
-
-Digest 不是替学生再做一个聊天机器人，而是把 AI 放进真实学习流程里，让资料能被理解、复习、关联和沉淀，最终变成学生自己的知识资产。
+不包含 OCR、Word/PPT、复杂 PDF 版式重建、FSRS、向量库、账户、支付、协作或云同步。原始 PDF 二进制不持久化，保存的是提取正文及 metadata。JSON 备份不加密，请自行妥善保管。
