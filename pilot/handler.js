@@ -51,7 +51,7 @@ export function validateMessages(body) {
 }
 export function createHandler(
   kind,
-  { env = process.env, fetchImpl = globalThis.fetch, timeoutMs = 45000 } = {},
+  { env = process.env, fetchImpl = globalThis.fetch, timeoutMs = 120000 } = {},
 ) {
   return async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
@@ -169,7 +169,9 @@ export function createHandler(
       return send(
         controller.signal.aborted ? 504 : 502,
         controller.signal.aborted ? "timeout" : "upstream",
-        "AI 请求失败或超时，已有研读结果保留，请重试",
+        controller.signal.aborted
+          ? "模型服务未在限定时间内完成响应。已有研读结果保留，请稍后重试，或先用较短资料检查服务。"
+          : "服务器连接模型服务失败，或模型返回了无法读取的响应。已有研读结果保留，请联系试用邀请人检查服务。",
       );
     } finally {
       clearTimeout(timer);

@@ -131,6 +131,8 @@ test("Pilot errors redact upstream diagnostics and timeout returns 504", async (
     },
   });
   assert.equal(failed.status, 502);
+  assert.equal(failed.output.code, "upstream");
+  assert.match(failed.output.message, /连接模型服务失败/);
   assert.ok(!JSON.stringify(failed).includes(env.MODEL_API_KEY));
   const timeout = await call("digest", body, {
     cookie,
@@ -141,6 +143,8 @@ test("Pilot errors redact upstream diagnostics and timeout returns 504", async (
       ),
   });
   assert.equal(timeout.status, 504);
+  assert.equal(timeout.output.code, "timeout");
+  assert.match(timeout.output.message, /限定时间/);
 });
 
 test('Pilot rate limits repeated attempts and fails closed without configuration',async()=>{
