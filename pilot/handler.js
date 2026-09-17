@@ -200,7 +200,35 @@ export function createHandler(
       }
       const text = data?.choices?.[0]?.message?.content;
       if (typeof text !== "string" || !text.trim() || text.length > 100000) {
-        console.warn(JSON.stringify({ event: "model_empty_content", kind }));
+        const choice = data?.choices?.[0];
+        const message = choice?.message;
+        const finishReason = [
+          "stop",
+          "length",
+          "content_filter",
+          "tool_calls",
+        ].includes(choice?.finish_reason)
+          ? choice.finish_reason
+          : "other";
+        console.warn(
+          JSON.stringify({
+            event: "model_empty_content",
+            kind,
+            finishReason,
+            contentType: Array.isArray(message?.content)
+              ? "array"
+              : typeof message?.content,
+            contentLength:
+              typeof message?.content === "string" ? message.content.length : 0,
+            reasoningLength:
+              typeof message?.reasoning_content === "string"
+                ? message.reasoning_content.length
+                : 0,
+            completionTokens: Number.isFinite(data?.usage?.completion_tokens)
+              ? data.usage.completion_tokens
+              : null,
+          }),
+        );
         return send(502, "upstream", "模型服务没有返回可用内容，请稍后重试。");
       }
       // Never return upstream envelopes, headers or diagnostics.
