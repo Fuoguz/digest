@@ -175,6 +175,31 @@ test("Pilot retries once without response_format when compatible upstream reject
   assert.equal("response_format" in requests[1], false);
 });
 
+test("Pilot retries one transient network failure and returns the recovered result", async () => {
+  const cookie = (await call("access", { code: env.PILOT_ACCESS_CODE }))
+    .headers["Set-Cookie"];
+  let attempts = 0;
+  const result = await call(
+    "digest",
+    { messages: [{ role: "user", content: "test" }] },
+    {
+      cookie,
+      fetchImpl: async () => {
+        attempts += 1;
+        if (attempts === 1) throw new TypeError("fetch failed");
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ choices: [{ message: { content: "{}" } }] }),
+        };
+      },
+    },
+  );
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.output, { text: "{}" });
+  assert.equal(attempts, 2);
+});
+
 test("Pilot rate limits repeated attempts and fails closed without configuration", async () => {
   const { rateAllowed } = await import("../../pilot/handler.js");
   for (let i = 0; i < 5; i++)

@@ -158,7 +158,28 @@ export function createHandler(
             max_tokens: 12000,
           }),
         });
-      let response = await request(true);
+      const requestWithNetworkRetry = async (includeResponseFormat) => {
+        try {
+          return await request(includeResponseFormat);
+        } catch (error) {
+          if (controller.signal.aborted) throw error;
+          const code = [
+            "ECONNRESET",
+            "ECONNREFUSED",
+            "ENOTFOUND",
+            "ETIMEDOUT",
+            "UND_ERR_CONNECT_TIMEOUT",
+            "UND_ERR_SOCKET",
+          ].includes(error?.cause?.code)
+            ? error.cause.code
+            : "other";
+          console.warn(
+            JSON.stringify({ event: "model_network_retry", kind, code }),
+          );
+          return request(includeResponseFormat);
+        }
+      };
+      let response = await requestWithNetworkRetry(true);
       if ([400, 422].includes(response.status)) {
         console.warn(
           JSON.stringify({
@@ -167,7 +188,7 @@ export function createHandler(
             upstreamStatus: response.status,
           }),
         );
-        response = await request(false);
+        response = await requestWithNetworkRetry(false);
       }
       if (!response.ok) {
         console.warn(
@@ -235,7 +256,22 @@ export function createHandler(
       if (text.includes(env.MODEL_API_KEY) || text.includes(secret))
         return send(502, "upstream", "AI 返回结果不可用，请重试");
       return res.status(200).json({ text });
-    } catch {
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        const code = [
+          "ECONNRESET",
+          "ECONNREFUSED",
+          "ENOTFOUND",
+          "ETIMEDOUT",
+          "UND_ERR_CONNECT_TIMEOUT",
+          "UND_ERR_SOCKET",
+        ].includes(error?.cause?.code)
+          ? error.cause.code
+          : "other";
+        console.warn(
+          JSON.stringify({ event: "model_network_failure", kind, code }),
+        );
+      }
       return send(
         controller.signal.aborted ? 504 : 502,
         controller.signal.aborted ? "timeout" : "upstream",
