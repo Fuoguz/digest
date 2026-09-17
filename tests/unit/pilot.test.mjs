@@ -147,7 +147,58 @@ test("Pilot errors redact upstream diagnostics and timeout returns 504", async (
   assert.match(timeout.output.message, /限定时间/);
 });
 
-test('Pilot rate limits repeated attempts and fails closed without configuration',async()=>{
- const {rateAllowed}=await import('../../pilot/handler.js');for(let i=0;i<5;i++)assert.equal(rateAllowed('unit-fixed-bucket',5,1),true);assert.equal(rateAllowed('unit-fixed-bucket',5,1),false);assert.equal(rateAllowed('unit-fixed-bucket',5,60002),true);
- let status;await createHandler('digest',{env:{}})({method:'POST',headers:{origin:'https://pilot.example',host:'pilot.example','content-type':'application/json'},body:{}},{setHeader(){},status(n){status=n;return this;},json(){}});assert.equal(status,503);
+test("Pilot retries once without response_format when compatible upstream rejects it", async () => {
+  const cookie = (await call("access", { code: env.PILOT_ACCESS_CODE }))
+    .headers["Set-Cookie"];
+  const requests = [];
+  const result = await call(
+    "digest",
+    { messages: [{ role: "user", content: "test" }] },
+    {
+      cookie,
+      fetchImpl: async (_url, options) => {
+        requests.push(JSON.parse(options.body));
+        if (requests.length === 1)
+          return { ok: false, status: 400, json: async () => ({}) };
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ choices: [{ message: { content: "{}" } }] }),
+        };
+      },
+    },
+  );
+  assert.equal(result.status, 200);
+  assert.equal(requests.length, 2);
+  assert.deepEqual(requests[0].response_format, { type: "json_object" });
+  assert.equal("response_format" in requests[1], false);
+});
+
+test("Pilot rate limits repeated attempts and fails closed without configuration", async () => {
+  const { rateAllowed } = await import("../../pilot/handler.js");
+  for (let i = 0; i < 5; i++)
+    assert.equal(rateAllowed("unit-fixed-bucket", 5, 1), true);
+  assert.equal(rateAllowed("unit-fixed-bucket", 5, 1), false);
+  assert.equal(rateAllowed("unit-fixed-bucket", 5, 60002), true);
+  let status;
+  await createHandler("digest", { env: {} })(
+    {
+      method: "POST",
+      headers: {
+        origin: "https://pilot.example",
+        host: "pilot.example",
+        "content-type": "application/json",
+      },
+      body: {},
+    },
+    {
+      setHeader() {},
+      status(n) {
+        status = n;
+        return this;
+      },
+      json() {},
+    },
+  );
+  assert.equal(status, 503);
 });

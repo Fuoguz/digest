@@ -139,28 +139,70 @@ export function createHandler(
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetchImpl(upstream, {
-        method: "POST",
-        redirect: "error",
-        signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + env.MODEL_API_KEY,
-        },
-        body: JSON.stringify({
-          model: env.MODEL_NAME,
-          messages,
-          response_format: { type: "json_object" },
-          temperature: 0.2,
-          max_tokens: 6000,
-        }),
-      });
-      if (!response.ok)
-        return send(502, "upstream", "AI 服务暂时不可用，请稍后重试");
-      const data = await response.json();
+      const request = (includeResponseFormat) =>
+        fetchImpl(upstream, {
+          method: "POST",
+          redirect: "error",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + env.MODEL_API_KEY,
+          },
+          body: JSON.stringify({
+            model: env.MODEL_NAME,
+            messages,
+            ...(includeResponseFormat
+              ? { response_format: { type: "json_object" } }
+              : {}),
+            temperature: 0.2,
+            max_tokens: 6000,
+          }),
+        });
+      let response = await request(true);
+      if ([400, 422].includes(response.status)) {
+        console.warn(
+          JSON.stringify({
+            event: "model_format_retry",
+            kind,
+            upstreamStatus: response.status,
+          }),
+        );
+        response = await request(false);
+      }
+      if (!response.ok) {
+        console.warn(
+          JSON.stringify({
+            event: "model_upstream_rejected",
+            kind,
+            upstreamStatus: response.status,
+          }),
+        );
+        const message =
+          response.status === 401 || response.status === 403
+            ? "模型服务拒绝了凭据或模型权限，请联系试用邀请人检查服务配置。"
+            : response.status === 404
+              ? "模型服务未找到当前模型或接口，请联系试用邀请人检查模型名称。"
+              : response.status === 429
+                ? "模型服务额度不足或请求过于频繁，请稍后重试。"
+                : "模型服务拒绝了当前请求，请联系试用邀请人检查模型兼容性。";
+        return send(502, "upstream", message);
+      }
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        console.warn(JSON.stringify({ event: "model_invalid_json", kind }));
+        return send(
+          502,
+          "upstream",
+          "模型服务返回了无法读取的内容，请稍后重试。",
+        );
+      }
       const text = data?.choices?.[0]?.message?.content;
-      if (typeof text !== "string" || !text.trim() || text.length > 100000)
-        return send(502, "upstream", "AI 返回结果不可用，请重试");
+      if (typeof text !== "string" || !text.trim() || text.length > 100000) {
+        console.warn(JSON.stringify({ event: "model_empty_content", kind }));
+        return send(502, "upstream", "模型服务没有返回可用内容，请稍后重试。");
+      }
       // Never return upstream envelopes, headers or diagnostics.
       if (text.includes(env.MODEL_API_KEY) || text.includes(secret))
         return send(502, "upstream", "AI 返回结果不可用，请重试");
