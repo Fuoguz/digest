@@ -51,7 +51,7 @@ export function validateMessages(body) {
 }
 export function createHandler(
   kind,
-  { env = process.env, fetchImpl = globalThis.fetch, timeoutMs = 120000 } = {},
+  { env = process.env, fetchImpl = globalThis.fetch, timeoutMs = 165000 } = {},
 ) {
   return async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
@@ -155,7 +155,7 @@ export function createHandler(
               ? { response_format: { type: "json_object" } }
               : {}),
             temperature: 0.2,
-            max_tokens: 6000,
+            max_tokens: 12000,
           }),
         });
       let response = await request(true);

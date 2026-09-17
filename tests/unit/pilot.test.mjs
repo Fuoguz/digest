@@ -111,6 +111,7 @@ test("Pilot proxy owns upstream config, strips envelope and does not return secr
   assert.deepEqual(result.output, { text: "{}" });
   assert.equal(sent.url, "https://model.example/v1/chat/completions");
   assert.equal(sent.body.model, "fixture");
+  assert.equal(sent.body.max_tokens, 12000);
   assert.throws(() =>
     validateMessages({ messages: [], endpoint: "https://evil.example" }),
   );
