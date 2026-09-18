@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <marker id="techArrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#3BA7FF" />
+    </marker>
+    <linearGradient id="layerGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3BA7FF" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#20E3B2" stop-opacity="0.10" />
+    </linearGradient>
+  </defs>
+  <g id="background">
+    <rect width="1280" height="720" fill="#08111F" />
+    <circle cx="1138" cy="156" r="230" fill="#7C5CFF" fill-opacity="0.08" />
+  </g>
+  <g id="header">
+    <text x="56" y="72" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="700" fill="#20E3B2">技术实现路径</text>
+    <text x="56" y="118" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="800" fill="#F4F8FF">成熟 AI 能力 + 轻量化产品开发</text>
+    <text x="56" y="151" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">不自研大模型，优先把成熟能力嵌进可用的学习产品原型。</text>
+  </g>
+  <g id="architecture">
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M86,210 H896 A22,22 0 0 1 918,232 V572 A22,22 0 0 1 896,594 H86 A22,22 0 0 1 64,572 V232 A22,22 0 0 1 86,210 Z" />
+    <text x="96" y="248" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" font-weight="800" fill="#F4F8FF">可落地架构：输入 → AI 处理层 → 知识节点库 → 图谱与复习包输出</text>
+    <g id="layer-input">
+      <path fill="url(#layerGrad)" stroke="#243A55" stroke-width="1" d="M110,286 H872 A14,14 0 0 1 886,300 V340 A14,14 0 0 1 872,354 H110 A14,14 0 0 1 96,340 V300 A14,14 0 0 1 110,286 Z" />
+      <path fill="#3BA7FF" fill-opacity="0.16" d="M126,306 H140 A10,10 0 0 1 150,316 V330 A10,10 0 0 1 140,340 H126 A10,10 0 0 1 116,330 V316 A10,10 0 0 1 126,306 Z" />
+      
+  <g transform="translate(123.0, 313.0) scale(1.25)" fill="#3BA7FF">
+    <path d="M11 0H5V12H15V4L11 0Z" />
+    <path d="M1 4V16H11V14H3V4H1Z" />
+  </g>
+      <text x="166" y="318" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#F4F8FF">用户输入层</text>
+      <text x="166" y="342" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">文本、网页、课程资料；后续接入 PPT 截图、课堂录音、学习视频</text>
+    </g>
+    <g id="layer-ai">
+      <path fill="#13243A" stroke="#243A55" stroke-width="1" d="M110,374 H872 A14,14 0 0 1 886,388 V428 A14,14 0 0 1 872,442 H110 A14,14 0 0 1 96,428 V388 A14,14 0 0 1 110,374 Z" />
+      <path fill="#20E3B2" fill-opacity="0.16" d="M126,394 H140 A10,10 0 0 1 150,404 V418 A10,10 0 0 1 140,428 H126 A10,10 0 0 1 116,418 V404 A10,10 0 0 1 126,394 Z" />
+      
+  <g transform="translate(123.0, 401.0) scale(1.25)" fill="#20E3B2">
+    <path d="M0 12.5L3.5 16L8 11L10 6L16 1.5L14.5 0L8 4L6.5 7L0 12.5Z" />
+    <path d="M11 15C11.5523 15 12 14.5523 12 14C12 13.4477 11.5523 13 11 13C10.4477 13 10 13.4477 10 14C10 14.5523 10.4477 15 11 15Z" />
+    <path d="M12 9L14 7L16 9L14 11L12 9Z" />
+    <path d="M3.5 2L2 3.5L3.5 5L5 3.5L3.5 2Z" />
+  </g>
+      <text x="166" y="406" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#F4F8FF">AI 处理层</text>
+      <text x="166" y="430" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">调用成熟大模型 API，完成摘要、观点提炼、论据整理、复习问题生成</text>
+    </g>
+    <g id="layer-data">
+      <path fill="#13243A" stroke="#243A55" stroke-width="1" d="M110,462 H872 A14,14 0 0 1 886,476 V516 A14,14 0 0 1 872,530 H110 A14,14 0 0 1 96,516 V476 A14,14 0 0 1 110,462 Z" />
+      <path fill="#7C5CFF" fill-opacity="0.16" d="M126,482 H140 A10,10 0 0 1 150,492 V506 A10,10 0 0 1 140,516 H126 A10,10 0 0 1 116,506 V492 A10,10 0 0 1 126,482 Z" />
+      
+  <g transform="translate(123.0, 489.0) scale(1.25)" fill="#7C5CFF">
+    <path d="M13.1371 6.91018C13.4184 6.7695 13.7123 6.59981 14 6.40001V8C14 9.65685 11.3137 11 8 11C4.68629 11 2 9.65685 2 8V6.40001C2.28772 6.59981 2.58158 6.7695 2.86293 6.91018C4.28096 7.61919 6.09998 8 8 8C9.90002 8 11.719 7.61919 13.1371 6.91018Z" />
+    <path d="M2 11.4V13C2 14.6569 4.68629 16 8 16C11.3137 16 14 14.6569 14 13V11.4C13.7123 11.5998 13.4184 11.7695 13.1371 11.9102C11.719 12.6192 9.90002 13 8 13C6.09998 13 4.28096 12.6192 2.86293 11.9102C2.58158 11.7695 2.28772 11.5998 2 11.4Z" />
+    <path d="M8 0C11.3137 0 14 1.34315 14 3C14 4.65685 11.3137 6 8 6C4.68629 6 2 4.65685 2 3C2 1.34315 4.68629 0 8 0Z" />
+  </g>
+      <text x="166" y="494" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#F4F8FF">知识节点库</text>
+      <text x="166" y="518" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">初期本地存储；后续拓展账号系统、云端数据库和多端同步</text>
+    </g>
+    <g id="layer-output">
+      <path fill="#20E3B2" fill-opacity="0.12" stroke="#20E3B2" stroke-width="1" d="M110,550 H872 A14,14 0 0 1 886,564 V564 A14,14 0 0 1 872,578 H110 A14,14 0 0 1 96,564 V564 A14,14 0 0 1 110,550 Z" />
+      <text x="491" y="570" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" font-weight="800" fill="#20E3B2">D3.js 知识图谱 · 重点概念表 · 自测题 · 可打印复习包</text>
+    </g>
+    <path d="M 491 354 L 491 374" stroke="#3BA7FF" stroke-width="2.5" marker-end="url(#techArrow)" />
+    <path d="M 491 442 L 491 462" stroke="#3BA7FF" stroke-width="2.5" marker-end="url(#techArrow)" />
+    <path d="M 491 530 L 491 550" stroke="#3BA7FF" stroke-width="2.5" marker-end="url(#techArrow)" />
+  </g>
+  <g id="prototype-proof">
+    <path fill="#101B2E" stroke="#20E3B2" stroke-width="1.2" d="M966,210 H1204 A20,20 0 0 1 1224,230 V360 A20,20 0 0 1 1204,380 H966 A20,20 0 0 1 946,360 V230 A20,20 0 0 1 966,210 Z" />
+    
+  <g transform="translate(976.0, 240.0) scale(2.125)" fill="#20E3B2">
+    <path d="M8 3L10.5 2.5L11 0H12L12.5 2.5L15 3V4L12.5 4.5L12 7H11L10.5 4.5L8 4V3Z" />
+    <path d="M0 11V10L4 9L5 5H6L7 9L11 10V11L7 12L6 16H5L4 12L0 11Z" />
+    <path d="M1 2L2.5 0.5L4 2L2.5 3.5L1 2Z" />
+    <path d="M15 14L13 12L11 14L13 16L15 14Z" />
+    <path d="M15 10C15.5523 10 16 9.55229 16 9C16 8.44771 15.5523 8 15 8C14.4477 8 14 8.44771 14 9C14 9.55229 14.4477 10 15 10Z" />
+  </g>
+    <text x="1026" y="264" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">已有原型基础</text>
+    <text x="976" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#A9B8CD">HTML / CSS / JavaScript</text>
+    <text x="976" y="340" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#A9B8CD">已有网页原型和 GitHub 项目基础</text>
+  </g>
+  <g id="extension">
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M966,408 H1204 A20,20 0 0 1 1224,428 V574 A20,20 0 0 1 1204,594 H966 A20,20 0 0 1 946,574 V428 A20,20 0 0 1 966,408 Z" />
+    <text x="976" y="448" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">拓展能力</text>
+    <g id="ext-ocr">
+      <path fill="#13243A" d="M991,474 H1179 A15,15 0 0 1 1194,489 V489 A15,15 0 0 1 1179,504 H991 A15,15 0 0 1 976,489 V489 A15,15 0 0 1 991,474 Z" />
+      <text x="994" y="495" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">OCR 识别 PPT 截图</text>
+    </g>
+    <g id="ext-audio">
+      <path fill="#13243A" d="M991,514 H1179 A15,15 0 0 1 1194,529 V529 A15,15 0 0 1 1179,544 H991 A15,15 0 0 1 976,529 V529 A15,15 0 0 1 991,514 Z" />
+      <text x="994" y="535" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">语音转写课堂录音</text>
+    </g>
+    <g id="ext-video">
+      <path fill="#13243A" d="M991,554 H1179 A15,15 0 0 1 1194,569 V569 A15,15 0 0 1 1179,584 H991 A15,15 0 0 1 976,569 V569 A15,15 0 0 1 991,554 Z" />
+      <text x="994" y="575" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">视频字幕 / 音频解析</text>
+    </g>
+  </g>
+  <g id="bottom-line">
+    <path fill="#3BA7FF" fill-opacity="0.10" stroke="#3BA7FF" stroke-width="1" d="M181,620 H1099 A21,21 0 0 1 1120,641 V641 A21,21 0 0 1 1099,662 H181 A21,21 0 0 1 160,641 V641 A21,21 0 0 1 181,620 Z" />
+    <text x="640" y="647" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="800" fill="#F4F8FF">技术风险可控：先做文本与网页闭环，再逐步接入 OCR、录音和视频能力</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="684" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">沉淀 Digest 开题答辩</text>
+    <text x="1224" y="684" text-anchor="end" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">07 / 10</text>
+  </g>
+</svg>

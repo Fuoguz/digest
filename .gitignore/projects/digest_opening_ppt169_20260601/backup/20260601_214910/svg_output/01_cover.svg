@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <radialGradient id="glowBlue" cx="74%" cy="28%" r="48%">
+      <stop offset="0%" stop-color="#3BA7FF" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#3BA7FF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowGreen" cx="26%" cy="74%" r="48%">
+      <stop offset="0%" stop-color="#20E3B2" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#20E3B2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="titleLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#20E3B2"/>
+      <stop offset="54%" stop-color="#3BA7FF"/>
+      <stop offset="100%" stop-color="#7C5CFF"/>
+    </linearGradient>
+  </defs>
+  <g id="background">
+    <rect width="1280" height="720" fill="#08111F"/>
+    <rect width="1280" height="720" fill="url(#glowBlue)"/>
+    <rect width="1280" height="720" fill="url(#glowGreen)"/>
+    <path d="M 68 144 L 1216 144" stroke="#31506F" stroke-width="1" stroke-opacity="0.22"/>
+    <path d="M 68 260 L 1216 260" stroke="#31506F" stroke-width="1" stroke-opacity="0.14"/>
+    <path d="M 68 376 L 1216 376" stroke="#31506F" stroke-width="1" stroke-opacity="0.14"/>
+    <path d="M 68 492 L 1216 492" stroke="#31506F" stroke-width="1" stroke-opacity="0.14"/>
+    <path d="M 68 608 L 1216 608" stroke="#31506F" stroke-width="1" stroke-opacity="0.22"/>
+    <path d="M 190 86 L 190 642" stroke="#31506F" stroke-width="1" stroke-opacity="0.12"/>
+    <path d="M 410 86 L 410 642" stroke="#31506F" stroke-width="1" stroke-opacity="0.12"/>
+    <path d="M 630 86 L 630 642" stroke="#31506F" stroke-width="1" stroke-opacity="0.12"/>
+    <path d="M 850 86 L 850 642" stroke="#31506F" stroke-width="1" stroke-opacity="0.12"/>
+    <path d="M 1070 86 L 1070 642" stroke="#31506F" stroke-width="1" stroke-opacity="0.12"/>
+  </g>
+  <g id="knowledge-network">
+    <path d="M 704 150 C 796 178, 828 250, 924 286" fill="none" stroke="#3BA7FF" stroke-width="2" stroke-opacity="0.46"/>
+    <path d="M 924 286 C 1014 334, 1048 402, 1144 438" fill="none" stroke="#20E3B2" stroke-width="2" stroke-opacity="0.45"/>
+    <path d="M 704 150 C 650 244, 694 334, 618 426" fill="none" stroke="#7C5CFF" stroke-width="2" stroke-opacity="0.36"/>
+    <path d="M 618 426 C 748 456, 832 548, 990 574" fill="none" stroke="#3BA7FF" stroke-width="2" stroke-opacity="0.32"/>
+    <path d="M 470 556 C 578 500, 630 510, 764 466" fill="none" stroke="#20E3B2" stroke-width="2" stroke-opacity="0.28"/>
+    <circle cx="704" cy="150" r="8" fill="#3BA7FF"/>
+    <circle cx="924" cy="286" r="11" fill="#20E3B2"/>
+    <circle cx="1144" cy="438" r="7" fill="#3BA7FF"/>
+    <circle cx="618" cy="426" r="10" fill="#7C5CFF"/>
+    <circle cx="990" cy="574" r="8" fill="#20E3B2"/>
+    <circle cx="470" cy="556" r="6" fill="#3BA7FF"/>
+    <rect x="744" y="204" width="118" height="34" rx="17" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <text x="803" y="226" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">课程知识点</text>
+    <rect x="966" y="344" width="108" height="34" rx="17" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <text x="1020" y="366" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">复习问题</text>
+    <rect x="552" y="490" width="130" height="34" rx="17" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <text x="617" y="512" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">期末资料包</text>
+  </g>
+  <g id="title-block">
+    <rect x="56" y="58" width="292" height="36" rx="18" fill="#101B2E" stroke="#243A55" stroke-width="1"/>
+    <text x="202" y="82" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" font-weight="700" fill="#20E3B2">大学生创新创业训练计划开题答辩</text>
+    <text x="56" y="276" font-family="Microsoft YaHei, Arial, sans-serif" font-size="76" font-weight="800" fill="#F4F8FF">沉淀 Digest</text>
+    <rect x="60" y="306" width="392" height="6" rx="3" fill="url(#titleLine)"/>
+    <text x="56" y="360" font-family="Microsoft YaHei, Arial, sans-serif" font-size="26" font-weight="700" fill="#A9B8CD">面向高校学生的 AI 知识内化</text>
+    <text x="56" y="396" font-family="Microsoft YaHei, Arial, sans-serif" font-size="26" font-weight="700" fill="#A9B8CD">与自主学习能力提升平台</text>
+    <rect x="56" y="452" width="420" height="64" rx="32" fill="#20E3B2" fill-opacity="0.12" stroke="#20E3B2" stroke-width="1.5"/>
+    <use data-icon="chunk-filled/sparkles" x="86" y="470" width="28" height="28" fill="#20E3B2"/>
+    <text x="132" y="493" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="800" fill="#F4F8FF">今天随手存，期末不用崩</text>
+  </g>
+  <g id="info-footer">
+    <rect x="56" y="604" width="560" height="72" rx="12" fill="#101B2E" stroke="#243A55" stroke-width="1"/>
+    <text x="82" y="632" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="700" fill="#F4F8FF">项目负责人：张少毅</text>
+    <text x="82" y="658" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">学院：上海政法学院上海纪录片学院　专业：网络与新媒体</text>
+    <use data-icon="chunk-filled/share-nodes" x="1164" y="620" width="36" height="36" fill="#3BA7FF"/>
+    <text x="1224" y="686" text-anchor="end" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">01 / 10</text>
+  </g>
+</svg>

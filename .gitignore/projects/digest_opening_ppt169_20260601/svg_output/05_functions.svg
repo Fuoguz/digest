@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <marker id="loopArrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#20E3B2"/>
+    </marker>
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#20E3B2" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#20E3B2" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g id="background">
+    <rect width="1280" height="720" fill="#08111F"/>
+    <circle cx="640" cy="390" r="270" fill="url(#centerGlow)"/>
+  </g>
+  <g id="header">
+    <text x="56" y="72" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="700" fill="#20E3B2">产品核心功能</text>
+    <text x="56" y="118" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="800" fill="#F4F8FF">从“资料输入”到“知识资产”</text>
+    <text x="56" y="151" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">六个模块构成持续学习闭环，每次学习都可以复用。</text>
+  </g>
+  <g id="loop-lines">
+    <path d="M 410 236 C 500 184, 780 184, 870 236" fill="none" stroke="#20E3B2" stroke-width="3" stroke-opacity="0.55" marker-end="url(#loopArrow)"/>
+    <path d="M 936 304 C 1018 384, 940 518, 826 558" fill="none" stroke="#20E3B2" stroke-width="3" stroke-opacity="0.55" marker-end="url(#loopArrow)"/>
+    <path d="M 700 610 C 592 656, 372 590, 344 462" fill="none" stroke="#20E3B2" stroke-width="3" stroke-opacity="0.55" marker-end="url(#loopArrow)"/>
+    <path d="M 330 360 C 286 286, 322 240, 410 236" fill="none" stroke="#20E3B2" stroke-width="3" stroke-opacity="0.55" marker-end="url(#loopArrow)"/>
+  </g>
+  <g id="center-asset">
+    <circle cx="640" cy="398" r="108" fill="#101B2E" stroke="#20E3B2" stroke-width="2"/>
+    <circle cx="640" cy="398" r="78" fill="#20E3B2" fill-opacity="0.08" stroke="#243A55" stroke-width="1"/>
+    <use data-icon="chunk-filled/share-nodes" x="604" y="348" width="72" height="72" fill="#20E3B2"/>
+    <text x="640" y="454" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="26" font-weight="800" fill="#F4F8FF">知识资产</text>
+    <text x="640" y="482" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">可检索、可复习、可导出</text>
+  </g>
+  <g id="module-input">
+    <rect x="104" y="248" width="250" height="112" rx="18" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <use data-icon="chunk-filled/files" x="128" y="276" width="36" height="36" fill="#3BA7FF"/>
+    <text x="180" y="292" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">多源输入</text>
+    <text x="180" y="322" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">文本、网页、课程资料</text>
+    <text x="180" y="346" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">后续拓展截图、录音、视频</text>
+  </g>
+  <g id="module-summary">
+    <rect x="406" y="184" width="250" height="112" rx="18" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <use data-icon="chunk-filled/wand-with-sparkles" x="430" y="212" width="36" height="36" fill="#20E3B2"/>
+    <text x="482" y="228" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">AI 结构化摘要</text>
+    <text x="482" y="258" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">核心观点、文章结构</text>
+    <text x="482" y="282" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">论据与重点概念</text>
+  </g>
+  <g id="module-question">
+    <rect x="708" y="184" width="250" height="112" rx="18" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <use data-icon="chunk-filled/circle-question" x="732" y="212" width="36" height="36" fill="#FFC857"/>
+    <text x="784" y="228" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">复习问题生成</text>
+    <text x="784" y="258" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">基于主动回忆机制</text>
+    <text x="784" y="282" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">生成自测题与思考题</text>
+  </g>
+  <g id="module-node">
+    <rect x="928" y="332" width="250" height="112" rx="18" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <use data-icon="chunk-filled/database" x="952" y="360" width="36" height="36" fill="#7C5CFF"/>
+    <text x="1004" y="376" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">知识节点沉淀</text>
+    <text x="1004" y="406" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">每一次学习内容</text>
+    <text x="1004" y="430" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">保存为可复用节点</text>
+  </g>
+  <g id="module-graph">
+    <rect x="708" y="520" width="250" height="112" rx="18" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <use data-icon="chunk-filled/share-nodes" x="732" y="548" width="36" height="36" fill="#3BA7FF"/>
+    <text x="784" y="564" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">知识图谱展示</text>
+    <text x="784" y="594" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">可视化知识点关系</text>
+    <text x="784" y="618" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">帮助回到课程框架</text>
+  </g>
+  <g id="module-review">
+    <rect x="406" y="520" width="250" height="112" rx="18" fill="#101B2E" stroke="#20E3B2" stroke-width="1.2"/>
+    <use data-icon="chunk-filled/clock" x="430" y="548" width="36" height="36" fill="#20E3B2"/>
+    <text x="482" y="564" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">期末复习包</text>
+    <text x="482" y="594" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">重点、框架、题目训练</text>
+    <text x="482" y="618" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">支持导出可打印资料</text>
+  </g>
+  <g id="module-loop">
+    <rect x="104" y="432" width="250" height="112" rx="18" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <use data-icon="chunk-filled/arrows-rotate-clockwise" x="128" y="460" width="36" height="36" fill="#20E3B2"/>
+    <text x="180" y="476" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">后续复习</text>
+    <text x="180" y="506" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">错题回流、节点更新</text>
+    <text x="180" y="530" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">形成持续学习循环</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="684" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">沉淀 Digest 开题答辩</text>
+    <text x="1224" y="684" text-anchor="end" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">05 / 10</text>
+  </g>
+</svg>

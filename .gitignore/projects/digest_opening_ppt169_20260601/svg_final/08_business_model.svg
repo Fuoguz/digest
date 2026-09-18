@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <linearGradient id="stairGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3BA7FF" stop-opacity="0.24" />
+      <stop offset="100%" stop-color="#20E3B2" stop-opacity="0.12" />
+    </linearGradient>
+    <marker id="upArrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#20E3B2" />
+    </marker>
+  </defs>
+  <g id="background">
+    <rect width="1280" height="720" fill="#08111F" />
+    <circle cx="236" cy="590" r="230" fill="#3BA7FF" fill-opacity="0.05" />
+    <circle cx="1078" cy="186" r="250" fill="#20E3B2" fill-opacity="0.06" />
+  </g>
+  <g id="header">
+    <text x="56" y="72" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="700" fill="#20E3B2">商业模式与用户付费逻辑</text>
+    <text x="56" y="118" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="800" fill="#F4F8FF">学生不是为 AI 总结付费，而是为节省期末复习时间付费</text>
+    <text x="56" y="151" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">先降低使用门槛，再围绕学期和课程复习形成付费场景。</text>
+  </g>
+  <g id="value-core">
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M86,212 H342 A22,22 0 0 1 364,234 V554 A22,22 0 0 1 342,576 H86 A22,22 0 0 1 64,554 V234 A22,22 0 0 1 86,212 Z" />
+    
+  <g transform="translate(94.0, 246.0) scale(2.875)" fill="#20E3B2">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M8 16C12.4183 16 16 12.4183 16 8C16 3.58172 12.4183 0 8 0C3.58172 0 0 3.58172 0 8C0 12.4183 3.58172 16 8 16ZM7 3V8.41421L10.2929 11.7071L11.7071 10.2929L9 7.58579V3H7Z" />
+  </g>
+    <text x="158" y="266" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" font-weight="800" fill="#F4F8FF">核心付费理由</text>
+    <text x="94" y="326" font-family="Microsoft YaHei, Arial, sans-serif" font-size="46" font-weight="800" fill="#20E3B2">省时间</text>
+    <text x="94" y="370" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" font-weight="800" fill="#F4F8FF">降低期末整理成本</text>
+    <line x1="94" y1="404" x2="334" y2="404" stroke="#243A55" stroke-width="1" />
+    <text x="94" y="440" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">不是卖“万能答案”</text>
+    <text x="94" y="474" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">而是卖“可复习资产”</text>
+    <text x="94" y="508" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">更适合学期制、课程制场景</text>
+  </g>
+  <g id="staircase">
+    <path d="M 420 568 L 420 512 L 574 512 L 574 456 L 728 456 L 728 400 L 882 400 L 882 344 L 1036 344 L 1036 288 L 1190 288" fill="none" stroke="#20E3B2" stroke-width="4" marker-end="url(#upArrow)" />
+    <g id="tier-free">
+      <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M424,470 H558 A16,16 0 0 1 574,486 V552 A16,16 0 0 1 558,568 H424 A16,16 0 0 1 408,552 V486 A16,16 0 0 1 424,470 Z" />
+      <text x="436" y="506" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">免费入口</text>
+      <text x="436" y="536" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">文本输入、AI 摘要</text>
+      <text x="436" y="558" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">少量复习问题</text>
+    </g>
+    <g id="tier-semester">
+      <path fill="#101B2E" stroke="#3BA7FF" stroke-width="1.2" d="M608,414 H742 A16,16 0 0 1 758,430 V552 A16,16 0 0 1 742,568 H608 A16,16 0 0 1 592,552 V430 A16,16 0 0 1 608,414 Z" />
+      <text x="620" y="450" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">学期卡</text>
+      <text x="620" y="480" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">更多知识节点</text>
+      <text x="620" y="502" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">更长文本处理</text>
+      <text x="620" y="524" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">复习计划提醒</text>
+    </g>
+    <g id="tier-course">
+      <path fill="url(#stairGrad)" stroke="#20E3B2" stroke-width="1.4" d="M792,358 H926 A16,16 0 0 1 942,374 V552 A16,16 0 0 1 926,568 H792 A16,16 0 0 1 776,552 V374 A16,16 0 0 1 792,358 Z" />
+      <text x="804" y="394" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">课程复习包</text>
+      <text x="804" y="424" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">重点概念表</text>
+      <text x="804" y="446" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">章节框架</text>
+      <text x="804" y="468" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">知识图谱</text>
+      <text x="804" y="490" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">自测题</text>
+      <text x="804" y="512" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">可打印资料</text>
+    </g>
+    <g id="tier-media">
+      <path fill="#101B2E" stroke="#7C5CFF" stroke-width="1.2" d="M976,302 H1110 A16,16 0 0 1 1126,318 V552 A16,16 0 0 1 1110,568 H976 A16,16 0 0 1 960,552 V318 A16,16 0 0 1 976,302 Z" />
+      <text x="988" y="338" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">音视频额度</text>
+      <text x="988" y="368" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">课堂录音</text>
+      <text x="988" y="390" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">学习视频</text>
+      <text x="988" y="412" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">按时长或额度</text>
+      
+  <g transform="translate(996.0, 456.0) scale(2.5)" fill="#7C5CFF">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M16 2H0V14H16V2ZM6.5 5V11H7.5L11 8L7.5 5H6.5Z" />
+  </g>
+      
+  <g transform="translate(1054.0, 456.0) scale(2.5)" fill="#7C5CFF">
+    <path d="M5 3C5 1.34315 6.34315 0 8 0C9.65685 0 11 1.34315 11 3V7C11 8.65685 9.65685 10 8 10C6.34315 10 5 8.65685 5 7V3Z" />
+    <path d="M9 13.9291V16H7V13.9291C3.60771 13.4439 1 10.5265 1 7V6H3V7C3 9.76142 5.23858 12 8 12C10.7614 12 13 9.76142 13 7V6H15V7C15 10.5265 12.3923 13.4439 9 13.9291Z" />
+  </g>
+    </g>
+  </g>
+  <g id="team-project">
+    <path fill="#101B2E" stroke="#FFC857" stroke-width="1.2" d="M426,212 H1108 A18,18 0 0 1 1126,230 V266 A18,18 0 0 1 1108,284 H426 A18,18 0 0 1 408,266 V230 A18,18 0 0 1 426,212 Z" />
+    
+  <g transform="translate(438.0, 232.0) scale(2.0)" fill="#FFC857">
+    <path d="M8 3.5C8 4.88071 6.88071 6 5.5 6C4.11929 6 3 4.88071 3 3.5C3 2.11929 4.11929 1 5.5 1C6.88071 1 8 2.11929 8 3.5Z" />
+    <path d="M3 8C1.34315 8 0 9.34315 0 11V15H8V8H3Z" />
+    <path d="M13 8H10V15H16V11C16 9.34315 14.6569 8 13 8Z" />
+    <path d="M12 6C13.1046 6 14 5.10457 14 4C14 2.89543 13.1046 2 12 2C10.8954 2 10 2.89543 10 4C10 5.10457 10.8954 6 12 6Z" />
+  </g>
+    <text x="492" y="244" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">团队项目服务</text>
+    <text x="492" y="270" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">服务大创项目、课程小组、社会调查和创新创业赛事团队</text>
+  </g>
+  <g id="bottom-note">
+    <path fill="#20E3B2" fill-opacity="0.12" stroke="#20E3B2" stroke-width="1" d="M245,612 H1035 A21,21 0 0 1 1056,633 V633 A21,21 0 0 1 1035,654 H245 A21,21 0 0 1 224,633 V633 A21,21 0 0 1 245,612 Z" />
+    <text x="640" y="639" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="800" fill="#F4F8FF">免费入口积累习惯，课程复习包承接期末高需求场景</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="684" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">沉淀 Digest 开题答辩</text>
+    <text x="1224" y="684" text-anchor="end" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">08 / 10</text>
+  </g>
+</svg>

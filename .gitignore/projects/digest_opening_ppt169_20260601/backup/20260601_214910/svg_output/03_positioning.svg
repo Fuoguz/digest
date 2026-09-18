@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <marker id="arrowAccent" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#20E3B2"/>
+    </marker>
+    <linearGradient id="rightPanel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#17314B"/>
+      <stop offset="100%" stop-color="#101B2E"/>
+    </linearGradient>
+  </defs>
+  <g id="background">
+    <rect width="1280" height="720" fill="#08111F"/>
+    <rect x="0" y="0" width="1280" height="720" fill="#0C1A2D" fill-opacity="0.42"/>
+    <circle cx="640" cy="364" r="300" fill="#3BA7FF" fill-opacity="0.05"/>
+  </g>
+  <g id="header">
+    <text x="56" y="72" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="700" fill="#20E3B2">项目定位</text>
+    <text x="56" y="118" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="800" fill="#F4F8FF">Digest 不是聊天 AI，而是学生的课程学习沉淀系统</text>
+    <text x="56" y="151" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">从“问一次”转向“学一学期、沉淀一学期、期末真正用得上”。</text>
+  </g>
+  <g id="generic-ai-panel">
+    <rect x="64" y="214" width="490" height="360" rx="20" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <rect x="92" y="246" width="160" height="36" rx="18" fill="#13243A" stroke="#243A55" stroke-width="1"/>
+    <text x="172" y="269" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" font-weight="800" fill="#A9B8CD">通用 AI 工具</text>
+    <text x="96" y="330" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="800" fill="#F4F8FF">问一次，答一次</text>
+    <text x="96" y="372" font-family="Microsoft YaHei, Arial, sans-serif" font-size="19" fill="#A9B8CD">适合临时总结、快速问答</text>
+    <g id="chat-stack">
+      <rect x="104" y="422" width="350" height="44" rx="14" fill="#13243A" stroke="#243A55" stroke-width="1"/>
+      <text x="130" y="450" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#A9B8CD">ChatGPT / Kimi / 豆包</text>
+      <rect x="156" y="482" width="318" height="44" rx="14" fill="#13243A" stroke="#243A55" stroke-width="1"/>
+      <text x="182" y="510" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#A9B8CD">每次对话独立，课程记忆弱</text>
+    </g>
+    <rect x="388" y="260" width="110" height="110" rx="55" fill="#FF5A7A" fill-opacity="0.14" stroke="#FF5A7A" stroke-width="1"/>
+    <text x="443" y="309" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="38" font-weight="800" fill="#FF5A7A">1</text>
+    <text x="443" y="337" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">次性</text>
+  </g>
+  <g id="transition-arrow">
+    <path d="M 584 394 C 626 354, 660 354, 704 394" fill="none" stroke="#20E3B2" stroke-width="4" marker-end="url(#arrowAccent)"/>
+    <text x="644" y="340" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" font-weight="800" fill="#20E3B2">学习流程化</text>
+  </g>
+  <g id="digest-panel">
+    <rect x="726" y="214" width="490" height="360" rx="20" fill="url(#rightPanel)" stroke="#20E3B2" stroke-width="1.4"/>
+    <rect x="758" y="246" width="162" height="36" rx="18" fill="#20E3B2" fill-opacity="0.14" stroke="#20E3B2" stroke-width="1"/>
+    <text x="839" y="269" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" font-weight="800" fill="#20E3B2">Digest 系统</text>
+    <text x="758" y="330" font-family="Microsoft YaHei, Arial, sans-serif" font-size="32" font-weight="800" fill="#F4F8FF">学一学期，沉淀一学期</text>
+    <text x="758" y="372" font-family="Microsoft YaHei, Arial, sans-serif" font-size="19" fill="#A9B8CD">把日常资料归入课程知识资产</text>
+    <g id="digest-modules">
+      <rect x="758" y="424" width="172" height="52" rx="14" fill="#101B2E" stroke="#243A55" stroke-width="1"/>
+      <use data-icon="chunk-filled/book-open" x="778" y="436" width="28" height="28" fill="#3BA7FF"/>
+      <text x="818" y="458" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="700" fill="#F4F8FF">课程库</text>
+      <rect x="952" y="424" width="204" height="52" rx="14" fill="#101B2E" stroke="#243A55" stroke-width="1"/>
+      <use data-icon="chunk-filled/database" x="972" y="436" width="28" height="28" fill="#20E3B2"/>
+      <text x="1012" y="458" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="700" fill="#F4F8FF">每日沉淀</text>
+      <rect x="758" y="492" width="172" height="52" rx="14" fill="#101B2E" stroke="#243A55" stroke-width="1"/>
+      <use data-icon="chunk-filled/share-nodes" x="778" y="504" width="28" height="28" fill="#7C5CFF"/>
+      <text x="818" y="526" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="700" fill="#F4F8FF">知识图谱</text>
+      <rect x="952" y="492" width="204" height="52" rx="14" fill="#101B2E" stroke="#243A55" stroke-width="1"/>
+      <use data-icon="chunk-filled/clock" x="972" y="504" width="28" height="28" fill="#FFC857"/>
+      <text x="1012" y="526" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="700" fill="#F4F8FF">期末复习包</text>
+    </g>
+  </g>
+  <g id="one-sentence-position">
+    <rect x="138" y="612" width="1004" height="54" rx="27" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <text x="640" y="646" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" font-weight="800" fill="#F4F8FF">
+      把 PPT 截图、课堂录音、网页资料和学习视频，自动沉淀为知识图谱、复习题和考前资料包
+    </text>
+  </g>
+  <g id="footer">
+    <text x="56" y="684" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">沉淀 Digest 开题答辩</text>
+    <text x="1224" y="684" text-anchor="end" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">03 / 10</text>
+  </g>
+</svg>

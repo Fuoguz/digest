@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <marker id="techArrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#3BA7FF"/>
+    </marker>
+    <linearGradient id="layerGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3BA7FF" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#20E3B2" stop-opacity="0.10"/>
+    </linearGradient>
+  </defs>
+  <g id="background">
+    <rect width="1280" height="720" fill="#08111F"/>
+    <circle cx="1138" cy="156" r="230" fill="#7C5CFF" fill-opacity="0.08"/>
+  </g>
+  <g id="header">
+    <text x="56" y="72" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="700" fill="#20E3B2">技术实现路径</text>
+    <text x="56" y="118" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="800" fill="#F4F8FF">成熟 AI 能力 + 轻量化产品开发</text>
+    <text x="56" y="151" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">不自研大模型，优先把成熟能力嵌进可用的学习产品原型。</text>
+  </g>
+  <g id="architecture">
+    <rect x="64" y="210" width="854" height="384" rx="22" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <text x="96" y="248" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" font-weight="800" fill="#F4F8FF">可落地架构：输入 → AI 处理层 → 知识节点库 → 图谱与复习包输出</text>
+    <g id="layer-input">
+      <rect x="96" y="286" width="790" height="68" rx="14" fill="url(#layerGrad)" stroke="#243A55" stroke-width="1"/>
+      <rect x="116" y="306" width="34" height="34" rx="10" fill="#3BA7FF" fill-opacity="0.16"/>
+      <use data-icon="chunk-filled/files" x="123" y="313" width="20" height="20" fill="#3BA7FF"/>
+      <text x="166" y="318" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#F4F8FF">用户输入层</text>
+      <text x="166" y="342" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">文本、网页、课程资料；后续接入 PPT 截图、课堂录音、学习视频</text>
+    </g>
+    <g id="layer-ai">
+      <rect x="96" y="374" width="790" height="68" rx="14" fill="#13243A" stroke="#243A55" stroke-width="1"/>
+      <rect x="116" y="394" width="34" height="34" rx="10" fill="#20E3B2" fill-opacity="0.16"/>
+      <use data-icon="chunk-filled/wand-with-sparkles" x="123" y="401" width="20" height="20" fill="#20E3B2"/>
+      <text x="166" y="406" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#F4F8FF">AI 处理层</text>
+      <text x="166" y="430" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">调用成熟大模型 API，完成摘要、观点提炼、论据整理、复习问题生成</text>
+    </g>
+    <g id="layer-data">
+      <rect x="96" y="462" width="790" height="68" rx="14" fill="#13243A" stroke="#243A55" stroke-width="1"/>
+      <rect x="116" y="482" width="34" height="34" rx="10" fill="#7C5CFF" fill-opacity="0.16"/>
+      <use data-icon="chunk-filled/database" x="123" y="489" width="20" height="20" fill="#7C5CFF"/>
+      <text x="166" y="494" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#F4F8FF">知识节点库</text>
+      <text x="166" y="518" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">初期本地存储；后续拓展账号系统、云端数据库和多端同步</text>
+    </g>
+    <g id="layer-output">
+      <rect x="96" y="550" width="790" height="28" rx="14" fill="#20E3B2" fill-opacity="0.12" stroke="#20E3B2" stroke-width="1"/>
+      <text x="491" y="570" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" font-weight="800" fill="#20E3B2">D3.js 知识图谱 · 重点概念表 · 自测题 · 可打印复习包</text>
+    </g>
+    <path d="M 491 354 L 491 374" stroke="#3BA7FF" stroke-width="2.5" marker-end="url(#techArrow)"/>
+    <path d="M 491 442 L 491 462" stroke="#3BA7FF" stroke-width="2.5" marker-end="url(#techArrow)"/>
+    <path d="M 491 530 L 491 550" stroke="#3BA7FF" stroke-width="2.5" marker-end="url(#techArrow)"/>
+  </g>
+  <g id="prototype-proof">
+    <rect x="946" y="210" width="278" height="170" rx="20" fill="#101B2E" stroke="#20E3B2" stroke-width="1.2"/>
+    <use data-icon="chunk-filled/sparkles" x="976" y="240" width="34" height="34" fill="#20E3B2"/>
+    <text x="1026" y="264" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">已有原型基础</text>
+    <text x="976" y="310" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#A9B8CD">HTML / CSS / JavaScript</text>
+    <text x="976" y="340" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#A9B8CD">已有网页原型和 GitHub 项目基础</text>
+  </g>
+  <g id="extension">
+    <rect x="946" y="408" width="278" height="186" rx="20" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <text x="976" y="448" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">拓展能力</text>
+    <g id="ext-ocr">
+      <rect x="976" y="474" width="218" height="30" rx="15" fill="#13243A"/>
+      <text x="994" y="495" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">OCR 识别 PPT 截图</text>
+    </g>
+    <g id="ext-audio">
+      <rect x="976" y="514" width="218" height="30" rx="15" fill="#13243A"/>
+      <text x="994" y="535" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">语音转写课堂录音</text>
+    </g>
+    <g id="ext-video">
+      <rect x="976" y="554" width="218" height="30" rx="15" fill="#13243A"/>
+      <text x="994" y="575" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">视频字幕 / 音频解析</text>
+    </g>
+  </g>
+  <g id="bottom-line">
+    <rect x="160" y="620" width="960" height="42" rx="21" fill="#3BA7FF" fill-opacity="0.10" stroke="#3BA7FF" stroke-width="1"/>
+    <text x="640" y="647" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="800" fill="#F4F8FF">技术风险可控：先做文本与网页闭环，再逐步接入 OCR、录音和视频能力</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="684" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">沉淀 Digest 开题答辩</text>
+    <text x="1224" y="684" text-anchor="end" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">07 / 10</text>
+  </g>
+</svg>

@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <linearGradient id="roadLine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3BA7FF"/>
+      <stop offset="55%" stop-color="#20E3B2"/>
+      <stop offset="100%" stop-color="#7C5CFF"/>
+    </linearGradient>
+    <radialGradient id="endGlow" cx="72%" cy="72%" r="54%">
+      <stop offset="0%" stop-color="#20E3B2" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#20E3B2" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g id="background">
+    <rect width="1280" height="720" fill="#08111F"/>
+    <rect width="1280" height="720" fill="url(#endGlow)"/>
+  </g>
+  <g id="header">
+    <text x="56" y="72" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="700" fill="#20E3B2">预期成果与未来规划</text>
+    <text x="56" y="118" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="800" fill="#F4F8FF">从大创原型走向真实可用的校园 AI 学习产品</text>
+    <text x="56" y="151" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">以校内小范围试用为起点，逐步扩展到课程学习和学生赛事场景。</text>
+  </g>
+  <g id="outcomes-panel">
+    <rect x="56" y="206" width="534" height="328" rx="22" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <use data-icon="chunk-filled/target" x="88" y="236" width="34" height="34" fill="#20E3B2"/>
+    <text x="138" y="260" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">预期成果</text>
+    <g id="outcome-list">
+      <circle cx="96" cy="306" r="5" fill="#20E3B2"/>
+      <text x="118" y="312" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">完成 Digest AI 知识内化平台网页原型</text>
+      <circle cx="96" cy="350" r="5" fill="#3BA7FF"/>
+      <text x="118" y="356" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">形成用户需求调研报告与竞品分析报告</text>
+      <circle cx="96" cy="394" r="5" fill="#7C5CFF"/>
+      <text x="118" y="400" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">完成创业计划书和模拟运营报告</text>
+      <circle cx="96" cy="438" r="5" fill="#FFC857"/>
+      <text x="118" y="444" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">制作答辩 PPT、演示视频和宣传材料</text>
+      <circle cx="96" cy="482" r="5" fill="#20E3B2"/>
+      <text x="118" y="488" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">推动校内小范围试用并持续迭代</text>
+    </g>
+  </g>
+  <g id="roadmap-panel">
+    <rect x="628" y="206" width="596" height="328" rx="22" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <use data-icon="chunk-filled/route" x="660" y="236" width="34" height="34" fill="#3BA7FF"/>
+    <text x="710" y="260" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">未来三阶段</text>
+    <line x1="690" y1="314" x2="690" y2="488" stroke="url(#roadLine)" stroke-width="5" stroke-linecap="round"/>
+    <g id="stage-one">
+      <circle cx="690" cy="326" r="17" fill="#3BA7FF"/>
+      <text x="690" y="333" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" font-weight="800" fill="#FFFFFF">1</text>
+      <text x="730" y="320" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" font-weight="800" fill="#F4F8FF">课程基础能力</text>
+      <text x="730" y="348" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">课程库、每日 Digest、PPT 截图 OCR、基础知识图谱</text>
+    </g>
+    <g id="stage-two">
+      <circle cx="690" cy="406" r="17" fill="#20E3B2"/>
+      <text x="690" y="413" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" font-weight="800" fill="#08111F">2</text>
+      <text x="730" y="400" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" font-weight="800" fill="#F4F8FF">复习闭环增强</text>
+      <text x="730" y="428" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">课堂录音转写、期末复习包、复习提醒、导出功能</text>
+    </g>
+    <g id="stage-three">
+      <circle cx="690" cy="486" r="17" fill="#7C5CFF"/>
+      <text x="690" y="493" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" font-weight="800" fill="#FFFFFF">3</text>
+      <text x="730" y="480" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" font-weight="800" fill="#F4F8FF">校园赛事与专业拓展</text>
+      <text x="730" y="508" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">法学案例、政策文本、团队项目资料，中国国际大学生创新大赛等</text>
+    </g>
+  </g>
+  <g id="closing-quote">
+    <rect x="94" y="568" width="1092" height="78" rx="28" fill="#20E3B2" fill-opacity="0.12" stroke="#20E3B2" stroke-width="1.4"/>
+    <use data-icon="chunk-filled/sparkles" x="128" y="590" width="34" height="34" fill="#20E3B2"/>
+    <text x="184" y="609" font-family="Microsoft YaHei, Arial, sans-serif" font-size="23" font-weight="800" fill="#F4F8FF">Digest 想做的不是替学生学习，</text>
+    <text x="526" y="609" font-family="Microsoft YaHei, Arial, sans-serif" font-size="23" font-weight="800" fill="#20E3B2">而是帮助学生把每天学过的东西真正留下来。</text>
+    <text x="640" y="636" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" fill="#A9B8CD">谢谢各位老师，欢迎批评指正。</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="684" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">沉淀 Digest 开题答辩</text>
+    <text x="1224" y="684" text-anchor="end" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">10 / 10</text>
+  </g>
+</svg>

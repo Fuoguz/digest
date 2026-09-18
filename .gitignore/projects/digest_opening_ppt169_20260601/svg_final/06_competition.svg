@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <linearGradient id="digestColumn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#20E3B2" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#101B2E" stop-opacity="0.96" />
+    </linearGradient>
+  </defs>
+  <g id="background">
+    <rect width="1280" height="720" fill="#08111F" />
+    <circle cx="1114" cy="616" r="250" fill="#20E3B2" fill-opacity="0.06" />
+  </g>
+  <g id="header">
+    <text x="56" y="72" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="700" fill="#20E3B2">产品差异化与竞品分析</text>
+    <text x="56" y="118" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="800" fill="#F4F8FF">不与大模型比能力，而是嵌入学生学习流程</text>
+    <text x="56" y="151" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">我们的竞争力来自高校学习场景理解、产品流程设计和持续沉淀机制。</text>
+  </g>
+  <g id="comparison-table">
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M74,202 H1206 A18,18 0 0 1 1224,220 V544 A18,18 0 0 1 1206,562 H74 A18,18 0 0 1 56,544 V220 A18,18 0 0 1 74,202 Z" />
+    <path fill="#13243A" d="M74,202 H1206 A18,18 0 0 1 1224,220 V240 A18,18 0 0 1 1206,258 H74 A18,18 0 0 1 56,240 V220 A18,18 0 0 1 74,202 Z" />
+    <rect x="56" y="244" width="1168" height="14" fill="#13243A" />
+    <text x="94" y="238" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="800" fill="#A9B8CD">竞品类型</text>
+    <text x="328" y="238" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="800" fill="#A9B8CD">优势</text>
+    <text x="578" y="238" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="800" fill="#A9B8CD">不足</text>
+    <text x="896" y="238" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="800" fill="#20E3B2">Digest 的切入点</text>
+    <line x1="286" y1="202" x2="286" y2="562" stroke="#243A55" stroke-width="1" />
+    <line x1="536" y1="202" x2="536" y2="562" stroke="#243A55" stroke-width="1" />
+    <line x1="824" y1="202" x2="824" y2="562" stroke="#243A55" stroke-width="1" />
+    <rect x="824" y="258" width="400" height="304" fill="url(#digestColumn)" />
+    <line x1="56" y1="334" x2="1224" y2="334" stroke="#243A55" stroke-width="1" />
+    <line x1="56" y1="418" x2="1224" y2="418" stroke="#243A55" stroke-width="1" />
+    <line x1="56" y1="502" x2="1224" y2="502" stroke="#243A55" stroke-width="1" />
+    <g id="row-llm">
+      <text x="94" y="294" font-family="Microsoft YaHei, Arial, sans-serif" font-size="19" font-weight="800" fill="#F4F8FF">ChatGPT / Kimi / 豆包</text>
+      <text x="328" y="286" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#A9B8CD">通用问答能力强</text>
+      <text x="328" y="314" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#6D7E96">响应快、覆盖广</text>
+      <text x="578" y="286" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#A9B8CD">偏一次性总结</text>
+      <text x="578" y="314" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#6D7E96">缺少课程长期沉淀</text>
+      <text x="896" y="294" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#F4F8FF">一学期课程记忆</text>
+      <text x="896" y="322" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">把每次学习接入课程库</text>
+    </g>
+    <g id="row-notion">
+      <text x="94" y="378" font-family="Microsoft YaHei, Arial, sans-serif" font-size="19" font-weight="800" fill="#F4F8FF">Notion AI / Obsidian</text>
+      <text x="328" y="370" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#A9B8CD">知识管理能力强</text>
+      <text x="328" y="398" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#6D7E96">结构灵活、可扩展</text>
+      <text x="578" y="370" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#A9B8CD">维护门槛高</text>
+      <text x="578" y="398" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#6D7E96">依赖学生手动整理</text>
+      <text x="896" y="378" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#F4F8FF">更低学习成本</text>
+      <text x="896" y="406" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">默认围绕课程和期末输出</text>
+    </g>
+    <g id="row-file-ai">
+      <text x="94" y="462" font-family="Microsoft YaHei, Arial, sans-serif" font-size="19" font-weight="800" fill="#F4F8FF">飞书妙记 / 网盘 AI</text>
+      <text x="328" y="454" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#A9B8CD">转写和文件处理强</text>
+      <text x="328" y="482" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#6D7E96">适合会议和文件场景</text>
+      <text x="578" y="454" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#A9B8CD">不专注课程复习闭环</text>
+      <text x="578" y="482" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#6D7E96">输出不一定可用于考试</text>
+      <text x="896" y="462" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#F4F8FF">期末复习包</text>
+      <text x="896" y="490" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">概念表、章节框架、自测题</text>
+    </g>
+    <g id="row-digest">
+      <text x="94" y="546" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" font-weight="800" fill="#20E3B2">Digest</text>
+      <text x="328" y="538" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#F4F8FF">面向高校课程学习</text>
+      <text x="578" y="538" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" fill="#F4F8FF">持续迭代原型和场景</text>
+      <text x="896" y="538" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#20E3B2">长期节点 + 图谱 + 复习包</text>
+    </g>
+  </g>
+  <g id="bottom-emphasis">
+    <path fill="#20E3B2" fill-opacity="0.12" stroke="#20E3B2" stroke-width="1" d="M194,600 H1086 A26,26 0 0 1 1112,626 V626 A26,26 0 0 1 1086,652 H194 A26,26 0 0 1 168,626 V626 A26,26 0 0 1 194,600 Z" />
+    
+  <g transform="translate(198.0, 612.0) scale(1.75)" fill="#20E3B2">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M8 4C5.79086 4 4 5.79086 4 8C4 10.2091 5.79086 12 8 12C10.2091 12 12 10.2091 12 8C12 5.79086 10.2091 4 8 4ZM6 8C6 6.89543 6.89543 6 8 6C9.10457 6 10 6.89543 10 8C10 9.10457 9.10457 10 8 10C6.89543 10 6 9.10457 6 8Z" />
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58172 0 0 3.58172 0 8C0 12.4183 3.58172 16 8 16C12.4183 16 16 12.4183 16 8C16 3.58172 12.4183 0 8 0ZM2 8C2 4.68629 4.68629 2 8 2C11.3137 2 14 4.68629 14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8Z" />
+  </g>
+    <text x="244" y="633" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#F4F8FF">竞争力不是模型本身，而是高校学习场景理解 + 产品流程设计 + 持续沉淀机制</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="684" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">沉淀 Digest 开题答辩</text>
+    <text x="1224" y="684" text-anchor="end" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">06 / 10</text>
+  </g>
+</svg>

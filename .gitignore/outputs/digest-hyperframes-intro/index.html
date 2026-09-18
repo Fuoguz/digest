@@ -1,0 +1,1147 @@
+<!doctype html>
+<html lang="zh-CN" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --bg: #050912;
+        --bg2: #081225;
+        --surface: #101827;
+        --surface2: #172235;
+        --text: #f4f8ff;
+        --muted: #aebbd0;
+        --soft: #dce8f7;
+        --cyan: #69e7f2;
+        --violet: #8f7bff;
+        --line: rgba(105, 231, 242, 0.28);
+        --line2: rgba(143, 123, 255, 0.26);
+        --paper: #eef3f8;
+        --paper-ink: #182234;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family: sans-serif;
+      }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+
+      audio {
+        display: none;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background-color: #050912;
+        transform-origin: 50% 50%;
+      }
+
+      #scene1 { z-index: 1; opacity: 1; }
+      #scene2 { z-index: 2; opacity: 0; }
+      #scene3 { z-index: 3; opacity: 0; }
+      #scene4 { z-index: 4; opacity: 0; }
+      #scene5 { z-index: 5; opacity: 0; }
+      #scene6 { z-index: 6; opacity: 0; }
+      #scene7 { z-index: 7; opacity: 0; }
+      #scene8 { z-index: 8; opacity: 0; }
+      #scene9 { z-index: 9; opacity: 0; }
+      #scene10 { z-index: 10; opacity: 0; }
+      #scene11 { z-index: 11; opacity: 0; }
+
+      .bg-layer {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+      }
+
+      .bg-layer::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 16% 18%, rgba(105, 231, 242, 0.2), rgba(105, 231, 242, 0) 28%),
+          radial-gradient(circle at 82% 20%, rgba(143, 123, 255, 0.18), rgba(143, 123, 255, 0) 30%),
+          radial-gradient(circle at 58% 88%, rgba(38, 105, 185, 0.18), rgba(38, 105, 185, 0) 34%),
+          linear-gradient(135deg, #061324 0%, #050912 46%, #080715 100%);
+      }
+
+      .bg-layer::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0.3;
+        background-image:
+          linear-gradient(rgba(136, 178, 230, 0.1) 1px, rgba(0, 0, 0, 0) 1px),
+          linear-gradient(90deg, rgba(136, 178, 230, 0.1) 1px, rgba(0, 0, 0, 0) 1px);
+        background-size: 80px 80px;
+        mask-image: radial-gradient(circle at 50% 45%, #000 0%, rgba(0, 0, 0, 0) 74%);
+      }
+
+      .network {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        opacity: 0.55;
+      }
+
+      .network line,
+      .network path {
+        stroke: rgba(105, 231, 242, 0.24);
+        stroke-width: 1.2;
+        fill: none;
+      }
+
+      .network circle {
+        fill: rgba(105, 231, 242, 0.6);
+      }
+
+      .particle {
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: rgba(105, 231, 242, 0.64);
+        box-shadow: 0 0 18px rgba(105, 231, 242, 0.58);
+      }
+
+      .scene-content {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        height: 100%;
+        padding: 72px 104px 86px;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+
+      .top-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--muted);
+        font-family: monospace;
+        font-size: 18px;
+      }
+
+      .kicker {
+        color: var(--cyan);
+        font-family: monospace;
+        font-size: 21px;
+        font-weight: 800;
+      }
+
+      .title-xl {
+        color: var(--text);
+        font-size: 86px;
+        line-height: 1.12;
+        font-weight: 900;
+      }
+
+      .title-lg {
+        color: var(--text);
+        font-size: 64px;
+        line-height: 1.18;
+        font-weight: 900;
+      }
+
+      .lead {
+        color: var(--muted);
+        font-size: 30px;
+        line-height: 1.55;
+        font-weight: 350;
+      }
+
+      .caption {
+        width: 100%;
+        min-height: 106px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 44px;
+        border: 1px solid rgba(105, 231, 242, 0.3);
+        background: rgba(6, 14, 28, 0.74);
+        color: var(--text);
+        box-shadow: 0 22px 80px rgba(0, 0, 0, 0.24);
+        font-size: 56px;
+        line-height: 1.28;
+        font-weight: 850;
+        text-align: center;
+      }
+
+      .panel {
+        background: rgba(16, 24, 39, 0.88);
+        border: 1px solid rgba(105, 231, 242, 0.26);
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      }
+
+      .window {
+        position: relative;
+        padding: 16px;
+        background: rgba(16, 24, 39, 0.92);
+        border: 1px solid rgba(105, 231, 242, 0.28);
+        box-shadow: 0 34px 96px rgba(0, 0, 0, 0.36);
+      }
+
+      .window::before {
+        content: "";
+        display: block;
+        height: 42px;
+        margin: -16px -16px 16px;
+        background: rgba(8, 14, 26, 0.96);
+        border-bottom: 1px solid rgba(105, 231, 242, 0.18);
+      }
+
+      .dots {
+        position: absolute;
+        top: 16px;
+        left: 22px;
+        display: flex;
+        gap: 10px;
+      }
+
+      .dots span {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: var(--cyan);
+        opacity: 0.7;
+      }
+
+      .window img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .overload-layout {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 0.78fr 1.22fr;
+        gap: 58px;
+        align-items: center;
+      }
+
+      .source-cloud {
+        position: relative;
+        height: 710px;
+      }
+
+      .source-card {
+        position: absolute;
+        width: 420px;
+        min-height: 134px;
+        padding: 24px 26px;
+        background: rgba(16, 24, 39, 0.92);
+        border: 1px solid rgba(105, 231, 242, 0.26);
+        color: var(--text);
+        box-shadow: 0 28px 70px rgba(0, 0, 0, 0.3);
+      }
+
+      .source-card strong {
+        display: block;
+        font-size: 27px;
+        line-height: 1.25;
+        font-weight: 850;
+      }
+
+      .source-card span {
+        display: block;
+        margin-top: 12px;
+        color: var(--muted);
+        font-family: monospace;
+        font-size: 17px;
+      }
+
+      .source-card:nth-child(1) { left: 46px; top: 14px; transform: rotate(-4deg); }
+      .source-card:nth-child(2) { left: 418px; top: 64px; transform: rotate(3deg); }
+      .source-card:nth-child(3) { left: 176px; top: 190px; transform: rotate(-2deg); }
+      .source-card:nth-child(4) { left: 590px; top: 252px; transform: rotate(4deg); }
+      .source-card:nth-child(5) { left: 70px; top: 412px; transform: rotate(3deg); }
+      .source-card:nth-child(6) { left: 474px; top: 470px; transform: rotate(-3deg); }
+
+      .lost-meter {
+        width: 610px;
+        padding: 34px;
+        align-self: flex-end;
+      }
+
+      .lost-meter .num {
+        color: var(--cyan);
+        font-family: monospace;
+        font-size: 68px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .meter-track {
+        height: 18px;
+        margin: 20px 0 18px;
+        background: rgba(105, 231, 242, 0.1);
+        overflow: hidden;
+      }
+
+      .meter-fill {
+        width: 14%;
+        height: 100%;
+        background: linear-gradient(90deg, var(--cyan), var(--violet));
+        transform-origin: left;
+      }
+
+      .summary-layout {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 64px;
+        align-items: center;
+      }
+
+      .article-panel {
+        min-height: 580px;
+        padding: 36px;
+      }
+
+      .article-panel h3 {
+        font-size: 32px;
+        margin-bottom: 24px;
+      }
+
+      .para-line {
+        height: 18px;
+        margin: 15px 0;
+        background: rgba(174, 187, 208, 0.28);
+      }
+
+      .para-line.short { width: 68%; }
+      .para-line.mid { width: 82%; }
+
+      .bullet-list {
+        margin-top: 42px;
+        padding: 28px;
+        background: rgba(105, 231, 242, 0.08);
+        border: 1px solid rgba(105, 231, 242, 0.2);
+      }
+
+      .bullet {
+        margin: 18px 0;
+        color: var(--soft);
+        font-size: 28px;
+        line-height: 1.3;
+      }
+
+      .keyword-grid {
+        display: grid;
+        gap: 22px;
+      }
+
+      .keyword-card {
+        min-height: 142px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        color: var(--text);
+        font-size: 54px;
+        font-weight: 900;
+        border: 1px solid rgba(105, 231, 242, 0.28);
+        background: rgba(16, 24, 39, 0.88);
+        box-shadow: 0 22px 70px rgba(0, 0, 0, 0.26);
+      }
+
+      .hero-layout {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+
+      .hero-lockup {
+        position: relative;
+        min-width: 1050px;
+        min-height: 520px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 38px;
+      }
+
+      .digest-logo {
+        color: var(--text);
+        font-size: 150px;
+        line-height: 1;
+        font-weight: 900;
+      }
+
+      .hero-subtitle {
+        max-width: 1050px;
+        color: var(--text);
+        font-size: 58px;
+        line-height: 1.28;
+        font-weight: 850;
+      }
+
+      .orbit-ring {
+        position: absolute;
+        inset: 26px 70px;
+        border: 1px solid rgba(105, 231, 242, 0.24);
+        border-radius: 999px;
+      }
+
+      .demo-layout {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 0.82fr 1.18fr;
+        gap: 56px;
+        align-items: center;
+      }
+
+      .demo-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+
+      .step-label {
+        color: var(--cyan);
+        font-family: monospace;
+        font-size: 24px;
+        font-weight: 800;
+      }
+
+      .demo-copy h2 {
+        color: var(--text);
+        font-size: 60px;
+        line-height: 1.16;
+        font-weight: 900;
+      }
+
+      .demo-copy p {
+        color: var(--muted);
+        font-size: 28px;
+        line-height: 1.55;
+      }
+
+      .step-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 8px;
+      }
+
+      .chip {
+        padding: 12px 16px;
+        border: 1px solid rgba(105, 231, 242, 0.28);
+        background: rgba(105, 231, 242, 0.08);
+        color: var(--soft);
+        font-size: 19px;
+        font-weight: 750;
+      }
+
+      .demo-stage {
+        position: relative;
+        min-height: 688px;
+      }
+
+      .demo-window {
+        position: absolute;
+        width: 890px;
+        right: 0;
+        top: 28px;
+      }
+
+      .overlay-card {
+        position: absolute;
+        padding: 24px 28px;
+        background: rgba(16, 24, 39, 0.94);
+        border: 1px solid rgba(105, 231, 242, 0.3);
+        color: var(--text);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
+      }
+
+      .paste-card {
+        left: 30px;
+        bottom: 34px;
+        width: 520px;
+      }
+
+      .paste-card h3,
+      .insight-card h3,
+      .knowledge-card h3 {
+        color: var(--text);
+        font-size: 28px;
+        line-height: 1.25;
+      }
+
+      .paste-card p,
+      .insight-card p,
+      .knowledge-card p {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 21px;
+        line-height: 1.45;
+      }
+
+      .input-row {
+        height: 54px;
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        padding: 0 18px;
+        color: var(--muted);
+        background: rgba(5, 9, 18, 0.86);
+        border: 1px solid rgba(105, 231, 242, 0.24);
+        font-family: monospace;
+        font-size: 17px;
+      }
+
+      .insight-stack {
+        position: absolute;
+        left: 6px;
+        bottom: 8px;
+        width: 580px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .insight-card {
+        min-height: 112px;
+      }
+
+      .card-grid {
+        position: absolute;
+        left: 0;
+        bottom: 2px;
+        width: 700px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .knowledge-card {
+        min-height: 162px;
+        background: rgba(16, 24, 39, 0.96);
+        color: var(--text);
+        border-color: rgba(105, 231, 242, 0.32);
+      }
+
+      .knowledge-card h3 {
+        color: var(--text);
+      }
+
+      .knowledge-card p {
+        color: var(--muted);
+      }
+
+      .tag-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .tag-row span {
+        padding: 7px 10px;
+        background: rgba(105, 231, 242, 0.12);
+        color: #dffbff;
+        border: 1px solid rgba(105, 231, 242, 0.22);
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .map-wrap {
+        position: absolute;
+        left: 10px;
+        top: 30px;
+        width: 720px;
+        height: 630px;
+      }
+
+      .knowledge-map {
+        width: 100%;
+        height: 100%;
+      }
+
+      .knowledge-map line {
+        stroke: rgba(105, 231, 242, 0.48);
+        stroke-width: 2;
+      }
+
+      .knowledge-map circle {
+        fill: rgba(16, 24, 39, 0.95);
+        stroke: rgba(105, 231, 242, 0.62);
+        stroke-width: 2;
+      }
+
+      .map-label {
+        color: var(--text);
+        font-size: 20px;
+        font-weight: 800;
+      }
+
+      .scenario-content {
+        justify-content: center;
+        gap: 56px;
+      }
+
+      .scenario-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+      }
+
+      .scenario-card {
+        min-height: 360px;
+        padding: 32px 30px;
+      }
+
+      .scenario-icon {
+        width: 64px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 42px;
+        border: 1px solid rgba(105, 231, 242, 0.32);
+        background: rgba(105, 231, 242, 0.09);
+        color: var(--cyan);
+        font-family: monospace;
+        font-size: 26px;
+        font-weight: 800;
+      }
+
+      .scenario-card h3,
+      .model-card h3 {
+        color: var(--text);
+        font-size: 34px;
+        line-height: 1.22;
+        font-weight: 850;
+      }
+
+      .scenario-card p,
+      .model-card p {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 23px;
+        line-height: 1.5;
+      }
+
+      .model-layout {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 0.82fr 1.18fr;
+        gap: 56px;
+        align-items: center;
+      }
+
+      .model-stack {
+        display: grid;
+        gap: 22px;
+      }
+
+      .model-card {
+        position: relative;
+        min-height: 158px;
+        padding: 30px 34px 30px 116px;
+      }
+
+      .model-card .level {
+        position: absolute;
+        left: 32px;
+        top: 34px;
+        color: var(--cyan);
+        font-family: monospace;
+        font-size: 28px;
+        font-weight: 800;
+      }
+
+      .model-note {
+        margin-top: 22px;
+        padding: 26px;
+        border-left: 3px solid var(--cyan);
+        color: var(--muted);
+        background: rgba(105, 231, 242, 0.08);
+        font-size: 24px;
+        line-height: 1.55;
+      }
+
+      .value-layout {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .value-keywords {
+        display: grid;
+        gap: 30px;
+        width: 1150px;
+      }
+
+      .value-keyword {
+        padding: 34px 42px;
+        border: 1px solid rgba(105, 231, 242, 0.28);
+        background: rgba(16, 24, 39, 0.84);
+        color: var(--text);
+        font-size: 64px;
+        line-height: 1.18;
+        font-weight: 900;
+        text-align: center;
+      }
+
+      .ending-content {
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 26px;
+      }
+
+      .ending-logo {
+        min-width: 820px;
+        min-height: 230px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(105, 231, 242, 0.28);
+        color: var(--text);
+        font-size: 124px;
+        line-height: 1;
+        font-weight: 900;
+      }
+
+      .ending-title {
+        color: var(--text);
+        font-size: 74px;
+        line-height: 1.24;
+        font-weight: 900;
+      }
+
+      .ending-sub {
+        color: var(--muted);
+        font-family: monospace;
+        font-size: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="85" data-width="1920" data-height="1080">
+      <audio id="ambient-audio" data-start="0" data-duration="85" data-track-index="20" src="assets/digest-ambient-pad-85.wav" data-volume="0.24"></audio>
+      <audio id="narration-01" data-start="0.85" data-track-index="21" src="assets/narration-01.wav" data-volume="0.92"></audio>
+      <audio id="narration-02" data-start="8.65" data-track-index="22" src="assets/narration-02.wav" data-volume="0.92"></audio>
+      <audio id="narration-03" data-start="18.85" data-track-index="23" src="assets/narration-03.wav" data-volume="0.92"></audio>
+      <audio id="narration-04" data-start="28.7" data-track-index="24" src="assets/narration-04.wav" data-volume="0.92"></audio>
+      <audio id="narration-05" data-start="34.6" data-track-index="25" src="assets/narration-05.wav" data-volume="0.92"></audio>
+      <audio id="narration-06" data-start="40.0" data-track-index="26" src="assets/narration-06.wav" data-volume="0.92"></audio>
+      <audio id="narration-07" data-start="45.05" data-track-index="27" src="assets/narration-07.wav" data-volume="0.92"></audio>
+      <audio id="narration-08" data-start="50.75" data-track-index="28" src="assets/narration-08.wav" data-volume="0.92"></audio>
+      <audio id="narration-09" data-start="62.75" data-track-index="29" src="assets/narration-09.wav" data-volume="0.92"></audio>
+      <audio id="narration-10" data-start="72.55" data-track-index="30" src="assets/narration-10.wav" data-volume="0.92"></audio>
+
+      <section id="scene1" class="scene">
+        <div class="bg-layer" data-layout-ignore>
+          <svg class="network" viewBox="0 0 1920 1080" aria-hidden="true">
+            <line x1="120" y1="182" x2="440" y2="132"></line><line x1="440" y1="132" x2="780" y2="258"></line>
+            <line x1="1210" y1="178" x2="1600" y2="284"></line><line x1="1360" y1="710" x2="1710" y2="840"></line>
+            <circle cx="120" cy="182" r="4"></circle><circle cx="440" cy="132" r="5"></circle><circle cx="780" cy="258" r="4"></circle>
+            <circle cx="1210" cy="178" r="5"></circle><circle cx="1600" cy="284" r="4"></circle><circle cx="1710" cy="840" r="5"></circle>
+          </svg>
+          <span class="particle" style="left: 260px; top: 286px"></span><span class="particle" style="left: 1480px; top: 168px"></span>
+          <span class="particle" style="left: 1706px; top: 734px"></span><span class="particle" style="left: 920px; top: 820px"></span>
+        </div>
+        <div class="scene-content">
+          <div class="top-meta"><span>PROBLEM / INFORMATION OVERLOAD</span><span>00-08</span></div>
+          <div class="overload-layout">
+            <div>
+              <p class="kicker">前因后果</p>
+              <h1 class="title-xl">资料越来越多，真正留下来的越来越少</h1>
+              <p class="lead">收藏、截图、转发、保存，每天都在发生；理解、复习和输出，却很难自然发生。</p>
+            </div>
+            <div class="source-cloud">
+              <div class="source-card"><strong>公众号文章</strong><span>Saved · AI education trend</span></div>
+              <div class="source-card"><strong>课程 PPT</strong><span>Week 08 · knowledge management</span></div>
+              <div class="source-card"><strong>网页资料</strong><span>Browser tabs · 27 open</span></div>
+              <div class="source-card"><strong>收藏夹</strong><span>Unread · 143 links</span></div>
+              <div class="source-card"><strong>论文截图</strong><span>PDF highlight · pending review</span></div>
+              <div class="source-card"><strong>笔记软件卡片</strong><span>Draft · no connection</span></div>
+            </div>
+          </div>
+          <div class="caption scene1-caption-a">我们每天都在收藏、截图、转发、保存资料。</div>
+          <div class="caption scene1-caption-b">但真正被理解、复习、用起来的内容，其实很少。</div>
+        </div>
+      </section>
+
+      <section id="scene2" class="scene">
+        <div class="bg-layer" data-layout-ignore>
+          <svg class="network" viewBox="0 0 1920 1080" aria-hidden="true">
+            <line x1="210" y1="820" x2="530" y2="610"></line><line x1="530" y1="610" x2="850" y2="740"></line>
+            <line x1="1110" y1="230" x2="1520" y2="180"></line><line x1="1520" y1="180" x2="1740" y2="450"></line>
+            <circle cx="210" cy="820" r="4"></circle><circle cx="530" cy="610" r="5"></circle><circle cx="850" cy="740" r="4"></circle>
+            <circle cx="1110" cy="230" r="4"></circle><circle cx="1520" cy="180" r="5"></circle><circle cx="1740" cy="450" r="4"></circle>
+          </svg>
+          <span class="particle" style="left: 340px; top: 242px"></span><span class="particle" style="left: 724px; top: 850px"></span>
+          <span class="particle" style="left: 1548px; top: 596px"></span><span class="particle" style="left: 1740px; top: 264px"></span>
+        </div>
+        <div class="scene-content">
+          <div class="top-meta"><span>SUMMARY IS NOT INTERNALIZATION</span><span>08-18</span></div>
+          <div class="summary-layout">
+            <div class="article-panel panel">
+              <p class="kicker">AI SUMMARY</p>
+              <h3>一篇复杂文章被压缩成几条要点</h3>
+              <div class="para-line"></div><div class="para-line mid"></div><div class="para-line short"></div>
+              <div class="bullet-list">
+                <div class="bullet">· 核心观点一：学习材料需要结构化</div>
+                <div class="bullet">· 核心观点二：复习问题促进记忆</div>
+                <div class="bullet">· 核心观点三：知识需要长期连接</div>
+              </div>
+            </div>
+            <div class="keyword-grid">
+              <div class="keyword-card">看过 ≠ 理解</div>
+              <div class="keyword-card">收藏 ≠ 掌握</div>
+              <div class="keyword-card">总结 ≠ 内化</div>
+            </div>
+          </div>
+          <div class="caption scene2-caption-a">AI 总结可以帮我们看得更快。</div>
+          <div class="caption scene2-caption-b">但看得更快，不等于真正吸收。</div>
+        </div>
+      </section>
+
+      <section id="scene3" class="scene">
+        <div class="bg-layer" data-layout-ignore>
+          <svg class="network network-hero" viewBox="0 0 1920 1080" aria-hidden="true">
+            <line x1="420" y1="520" x2="720" y2="410"></line><line x1="720" y1="410" x2="960" y2="540"></line>
+            <line x1="960" y1="540" x2="1220" y2="420"></line><line x1="1220" y1="420" x2="1510" y2="560"></line>
+            <line x1="540" y1="730" x2="960" y2="540"></line><line x1="1380" y1="720" x2="960" y2="540"></line>
+            <circle cx="420" cy="520" r="5"></circle><circle cx="720" cy="410" r="5"></circle><circle cx="960" cy="540" r="7"></circle>
+            <circle cx="1220" cy="420" r="5"></circle><circle cx="1510" cy="560" r="5"></circle><circle cx="540" cy="730" r="4"></circle><circle cx="1380" cy="720" r="4"></circle>
+          </svg>
+          <span class="particle" style="left: 476px; top: 290px"></span><span class="particle" style="left: 862px; top: 744px"></span>
+          <span class="particle" style="left: 1420px; top: 294px"></span>
+        </div>
+        <div class="scene-content">
+          <div class="top-meta"><span>DIGEST / PRODUCT POSITIONING</span><span>18-28</span></div>
+          <div class="hero-layout">
+            <div class="hero-lockup">
+              <div class="orbit-ring"></div>
+              <p class="kicker">AI + EDUCATION KNOWLEDGE INTERNALIZATION</p>
+              <h1 class="digest-logo">Digest</h1>
+              <p class="hero-subtitle">把看过的内容，变成真正属于你的知识。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene4" class="scene">
+        <div class="bg-layer" data-layout-ignore><span class="particle" style="left: 330px; top: 190px"></span><span class="particle" style="left: 1580px; top: 760px"></span></div>
+        <div class="scene-content">
+          <div class="top-meta"><span>PRODUCT DEMO / STEP 01</span><span>28-34</span></div>
+          <div class="demo-layout">
+            <div class="demo-copy">
+              <p class="step-label">1. 导入文章 / 笔记 / 链接</p>
+              <h2>把分散资料放进同一个内化入口</h2>
+              <p>用户可以把文章、课程笔记、网页资料导入 Digest。</p>
+              <div class="step-chips"><span class="chip">文章链接</span><span class="chip">课程笔记</span><span class="chip">网页内容</span><span class="chip">公众号素材</span></div>
+            </div>
+            <div class="demo-stage">
+              <div class="window demo-window"><div class="dots"><span></span><span></span><span></span></div><img src="assets/digest-prototype-input.png" alt="Digest input screen" /></div>
+              <div class="overlay-card paste-card">
+                <h3>粘贴学习资料</h3>
+                <p>链接、长文、Markdown 笔记都可以进入 AI 内化流程。</p>
+                <div class="input-row">https://example.edu/article/knowledge-learning</div>
+              </div>
+            </div>
+          </div>
+          <div class="caption">1. 导入文章 / 笔记 / 链接</div>
+        </div>
+      </section>
+
+      <section id="scene5" class="scene">
+        <div class="bg-layer" data-layout-ignore><span class="particle" style="left: 280px; top: 760px"></span><span class="particle" style="left: 1500px; top: 230px"></span></div>
+        <div class="scene-content">
+          <div class="top-meta"><span>PRODUCT DEMO / STEP 02</span><span>34-39.5</span></div>
+          <div class="demo-layout">
+            <div class="demo-copy">
+              <p class="step-label">2. 提炼核心观点与关键概念</p>
+              <h2>AI 不是只压缩文字，而是拆出知识结构</h2>
+              <p>系统会自动提炼核心观点、关键概念和内容结构。</p>
+              <div class="step-chips"><span class="chip">核心观点</span><span class="chip">关键概念</span><span class="chip">结构摘要</span><span class="chip">问题清单</span></div>
+            </div>
+            <div class="demo-stage">
+              <div class="window demo-window"><div class="dots"><span></span><span></span><span></span></div><img src="assets/digest-prototype-workflow.png" alt="Digest workflow screen" /></div>
+              <div class="insight-stack">
+                <div class="overlay-card insight-card"><h3>核心观点</h3><p>信息只有被重新组织，才可能进入长期记忆。</p></div>
+                <div class="overlay-card insight-card"><h3>关键概念</h3><p>知识内化、主动回忆、结构化复习。</p></div>
+                <div class="overlay-card insight-card"><h3>问题清单</h3><p>这篇内容可以如何被用于写作或项目研究？</p></div>
+              </div>
+            </div>
+          </div>
+          <div class="caption">2. 提炼核心观点与关键概念</div>
+        </div>
+      </section>
+
+      <section id="scene6" class="scene">
+        <div class="bg-layer" data-layout-ignore><span class="particle" style="left: 360px; top: 210px"></span><span class="particle" style="left: 1660px; top: 820px"></span></div>
+        <div class="scene-content">
+          <div class="top-meta"><span>PRODUCT DEMO / STEP 03</span><span>39.5-45</span></div>
+          <div class="demo-layout">
+            <div class="demo-copy">
+              <p class="step-label">3. 生成可复习的知识卡片</p>
+              <h2>从一次性总结，变成可复习、可输出的卡片</h2>
+              <p>内容会被整理成可以复习、检索和继续加工的知识卡片。</p>
+              <div class="step-chips"><span class="chip">标题</span><span class="chip">摘要</span><span class="chip">问题</span><span class="chip">标签</span></div>
+            </div>
+            <div class="demo-stage">
+              <div class="window demo-window"><div class="dots"><span></span><span></span><span></span></div><img src="assets/digest-prototype-filled.png" alt="Digest filled screen" /></div>
+              <div class="card-grid">
+                <div class="overlay-card knowledge-card"><h3>观点卡</h3><p>学习不是保存材料，而是重建理解。</p><div class="tag-row"><span>学习</span><span>观点</span></div></div>
+                <div class="overlay-card knowledge-card"><h3>概念卡</h3><p>主动回忆能让知识更稳定地留下来。</p><div class="tag-row"><span>复习</span><span>概念</span></div></div>
+                <div class="overlay-card knowledge-card"><h3>问题卡</h3><p>这段内容可以支持哪些论文论点？</p><div class="tag-row"><span>研究</span><span>问题</span></div></div>
+                <div class="overlay-card knowledge-card"><h3>输出卡</h3><p>可复用为课程汇报、选题和项目分析。</p><div class="tag-row"><span>输出</span><span>写作</span></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="caption">3. 生成可复习的知识卡片</div>
+        </div>
+      </section>
+
+      <section id="scene7" class="scene">
+        <div class="bg-layer" data-layout-ignore><span class="particle" style="left: 260px; top: 820px"></span><span class="particle" style="left: 1540px; top: 210px"></span></div>
+        <div class="scene-content">
+          <div class="top-meta"><span>PRODUCT DEMO / STEP 04</span><span>45-50</span></div>
+          <div class="demo-layout">
+            <div class="demo-copy">
+              <p class="step-label">4. 沉淀为个人知识库</p>
+              <h2>长期使用后，知识会从散点变成体系</h2>
+              <p>用户逐渐形成自己的知识库，而不是一堆散乱的收藏夹。</p>
+              <div class="step-chips"><span class="chip">长期沉淀</span><span class="chip">可连接</span><span class="chip">可检索</span><span class="chip">可输出</span></div>
+            </div>
+            <div class="demo-stage">
+              <div class="window demo-window"><div class="dots"><span></span><span></span><span></span></div><img src="assets/digest-prototype-workspace.png" alt="Digest workspace screen" /></div>
+              <div class="map-wrap">
+                <svg class="knowledge-map" viewBox="0 0 720 630" aria-hidden="true">
+                  <line x1="360" y1="315" x2="180" y2="170"></line><line x1="360" y1="315" x2="550" y2="150"></line>
+                  <line x1="360" y1="315" x2="190" y2="470"></line><line x1="360" y1="315" x2="570" y2="455"></line>
+                  <line x1="180" y1="170" x2="550" y2="150"></line><line x1="190" y1="470" x2="570" y2="455"></line>
+                  <circle cx="360" cy="315" r="58"></circle><circle cx="180" cy="170" r="48"></circle><circle cx="550" cy="150" r="48"></circle>
+                  <circle cx="190" cy="470" r="48"></circle><circle cx="570" cy="455" r="48"></circle>
+                  <foreignObject x="318" y="298" width="90" height="40"><div class="map-label">知识库</div></foreignObject>
+                  <foreignObject x="136" y="154" width="100" height="40"><div class="map-label">课程</div></foreignObject>
+                  <foreignObject x="506" y="134" width="100" height="40"><div class="map-label">论文</div></foreignObject>
+                  <foreignObject x="146" y="454" width="100" height="40"><div class="map-label">写作</div></foreignObject>
+                  <foreignObject x="526" y="439" width="100" height="40"><div class="map-label">项目</div></foreignObject>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="caption">4. 沉淀为个人知识库</div>
+        </div>
+      </section>
+
+      <section id="scene8" class="scene">
+        <div class="bg-layer" data-layout-ignore><span class="particle" style="left: 298px; top: 760px"></span><span class="particle" style="left: 862px; top: 190px"></span><span class="particle" style="left: 1640px; top: 270px"></span></div>
+        <div class="scene-content scenario-content">
+          <div class="top-meta"><span>USAGE SCENARIOS / TARGET USERS</span><span>50-62</span></div>
+          <div>
+            <p class="kicker">使用场景</p>
+            <h2 class="title-lg">面向学生、研究型学习者和内容创作者</h2>
+          </div>
+          <div class="scenario-grid">
+            <div class="scenario-card panel"><div class="scenario-icon">01</div><h3>课程学习</h3><p>整理课堂内容，形成复习材料</p></div>
+            <div class="scenario-card panel"><div class="scenario-icon">02</div><h3>论文准备</h3><p>积累文献观点，搭建研究框架</p></div>
+            <div class="scenario-card panel"><div class="scenario-icon">03</div><h3>公众号 / 内容创作</h3><p>从素材收集到选题输出</p></div>
+            <div class="scenario-card panel"><div class="scenario-icon">04</div><h3>项目研究</h3><p>沉淀案例、资料和分析框架</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene9" class="scene">
+        <div class="bg-layer" data-layout-ignore><span class="particle" style="left: 250px; top: 250px"></span><span class="particle" style="left: 1540px; top: 780px"></span></div>
+        <div class="scene-content">
+          <div class="top-meta"><span>BUSINESS PATH / VALIDATION DIRECTION</span><span>62-72</span></div>
+          <div class="model-layout">
+            <div>
+              <p class="kicker">商业化路径</p>
+              <h2 class="title-lg">从个人订阅切入，向校园与教育内容场景延展</h2>
+              <p class="model-note">表达为可验证的商业化路径和未来变现方向，不预设大规模盈利。</p>
+            </div>
+            <div class="model-stack">
+              <div class="model-card panel"><span class="level">01</span><h3>个人订阅</h3><p>基础免费，高级功能付费</p></div>
+              <div class="model-card panel"><span class="level">02</span><h3>校园推广</h3><p>面向学生社群、课程小组、学习组织推广</p></div>
+              <div class="model-card panel"><span class="level">03</span><h3>创作者 / 教育机构服务</h3><p>提供知识库整理、课程资料沉淀和内容复用能力</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene10" class="scene">
+        <div class="bg-layer" data-layout-ignore><span class="particle" style="left: 450px; top: 260px"></span><span class="particle" style="left: 1420px; top: 760px"></span></div>
+        <div class="scene-content">
+          <div class="top-meta"><span>PROJECT VALUE / KNOWLEDGE SYSTEM</span><span>72-78</span></div>
+          <div class="value-layout">
+            <div class="value-keywords">
+              <div class="value-keyword">更高效地学习</div>
+              <div class="value-keyword">更系统地沉淀</div>
+              <div class="value-keyword">更稳定地输出</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene11" class="scene">
+        <div class="bg-layer" data-layout-ignore>
+          <svg class="network" viewBox="0 0 1920 1080" aria-hidden="true">
+            <line x1="390" y1="640" x2="700" y2="460"></line><line x1="700" y1="460" x2="960" y2="540"></line>
+            <line x1="960" y1="540" x2="1230" y2="420"></line><line x1="1230" y1="420" x2="1530" y2="560"></line>
+            <circle cx="390" cy="640" r="4"></circle><circle cx="700" cy="460" r="5"></circle><circle cx="960" cy="540" r="6"></circle><circle cx="1230" cy="420" r="5"></circle><circle cx="1530" cy="560" r="4"></circle>
+          </svg>
+          <span class="particle" style="left: 476px; top: 290px"></span><span class="particle" style="left: 862px; top: 744px"></span><span class="particle" style="left: 1420px; top: 294px"></span>
+        </div>
+        <div class="scene-content ending-content">
+          <div class="ending-logo">Digest</div>
+          <h2 class="ending-title">让知识真正留下来。</h2>
+          <p class="ending-sub">AI-powered knowledge internalization tool</p>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true, defaults: { overwrite: "auto" } });
+
+      function transition(oldScene, newScene, t) {
+        tl.to(oldScene, { filter: "blur(24px)", scale: 1.028, duration: 0.58, ease: "power1.in" }, t);
+        tl.to(oldScene, { opacity: 0, duration: 0.44, ease: "sine.inOut" }, t + 0.32);
+        tl.fromTo(newScene, { filter: "blur(22px)", scale: 0.978, opacity: 0 }, { opacity: 1, duration: 0.38, ease: "sine.inOut" }, t + 0.44);
+        tl.to(newScene, { filter: "blur(0px)", scale: 1, duration: 0.6, ease: "power1.out" }, t + 0.68);
+      }
+
+      tl.to(".particle", { x: 20, y: -24, opacity: 0.28, duration: 7.2, repeat: 11, yoyo: true, ease: "sine.inOut", stagger: { each: 0.14, from: "center" } }, 0.2);
+      tl.to(".network", { opacity: 0.76, duration: 8.4, repeat: 10, yoyo: true, ease: "sine.inOut" }, 0.2);
+      tl.to(".bg-layer", { scale: 1.015, duration: 10, repeat: 8, yoyo: true, ease: "sine.inOut" }, 0.2);
+
+      tl.from("#scene1 .top-meta", { y: -18, opacity: 0, duration: 0.5, ease: "power2.out" }, 0.18);
+      tl.from("#scene1 .kicker", { x: -34, opacity: 0, duration: 0.48, ease: "expo.out" }, 0.42);
+      tl.from("#scene1 .title-xl", { y: 48, opacity: 0, duration: 0.72, ease: "power3.out" }, 0.64);
+      tl.from("#scene1 .lead", { x: -26, opacity: 0, duration: 0.54, ease: "circ.out" }, 1.0);
+      tl.from("#scene1 .source-card", { y: 50, rotation: 0, opacity: 0, duration: 0.58, stagger: 0.08, ease: "back.out(1.1)" }, 1.08);
+      tl.from("#scene1 .scene1-caption-a", { y: 34, opacity: 0, duration: 0.58, ease: "sine.out" }, 2.25);
+      tl.from("#scene1 .scene1-caption-b", { y: 34, opacity: 0, duration: 0.58, ease: "sine.out" }, 5.05);
+      tl.to("#scene1 .source-card", { x: 18, y: -8, duration: 4.4, stagger: 0.06, ease: "sine.inOut" }, 3.0);
+
+      transition("#scene1", "#scene2", 7.28);
+      tl.from("#scene2 .top-meta", { y: -18, opacity: 0, duration: 0.48, ease: "power2.out" }, 8.15);
+      tl.from("#scene2 .article-panel", { x: -50, opacity: 0, duration: 0.68, ease: "power3.out" }, 8.42);
+      tl.from("#scene2 .para-line", { scaleX: 0, transformOrigin: "left center", duration: 0.46, stagger: 0.06, ease: "power1.out" }, 8.86);
+      tl.from("#scene2 .bullet", { y: 22, opacity: 0, duration: 0.42, stagger: 0.12, ease: "circ.out" }, 9.35);
+      tl.to("#scene2 .bullet-list", { opacity: 0.28, y: -20, duration: 1.2, ease: "sine.inOut" }, 11.4);
+      tl.from("#scene2 .keyword-card", { x: 46, opacity: 0, duration: 0.58, stagger: 0.16, ease: "back.out(1.15)" }, 11.0);
+      tl.from("#scene2 .scene2-caption-a", { y: 34, opacity: 0, duration: 0.56, ease: "sine.out" }, 9.9);
+      tl.from("#scene2 .scene2-caption-b", { y: 34, opacity: 0, duration: 0.56, ease: "sine.out" }, 14.1);
+
+      transition("#scene2", "#scene3", 17.28);
+      tl.from("#scene3 .top-meta", { y: -18, opacity: 0, duration: 0.48, ease: "power2.out" }, 18.15);
+      tl.from("#scene3 .orbit-ring", { scaleX: 0.82, scaleY: 0.72, opacity: 0, duration: 0.72, ease: "power2.out" }, 18.58);
+      tl.from("#scene3 .kicker", { y: 22, opacity: 0, duration: 0.5, ease: "sine.out" }, 18.8);
+      tl.from("#scene3 .digest-logo", { scale: 0.92, opacity: 0, duration: 0.78, ease: "power3.out" }, 19.1);
+      tl.from("#scene3 .hero-subtitle", { y: 38, opacity: 0, duration: 0.7, ease: "circ.out" }, 19.72);
+      tl.to("#scene3 .network-hero circle", { scale: 1.28, transformOrigin: "center", duration: 1.8, stagger: 0.08, yoyo: true, repeat: 2, ease: "sine.inOut" }, 21.0);
+
+      transition("#scene3", "#scene4", 27.28);
+      tl.from("#scene4 .top-meta", { y: -18, opacity: 0, duration: 0.46, ease: "power2.out" }, 28.12);
+      tl.from("#scene4 .step-label", { x: -30, opacity: 0, duration: 0.46, ease: "expo.out" }, 28.35);
+      tl.from("#scene4 h2", { y: 40, opacity: 0, duration: 0.62, ease: "power3.out" }, 28.55);
+      tl.from("#scene4 .demo-copy p", { x: -24, opacity: 0, duration: 0.5, ease: "circ.out" }, 28.95);
+      tl.from("#scene4 .chip", { y: 18, opacity: 0, duration: 0.34, stagger: 0.06, ease: "back.out(1.2)" }, 29.24);
+      tl.from("#scene4 .demo-window", { x: 58, opacity: 0, scale: 0.96, duration: 0.72, ease: "power3.out" }, 28.55);
+      tl.from("#scene4 .paste-card", { y: 46, opacity: 0, duration: 0.58, ease: "circ.out" }, 29.5);
+      tl.from("#scene4 .caption", { y: 30, opacity: 0, duration: 0.52, ease: "sine.out" }, 30.0);
+
+      transition("#scene4", "#scene5", 33.28);
+      tl.from("#scene5 .top-meta", { y: -18, opacity: 0, duration: 0.46, ease: "power2.out" }, 34.08);
+      tl.from("#scene5 .step-label", { x: -30, opacity: 0, duration: 0.46, ease: "expo.out" }, 34.28);
+      tl.from("#scene5 h2", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 34.48);
+      tl.from("#scene5 .demo-copy p", { x: -24, opacity: 0, duration: 0.48, ease: "circ.out" }, 34.86);
+      tl.from("#scene5 .chip", { y: 18, opacity: 0, duration: 0.32, stagger: 0.05, ease: "back.out(1.2)" }, 35.08);
+      tl.from("#scene5 .demo-window", { x: 58, opacity: 0, scale: 0.96, duration: 0.68, ease: "power3.out" }, 34.48);
+      tl.from("#scene5 .insight-card", { y: 38, opacity: 0, duration: 0.48, stagger: 0.13, ease: "circ.out" }, 35.1);
+      tl.from("#scene5 .caption", { y: 30, opacity: 0, duration: 0.5, ease: "sine.out" }, 35.75);
+
+      transition("#scene5", "#scene6", 38.78);
+      tl.from("#scene6 .top-meta", { y: -18, opacity: 0, duration: 0.46, ease: "power2.out" }, 39.55);
+      tl.from("#scene6 .step-label", { x: -30, opacity: 0, duration: 0.46, ease: "expo.out" }, 39.75);
+      tl.from("#scene6 h2", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 39.95);
+      tl.from("#scene6 .demo-copy p", { x: -24, opacity: 0, duration: 0.48, ease: "circ.out" }, 40.32);
+      tl.from("#scene6 .demo-window", { x: 58, opacity: 0, scale: 0.96, duration: 0.68, ease: "power3.out" }, 40.0);
+      tl.from("#scene6 .knowledge-card", { y: 40, opacity: 0, duration: 0.44, stagger: 0.08, ease: "back.out(1.12)" }, 40.66);
+      tl.from("#scene6 .chip", { y: 18, opacity: 0, duration: 0.32, stagger: 0.05, ease: "back.out(1.2)" }, 40.7);
+      tl.from("#scene6 .caption", { y: 30, opacity: 0, duration: 0.5, ease: "sine.out" }, 41.35);
+
+      transition("#scene6", "#scene7", 44.28);
+      tl.from("#scene7 .top-meta", { y: -18, opacity: 0, duration: 0.46, ease: "power2.out" }, 45.08);
+      tl.from("#scene7 .step-label", { x: -30, opacity: 0, duration: 0.46, ease: "expo.out" }, 45.28);
+      tl.from("#scene7 h2", { y: 40, opacity: 0, duration: 0.58, ease: "power3.out" }, 45.48);
+      tl.from("#scene7 .demo-copy p", { x: -24, opacity: 0, duration: 0.46, ease: "circ.out" }, 45.86);
+      tl.from("#scene7 .demo-window", { x: 58, opacity: 0, scale: 0.96, duration: 0.64, ease: "power3.out" }, 45.5);
+      tl.from("#scene7 .knowledge-map line", { scaleX: 0, transformOrigin: "center", duration: 0.62, stagger: 0.05, ease: "power1.out" }, 46.05);
+      tl.from("#scene7 .knowledge-map circle", { scale: 0.72, opacity: 0, transformOrigin: "center", duration: 0.46, stagger: 0.08, ease: "back.out(1.2)" }, 46.28);
+      tl.from("#scene7 .map-label", { opacity: 0, y: 10, duration: 0.34, stagger: 0.05, ease: "sine.out" }, 46.82);
+      tl.from("#scene7 .chip", { y: 18, opacity: 0, duration: 0.3, stagger: 0.05, ease: "back.out(1.2)" }, 46.88);
+      tl.from("#scene7 .caption", { y: 30, opacity: 0, duration: 0.48, ease: "sine.out" }, 47.22);
+
+      transition("#scene7", "#scene8", 49.28);
+      tl.from("#scene8 .top-meta", { y: -18, opacity: 0, duration: 0.46, ease: "power2.out" }, 50.08);
+      tl.from("#scene8 .kicker", { x: -30, opacity: 0, duration: 0.44, ease: "expo.out" }, 50.32);
+      tl.from("#scene8 .title-lg", { y: 40, opacity: 0, duration: 0.62, ease: "power3.out" }, 50.55);
+      tl.from("#scene8 .scenario-card", { y: 52, opacity: 0, duration: 0.58, stagger: 0.12, ease: "circ.out" }, 51.15);
+      tl.from("#scene8 .scenario-icon", { scale: 0.72, opacity: 0, duration: 0.38, stagger: 0.08, ease: "back.out(1.2)" }, 51.55);
+      tl.to("#scene8 .scenario-card", { y: -10, duration: 2.8, stagger: 0.08, yoyo: true, repeat: 2, ease: "sine.inOut" }, 54.0);
+
+      transition("#scene8", "#scene9", 61.28);
+      tl.from("#scene9 .top-meta", { y: -18, opacity: 0, duration: 0.46, ease: "power2.out" }, 62.08);
+      tl.from("#scene9 .kicker", { x: -30, opacity: 0, duration: 0.44, ease: "expo.out" }, 62.32);
+      tl.from("#scene9 .title-lg", { y: 40, opacity: 0, duration: 0.62, ease: "power3.out" }, 62.55);
+      tl.from("#scene9 .model-note", { x: -24, opacity: 0, duration: 0.5, ease: "circ.out" }, 63.2);
+      tl.from("#scene9 .model-card", { x: 54, opacity: 0, duration: 0.58, stagger: 0.16, ease: "power3.out" }, 63.0);
+      tl.from("#scene9 .level", { scale: 0.78, opacity: 0, duration: 0.34, stagger: 0.12, ease: "back.out(1.2)" }, 63.4);
+
+      transition("#scene9", "#scene10", 71.28);
+      tl.from("#scene10 .top-meta", { y: -18, opacity: 0, duration: 0.46, ease: "power2.out" }, 72.08);
+      tl.from("#scene10 .value-keyword", { y: 56, opacity: 0, duration: 0.62, stagger: 0.42, ease: "power3.out" }, 72.65);
+
+      transition("#scene10", "#scene11", 77.28);
+      tl.from("#scene11 .ending-logo", { scale: 0.92, opacity: 0, duration: 0.72, ease: "power3.out" }, 78.18);
+      tl.from("#scene11 .ending-title", { y: 40, opacity: 0, duration: 0.68, ease: "circ.out" }, 78.72);
+      tl.from("#scene11 .ending-sub", { y: 18, opacity: 0, duration: 0.5, ease: "sine.out" }, 79.18);
+      tl.to("#scene11 .ending-logo", { scale: 1.03, duration: 2.5, ease: "sine.inOut" }, 80.0);
+      tl.to("#scene11 .ending-content", { opacity: 0, y: -18, duration: 0.86, ease: "sine.inOut" }, 84.0);
+      tl.to("#scene11 .bg-layer", { opacity: 0, duration: 0.86, ease: "sine.inOut" }, 84.0);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

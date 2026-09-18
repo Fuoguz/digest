@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <marker id="flowArrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#3BA7FF" />
+    </marker>
+    <linearGradient id="flowTrack" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3BA7FF" />
+      <stop offset="50%" stop-color="#20E3B2" />
+      <stop offset="100%" stop-color="#7C5CFF" />
+    </linearGradient>
+  </defs>
+  <g id="background">
+    <rect width="1280" height="720" fill="#08111F" />
+    <path fill="#0C1A2D" stroke="#243A55" stroke-width="1" d="M80,176 H1200 A24,24 0 0 1 1224,200 V582 A24,24 0 0 1 1200,606 H80 A24,24 0 0 1 56,582 V200 A24,24 0 0 1 80,176 Z" />
+  </g>
+  <g id="header">
+    <text x="56" y="72" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="700" fill="#20E3B2">核心使用场景</text>
+    <text x="56" y="118" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="800" fill="#F4F8FF">围绕大学生真实学习流程设计</text>
+    <text x="56" y="151" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">从日常输入，到每日沉淀，再到期末输出。</text>
+  </g>
+  <g id="flow-track">
+    <line x1="196" y1="240" x2="1084" y2="240" stroke="url(#flowTrack)" stroke-width="6" stroke-linecap="round" />
+    <circle cx="196" cy="240" r="16" fill="#3BA7FF" />
+    <circle cx="640" cy="240" r="16" fill="#20E3B2" />
+    <circle cx="1084" cy="240" r="16" fill="#7C5CFF" />
+    <text x="196" y="214" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" font-weight="800" fill="#3BA7FF">日常输入</text>
+    <text x="640" y="214" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" font-weight="800" fill="#20E3B2">每日沉淀</text>
+    <text x="1084" y="214" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" font-weight="800" fill="#7C5CFF">期末输出</text>
+  </g>
+  <g id="scene-class">
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M114,284 H408 A18,18 0 0 1 426,302 V522 A18,18 0 0 1 408,540 H114 A18,18 0 0 1 96,522 V302 A18,18 0 0 1 114,284 Z" />
+    <path fill="#3BA7FF" fill-opacity="0.14" d="M140,312 H164 A16,16 0 0 1 180,328 V352 A16,16 0 0 1 164,368 H140 A16,16 0 0 1 124,352 V328 A16,16 0 0 1 140,312 Z" />
+    
+  <g transform="translate(138.0, 326.0) scale(1.75)" fill="#3BA7FF">
+    <path d="M7 0H2V16H14V7H7V0Z" />
+    <path d="M9 0V5H14L9 0Z" />
+  </g>
+    <text x="198" y="335" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" font-weight="800" fill="#F4F8FF">场景一：日常上课</text>
+    <text x="198" y="363" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">拍老师 PPT，快速入库</text>
+    <line x1="124" y1="396" x2="398" y2="396" stroke="#243A55" stroke-width="1" />
+    <text x="124" y="430" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#F4F8FF">学生拍 PPT 截图</text>
+    <path d="M 124 454 L 238 454" stroke="#3BA7FF" stroke-width="2.5" marker-end="url(#flowArrow)" />
+    <text x="124" y="494" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">OCR 识别与提炼知识点</text>
+    <text x="124" y="526" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#20E3B2">归入对应课程</text>
+  </g>
+  <g id="scene-after-class">
+    <path fill="#101B2E" stroke="#20E3B2" stroke-width="1.2" d="M493,284 H787 A18,18 0 0 1 805,302 V522 A18,18 0 0 1 787,540 H493 A18,18 0 0 1 475,522 V302 A18,18 0 0 1 493,284 Z" />
+    <path fill="#20E3B2" fill-opacity="0.14" d="M519,312 H543 A16,16 0 0 1 559,328 V352 A16,16 0 0 1 543,368 H519 A16,16 0 0 1 503,352 V328 A16,16 0 0 1 519,312 Z" />
+    
+  <g transform="translate(517.0, 326.0) scale(1.75)" fill="#20E3B2">
+    <path d="M5 3C5 1.34315 6.34315 0 8 0C9.65685 0 11 1.34315 11 3V7C11 8.65685 9.65685 10 8 10C6.34315 10 5 8.65685 5 7V3Z" />
+    <path d="M9 13.9291V16H7V13.9291C3.60771 13.4439 1 10.5265 1 7V6H3V7C3 9.76142 5.23858 12 8 12C10.7614 12 13 9.76142 13 7V6H15V7C15 10.5265 12.3923 13.4439 9 13.9291Z" />
+  </g>
+    <text x="577" y="335" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" font-weight="800" fill="#F4F8FF">场景二：课后整理</text>
+    <text x="577" y="363" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">录音、网页、视频统一处理</text>
+    <line x1="503" y1="396" x2="777" y2="396" stroke="#243A55" stroke-width="1" />
+    <text x="503" y="430" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#F4F8FF">上传录音 / 网页 / 视频</text>
+    <path d="M 503 454 L 617 454" stroke="#3BA7FF" stroke-width="2.5" marker-end="url(#flowArrow)" />
+    <text x="503" y="494" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">AI 转写、摘要、结构化</text>
+    <text x="503" y="526" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#20E3B2">生成知识节点和复习问题</text>
+  </g>
+  <g id="scene-exam">
+    <path fill="#101B2E" stroke="#7C5CFF" stroke-width="1.2" d="M872,284 H1166 A18,18 0 0 1 1184,302 V522 A18,18 0 0 1 1166,540 H872 A18,18 0 0 1 854,522 V302 A18,18 0 0 1 872,284 Z" />
+    <path fill="#7C5CFF" fill-opacity="0.16" d="M898,312 H922 A16,16 0 0 1 938,328 V352 A16,16 0 0 1 922,368 H898 A16,16 0 0 1 882,352 V328 A16,16 0 0 1 898,312 Z" />
+    
+  <g transform="translate(896.0, 326.0) scale(1.75)" fill="#7C5CFF">
+    <path d="M0 2H3.58579C4.49129 2 5.35971 2.35971 6 3C6.64029 3.64029 7 4.50871 7 5.41421V11H9V5.41421C9 4.50871 9.35971 3.64029 10 3C10.6403 2.35971 11.5087 2 12.4142 2H16V13H11L9 15H7L5 13H0V2Z" />
+  </g>
+    <text x="956" y="335" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" font-weight="800" fill="#F4F8FF">场景三：期末复习</text>
+    <text x="956" y="363" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">选择课程，一键生成资料包</text>
+    <line x1="882" y1="396" x2="1156" y2="396" stroke="#243A55" stroke-width="1" />
+    <text x="882" y="430" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#F4F8FF">选择一门课</text>
+    <path d="M 882 454 L 996 454" stroke="#3BA7FF" stroke-width="2.5" marker-end="url(#flowArrow)" />
+    <text x="882" y="494" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">重点概念表、章节框架</text>
+    <text x="882" y="526" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#20E3B2">知识图谱、自测题、可打印包</text>
+  </g>
+  <g id="bottom-takeaway">
+    <path fill="#20E3B2" fill-opacity="0.12" stroke="#20E3B2" stroke-width="1" d="M216,580 H1064 A24,24 0 0 1 1088,604 V604 A24,24 0 0 1 1064,628 H216 A24,24 0 0 1 192,604 V604 A24,24 0 0 1 216,580 Z" />
+    <text x="640" y="611" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" font-weight="800" fill="#F4F8FF">关键不是多一个入口，而是把学习行为变成连续的课程资产</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="684" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">沉淀 Digest 开题答辩</text>
+    <text x="1224" y="684" text-anchor="end" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">04 / 10</text>
+  </g>
+</svg>

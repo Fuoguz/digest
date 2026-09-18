@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <linearGradient id="anxietyGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF5A7A" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#101B2E" stop-opacity="0.72"/>
+    </linearGradient>
+    <marker id="arrowDanger" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#FF5A7A"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#3BA7FF"/>
+    </marker>
+  </defs>
+  <g id="background">
+    <rect width="1280" height="720" fill="#08111F"/>
+    <circle cx="1100" cy="118" r="260" fill="#3BA7FF" fill-opacity="0.07"/>
+    <circle cx="104" cy="610" r="260" fill="#20E3B2" fill-opacity="0.06"/>
+  </g>
+  <g id="header">
+    <text x="56" y="72" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="700" fill="#20E3B2">问题提出</text>
+    <text x="56" y="118" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="800" fill="#F4F8FF">资料越来越多，知识却越来越散</text>
+    <text x="56" y="151" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">大学生不是缺资料，而是缺少一个持续沉淀、期末能调用的学习系统。</text>
+  </g>
+  <g id="fragmented-inputs">
+    <rect x="60" y="204" width="496" height="382" rx="18" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <text x="92" y="246" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">每天涌入的学习资料</text>
+    <text x="92" y="274" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#6D7E96">不同来源、不同格式、不同保存位置</text>
+    <g id="chip-ppt">
+      <rect x="92" y="314" width="178" height="54" rx="14" fill="#13243A" stroke="#243A55" stroke-width="1"/>
+      <use data-icon="chunk-filled/file" x="112" y="326" width="28" height="28" fill="#3BA7FF"/>
+      <text x="154" y="349" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="700" fill="#F4F8FF">老师 PPT 截图</text>
+    </g>
+    <g id="chip-audio">
+      <rect x="298" y="314" width="178" height="54" rx="14" fill="#13243A" stroke="#243A55" stroke-width="1"/>
+      <use data-icon="chunk-filled/microphone" x="318" y="326" width="28" height="28" fill="#20E3B2"/>
+      <text x="360" y="349" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="700" fill="#F4F8FF">课堂录音</text>
+    </g>
+    <g id="chip-paper">
+      <rect x="92" y="390" width="178" height="54" rx="14" fill="#13243A" stroke="#243A55" stroke-width="1"/>
+      <use data-icon="chunk-filled/book" x="112" y="402" width="28" height="28" fill="#7C5CFF"/>
+      <text x="154" y="425" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="700" fill="#F4F8FF">论文文献</text>
+    </g>
+    <g id="chip-web">
+      <rect x="298" y="390" width="178" height="54" rx="14" fill="#13243A" stroke="#243A55" stroke-width="1"/>
+      <use data-icon="chunk-filled/map" x="318" y="402" width="28" height="28" fill="#FFC857"/>
+      <text x="360" y="425" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="700" fill="#F4F8FF">网页文章</text>
+    </g>
+    <g id="chip-video">
+      <rect x="92" y="466" width="178" height="54" rx="14" fill="#13243A" stroke="#243A55" stroke-width="1"/>
+      <use data-icon="chunk-filled/video" x="112" y="478" width="28" height="28" fill="#3BA7FF"/>
+      <text x="154" y="501" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="700" fill="#F4F8FF">B 站课程视频</text>
+    </g>
+    <g id="chip-research">
+      <rect x="298" y="466" width="178" height="54" rx="14" fill="#13243A" stroke="#243A55" stroke-width="1"/>
+      <use data-icon="chunk-filled/files" x="318" y="478" width="28" height="28" fill="#20E3B2"/>
+      <text x="360" y="501" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="700" fill="#F4F8FF">项目调研资料</text>
+    </g>
+  </g>
+  <g id="path-fragmentation">
+    <path d="M 570 386 C 648 330, 694 300, 762 330" fill="none" stroke="#3BA7FF" stroke-width="3" stroke-dasharray="8,8" marker-end="url(#arrowBlue)"/>
+    <path d="M 570 430 C 650 496, 720 534, 800 508" fill="none" stroke="#FF5A7A" stroke-width="3" stroke-dasharray="8,8" marker-end="url(#arrowDanger)"/>
+    <text x="652" y="404" font-family="Microsoft YaHei, Arial, sans-serif" font-size="17" font-weight="800" fill="#F4F8FF">碎片化</text>
+    <text x="648" y="432" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">资料在流动，知识没有沉淀</text>
+  </g>
+  <g id="scattered-storage">
+    <rect x="820" y="204" width="400" height="186" rx="18" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <text x="852" y="246" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">现实保存状态</text>
+    <text x="852" y="286" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">PPT 在相册里</text>
+    <text x="852" y="322" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">录音在手机里</text>
+    <text x="1052" y="286" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">网页在收藏夹</text>
+    <text x="1052" y="322" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">AI 总结散落在对话里</text>
+  </g>
+  <g id="exam-anxiety">
+    <rect x="820" y="426" width="400" height="160" rx="18" fill="url(#anxietyGrad)" stroke="#FF5A7A" stroke-width="1.5"/>
+    <text x="852" y="472" font-family="Microsoft YaHei, Arial, sans-serif" font-size="24" font-weight="800" fill="#F4F8FF">期末复习时</text>
+    <text x="852" y="516" font-family="Microsoft YaHei, Arial, sans-serif" font-size="38" font-weight="800" fill="#FF5A7A">还要重新整理</text>
+    <text x="852" y="552" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" fill="#A9B8CD">资料越多，越难回到课程知识框架里。</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="684" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">沉淀 Digest 开题答辩</text>
+    <text x="1224" y="684" text-anchor="end" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">02 / 10</text>
+  </g>
+</svg>

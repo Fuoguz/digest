@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #050b14;
+        font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+        color: #f4f8ff;
+      }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 72% 18%, rgba(59, 167, 255, 0.13), rgba(59, 167, 255, 0) 34%),
+          radial-gradient(circle at 18% 78%, rgba(32, 227, 178, 0.10), rgba(32, 227, 178, 0) 34%),
+          #050b14;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        opacity: 0;
+        background: #050b14;
+      }
+
+      .backdrop {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(49, 80, 111, 0.12) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(49, 80, 111, 0.10) 1px, transparent 1px);
+        background-size: 112px 112px;
+        opacity: 0.28;
+      }
+
+      .glow {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(16px);
+        opacity: 0.72;
+      }
+
+      .caption {
+        position: absolute;
+        left: 140px;
+        right: 140px;
+        bottom: 72px;
+        min-height: 84px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-size: 46px;
+        line-height: 1.22;
+        font-weight: 850;
+        letter-spacing: 0.01em;
+        text-shadow: 0 14px 38px rgba(0, 0, 0, 0.55);
+      }
+
+      .caption .accent {
+        color: #20e3b2;
+        padding: 0 10px;
+      }
+
+      .eyebrow {
+        font-size: 22px;
+        line-height: 1;
+        color: #20e3b2;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+      }
+
+      .title {
+        font-size: 88px;
+        line-height: 1.08;
+        font-weight: 900;
+        letter-spacing: 0.01em;
+      }
+
+      .small {
+        color: #a9b8cd;
+        font-size: 24px;
+        line-height: 1.45;
+        font-weight: 360;
+      }
+
+      .mono {
+        font-family: Consolas, "Courier New", monospace;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .glass {
+        background: rgba(15, 26, 43, 0.78);
+        border: 1px solid rgba(98, 136, 178, 0.34);
+        box-shadow: 0 28px 80px rgba(0, 0, 0, 0.36);
+        backdrop-filter: blur(20px);
+      }
+
+      .top-label {
+        position: absolute;
+        top: 64px;
+        left: 84px;
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        color: #a9b8cd;
+        font-size: 20px;
+        letter-spacing: 0.06em;
+      }
+
+      .top-label::before {
+        content: "";
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #20e3b2;
+        box-shadow: 0 0 26px #20e3b2;
+      }
+
+      .desk {
+        position: absolute;
+        left: 210px;
+        top: 152px;
+        width: 1500px;
+        height: 700px;
+        perspective: 1400px;
+      }
+
+      .laptop {
+        position: absolute;
+        left: 420px;
+        top: 96px;
+        width: 760px;
+        height: 470px;
+        border-radius: 28px;
+        background: linear-gradient(145deg, #101b2e, #08111f);
+        border: 1px solid rgba(169, 184, 205, 0.22);
+        box-shadow: 0 50px 120px rgba(0, 0, 0, 0.55);
+        transform: rotateX(8deg) rotateY(-8deg);
+      }
+
+      .laptop-screen {
+        position: absolute;
+        inset: 28px;
+        border-radius: 20px;
+        background: #08111f;
+        border: 1px solid rgba(59, 167, 255, 0.22);
+        overflow: hidden;
+      }
+
+      .browser-bar {
+        height: 48px;
+        background: #0f1a2b;
+        border-bottom: 1px solid rgba(49, 80, 111, 0.7);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 20px;
+      }
+
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #31506f;
+      }
+
+      .window-row {
+        display: flex;
+        gap: 16px;
+        padding: 22px;
+      }
+
+      .mini-panel {
+        flex: 1;
+        min-height: 310px;
+        border-radius: 18px;
+        background: rgba(20, 34, 56, 0.82);
+        border: 1px solid rgba(49, 80, 111, 0.55);
+        padding: 22px;
+      }
+
+      .line {
+        height: 12px;
+        border-radius: 6px;
+        background: #31506f;
+        margin: 14px 0;
+      }
+
+      .line.cyan {
+        background: #20e3b2;
+        box-shadow: 0 0 22px rgba(32, 227, 178, 0.35);
+      }
+
+      .material-card {
+        position: absolute;
+        width: 230px;
+        min-height: 108px;
+        padding: 22px;
+        border-radius: 18px;
+        background: rgba(15, 26, 43, 0.88);
+        border: 1px solid rgba(98, 136, 178, 0.32);
+        box-shadow: 0 20px 70px rgba(0, 0, 0, 0.32);
+        color: #f4f8ff;
+      }
+
+      .material-card .type {
+        color: #20e3b2;
+        font-size: 16px;
+        font-weight: 850;
+        letter-spacing: 0.06em;
+        margin-bottom: 14px;
+      }
+
+      .material-card .desc {
+        color: #a9b8cd;
+        font-size: 18px;
+        line-height: 1.28;
+      }
+
+      .phone {
+        position: absolute;
+        right: 150px;
+        top: 330px;
+        width: 206px;
+        height: 370px;
+        border-radius: 36px;
+        background: #101b2e;
+        border: 1px solid rgba(169, 184, 205, 0.26);
+        transform: rotateZ(8deg) rotateX(12deg);
+        box-shadow: 0 38px 95px rgba(0, 0, 0, 0.45);
+        padding: 18px;
+      }
+
+      .phone-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 30px;
+      }
+
+      .phone-thumb {
+        height: 54px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #17314b, #31506f);
+      }
+
+      .flash-wrap {
+        position: absolute;
+        left: 120px;
+        right: 120px;
+        top: 180px;
+        bottom: 190px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 26px;
+      }
+
+      .flash-card {
+        position: relative;
+        border-radius: 24px;
+        padding: 30px;
+        background: rgba(15, 26, 43, 0.82);
+        border: 1px solid rgba(98, 136, 178, 0.32);
+        overflow: hidden;
+      }
+
+      .flash-card::after {
+        content: "";
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 5px;
+        background: linear-gradient(90deg, #3ba7ff, #20e3b2, #7c5cff);
+      }
+
+      .flash-card .label {
+        color: #9fb1c9;
+        font-size: 18px;
+        margin-bottom: 24px;
+      }
+
+      .flash-card .verb {
+        font-size: 32px;
+        font-weight: 900;
+      }
+
+      .workbench {
+        position: absolute;
+        left: 250px;
+        top: 154px;
+        width: 1420px;
+        height: 700px;
+        border-radius: 36px;
+        background: rgba(8, 17, 31, 0.78);
+        border: 1px solid rgba(59, 167, 255, 0.32);
+        box-shadow: 0 0 120px rgba(32, 227, 178, 0.12), 0 60px 150px rgba(0, 0, 0, 0.48);
+        overflow: hidden;
+      }
+
+      .app-sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 285px;
+        background: rgba(15, 26, 43, 0.88);
+        border-right: 1px solid rgba(49, 80, 111, 0.7);
+        padding: 36px 28px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 28px;
+        font-weight: 900;
+      }
+
+      .brand-mark {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #20e3b2, #3ba7ff);
+        box-shadow: 0 0 32px rgba(32, 227, 178, 0.35);
+      }
+
+      .course-pill {
+        margin-top: 18px;
+        padding: 16px 18px;
+        border-radius: 16px;
+        color: #a9b8cd;
+        background: rgba(20, 34, 56, 0.6);
+        font-size: 20px;
+      }
+
+      .course-pill.active {
+        color: #f4f8ff;
+        background: rgba(32, 227, 178, 0.14);
+        border: 1px solid rgba(32, 227, 178, 0.45);
+      }
+
+      .app-main {
+        position: absolute;
+        left: 285px;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        padding: 42px 48px;
+      }
+
+      .app-title {
+        font-size: 42px;
+        font-weight: 900;
+      }
+
+      .app-sub {
+        margin-top: 10px;
+        color: #a9b8cd;
+        font-size: 22px;
+      }
+
+      .slot-note {
+        position: absolute;
+        inset: 130px 48px 36px 48px;
+        border-radius: 28px;
+        background: rgba(15, 26, 43, 0.66);
+        border: 1px solid rgba(98, 136, 178, 0.28);
+      }
+
+      .ingest-lane {
+        position: absolute;
+        left: 50px;
+        top: 160px;
+        width: 390px;
+      }
+
+      .drop-item {
+        width: 360px;
+        height: 78px;
+        margin-bottom: 18px;
+        border-radius: 20px;
+        background: rgba(20, 34, 56, 0.86);
+        border: 1px solid rgba(98, 136, 178, 0.32);
+        display: flex;
+        align-items: center;
+        padding: 0 24px;
+        gap: 16px;
+        font-size: 22px;
+      }
+
+      .drop-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 13px;
+        background: rgba(59, 167, 255, 0.18);
+      }
+
+      .analysis-panel {
+        position: absolute;
+        left: 500px;
+        top: 160px;
+        width: 520px;
+        height: 358px;
+        border-radius: 28px;
+        padding: 30px;
+        background: rgba(15, 26, 43, 0.86);
+        border: 1px solid rgba(32, 227, 178, 0.28);
+      }
+
+      .progress-row {
+        margin: 24px 0;
+      }
+
+      .progress-row .txt {
+        display: flex;
+        justify-content: space-between;
+        color: #a9b8cd;
+        font-size: 18px;
+        margin-bottom: 9px;
+      }
+
+      .bar {
+        width: 100%;
+        height: 10px;
+        border-radius: 999px;
+        background: #182c46;
+        overflow: hidden;
+      }
+
+      .fill {
+        width: 0%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #3ba7ff, #20e3b2);
+        box-shadow: 0 0 20px rgba(32, 227, 178, 0.35);
+      }
+
+      .graph-area {
+        position: absolute;
+        inset: 136px 80px 150px 80px;
+      }
+
+      .node {
+        position: absolute;
+        padding: 16px 22px;
+        border-radius: 999px;
+        color: #f4f8ff;
+        background: rgba(15, 26, 43, 0.86);
+        border: 1px solid rgba(32, 227, 178, 0.42);
+        box-shadow: 0 0 32px rgba(32, 227, 178, 0.14);
+        font-size: 22px;
+        font-weight: 850;
+        white-space: nowrap;
+      }
+
+      .source-tag {
+        display: block;
+        position: static;
+        transform: none;
+        margin-top: 9px;
+        color: #6d7e96;
+        font-size: 16px;
+        white-space: nowrap;
+      }
+
+      .edge {
+        position: absolute;
+        height: 2px;
+        background: linear-gradient(90deg, rgba(59, 167, 255, 0), rgba(32, 227, 178, 0.8), rgba(124, 92, 255, 0));
+        transform-origin: left center;
+        opacity: 0;
+        box-shadow: 0 0 16px rgba(32, 227, 178, 0.35);
+      }
+
+      .pack-grid {
+        position: absolute;
+        left: 250px;
+        top: 240px;
+        width: 1420px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+      }
+
+      .pack-card {
+        min-height: 275px;
+        border-radius: 28px;
+        padding: 30px;
+        background: rgba(15, 26, 43, 0.86);
+        border: 1px solid rgba(98, 136, 178, 0.32);
+      }
+
+      .pack-card .pack-title {
+        font-size: 28px;
+        font-weight: 900;
+        margin-bottom: 26px;
+      }
+
+      .pack-line {
+        height: 14px;
+        border-radius: 8px;
+        background: #31506f;
+        margin: 17px 0;
+      }
+
+      .file-card {
+        position: absolute;
+        left: 720px;
+        top: 635px;
+        width: 480px;
+        height: 92px;
+        border-radius: 26px;
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        padding: 0 30px;
+        background: rgba(32, 227, 178, 0.14);
+        border: 1px solid rgba(32, 227, 178, 0.5);
+        box-shadow: 0 0 58px rgba(32, 227, 178, 0.14);
+      }
+
+      .compare-wrap {
+        position: absolute;
+        left: 190px;
+        right: 190px;
+        top: 230px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 54px;
+      }
+
+      .compare-panel {
+        height: 470px;
+        border-radius: 34px;
+        background: rgba(15, 26, 43, 0.82);
+        border: 1px solid rgba(98, 136, 178, 0.32);
+        padding: 42px;
+        overflow: hidden;
+      }
+
+      .fade-chat {
+        margin-top: 44px;
+        border-radius: 24px;
+        background: rgba(20, 34, 56, 0.74);
+        padding: 32px;
+        color: #a9b8cd;
+        font-size: 24px;
+      }
+
+      .growth-stat {
+        margin-top: 28px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+      }
+
+      .stat {
+        border-radius: 22px;
+        background: rgba(32, 227, 178, 0.11);
+        border: 1px solid rgba(32, 227, 178, 0.28);
+        padding: 24px;
+      }
+
+      .stat b {
+        display: block;
+        font-size: 40px;
+        color: #20e3b2;
+        margin-bottom: 8px;
+      }
+
+      .final-logo {
+        position: absolute;
+        left: 50%;
+        top: 46%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+      }
+
+      .final-logo .name {
+        font-size: 112px;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+      }
+
+      .final-logo .slogan {
+        margin-top: 28px;
+        color: #20e3b2;
+        font-size: 42px;
+        font-weight: 850;
+      }
+
+      .final-logo .leave {
+        margin-top: 34px;
+        color: #a9b8cd;
+        font-size: 30px;
+        font-weight: 360;
+      }
+
+      .terminal-lines {
+        position: absolute;
+        inset: 0;
+        opacity: 0.32;
+        pointer-events: none;
+      }
+
+      .terminal-lines div {
+        position: absolute;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(32, 227, 178, 0.55), transparent);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="61.5"
+      data-width="1920"
+      data-height="1080"
+    >
+      <audio
+        id="narration"
+        class="clip"
+        data-start="0"
+        data-duration="61.5"
+        data-track-index="20"
+        src="assets/narration.wav"
+        data-volume="0.95"
+      ></audio>
+      <audio
+        id="bgm"
+        class="clip"
+        data-start="0"
+        data-duration="61.5"
+        data-track-index="21"
+        src="assets/bgm.wav"
+        data-volume="0.26"
+      ></audio>
+
+      <section id="scene1" class="scene">
+        <div class="backdrop"></div>
+        <div class="glow" style="left: 980px; top: 80px; width: 460px; height: 460px; background: rgba(59, 167, 255, 0.18)"></div>
+        <div class="top-label">期末前夜 01:37</div>
+        <div class="desk">
+          <div class="laptop">
+            <div class="laptop-screen">
+              <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+              <div class="window-row">
+                <div class="mini-panel"><div class="line cyan"></div><div class="line" style="width: 84%"></div><div class="line" style="width: 62%"></div><div class="line" style="width: 76%"></div></div>
+                <div class="mini-panel"><div class="line" style="width: 55%"></div><div class="line cyan" style="width: 90%"></div><div class="line" style="width: 68%"></div><div class="line" style="width: 82%"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="phone"><div class="phone-grid"><div class="phone-thumb"></div><div class="phone-thumb"></div><div class="phone-thumb"></div><div class="phone-thumb"></div><div class="phone-thumb"></div><div class="phone-thumb"></div><div class="phone-thumb"></div><div class="phone-thumb"></div><div class="phone-thumb"></div></div></div>
+          <div class="material-card s1-card" style="left: 70px; top: 48px; transform: rotate(-7deg)"><div class="type">PPT</div><div class="desc">传播学概论 第 5 周截图</div></div>
+          <div class="material-card s1-card" style="left: 1160px; top: 92px; transform: rotate(6deg)"><div class="type">PDF</div><div class="desc">媒介理论论文 24 页</div></div>
+          <div class="material-card s1-card" style="left: 104px; top: 430px; transform: rotate(5deg)"><div class="type">AUDIO</div><div class="desc">课堂录音 01:18:24</div></div>
+          <div class="material-card s1-card" style="left: 1170px; top: 540px; transform: rotate(-5deg)"><div class="type">VIDEO</div><div class="desc">B 站课程视频 42 分钟</div></div>
+          <div class="material-card s1-card" style="left: 490px; top: 600px; transform: rotate(3deg)"><div class="type">AI CHAT</div><div class="desc">总结结果散落在对话里</div></div>
+        </div>
+        <div class="caption">资料很多，<span class="accent">知识却没有留下。</span></div>
+      </section>
+
+      <section id="scene2" class="scene">
+        <div class="backdrop"></div>
+        <div class="glow" style="left: 120px; top: 140px; width: 520px; height: 520px; background: rgba(255, 90, 122, 0.12)"></div>
+        <div class="top-label">碎片闪回</div>
+        <div class="flash-wrap">
+          <div class="flash-card"><div class="label">课堂</div><div class="verb">拍下 PPT</div><div class="line" style="width: 80%"></div><div class="line" style="width: 56%"></div></div>
+          <div class="flash-card"><div class="label">手机</div><div class="verb">录下音频</div><div class="line" style="width: 68%"></div><div class="line cyan" style="width: 48%"></div></div>
+          <div class="flash-card"><div class="label">浏览器</div><div class="verb">收藏网页</div><div class="line" style="width: 82%"></div><div class="line" style="width: 44%"></div></div>
+          <div class="flash-card"><div class="label">资料库</div><div class="verb">下载论文</div><div class="line cyan" style="width: 72%"></div><div class="line" style="width: 58%"></div></div>
+          <div class="flash-card"><div class="label">视频</div><div class="verb">看完课程</div><div class="line" style="width: 78%"></div><div class="line" style="width: 36%"></div></div>
+          <div class="flash-card"><div class="label">AI 对话</div><div class="verb">临时总结</div><div class="line" style="width: 65%"></div><div class="line cyan" style="width: 72%"></div></div>
+        </div>
+        <div class="caption">PPT 在相册，录音在手机，网页在收藏夹。</div>
+      </section>
+
+      <section id="scene3" class="scene">
+        <div class="backdrop"></div>
+        <div class="glow" style="left: 720px; top: 240px; width: 700px; height: 700px; background: rgba(32, 227, 178, 0.18)"></div>
+        <div class="workbench screenshot-slot" data-replaceable-slot="home-entry">
+          <div class="app-sidebar">
+            <div class="brand"><div class="brand-mark"></div><span>Digest</span></div>
+            <div class="course-pill active">传播学概论</div>
+            <div class="course-pill">法学导论</div>
+            <div class="course-pill">新闻采访写作</div>
+            <div class="course-pill">社会调查方法</div>
+          </div>
+          <div class="app-main">
+            <div class="app-title">课程学习工作台</div>
+            <div class="app-sub">把每天看到的资料，沉淀成一门课的知识资产</div>
+            <div class="slot-note">
+              <div style="position:absolute; left:54px; top:48px; width:320px; height:360px; border-radius:28px; background:rgba(20,34,56,.9); border:1px solid rgba(98,136,178,.35); padding:32px">
+                <div class="eyebrow">TODAY</div><div style="font-size:38px; font-weight:900; margin-top:30px">3 个资料已沉淀</div><div class="line cyan" style="margin-top:42px; width:90%"></div><div class="line" style="width:70%"></div><div class="line" style="width:82%"></div>
+              </div>
+              <div style="position:absolute; left:430px; top:48px; right:54px; height:360px; border-radius:28px; background:rgba(20,34,56,.7); border:1px solid rgba(98,136,178,.28); padding:34px">
+                <div style="font-size:28px; font-weight:900">AI 学习流</div>
+                <div class="line cyan" style="margin-top:38px; width:76%"></div><div class="line" style="width:64%"></div><div class="line" style="width:88%"></div><div class="line" style="width:52%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="caption">沉淀 Digest <span class="accent">今天随手存，期末不用崩。</span></div>
+      </section>
+
+      <section id="scene4" class="scene">
+        <div class="backdrop"></div>
+        <div class="workbench screenshot-slot" data-replaceable-slot="summary-questions">
+          <div class="app-sidebar">
+            <div class="brand"><div class="brand-mark"></div><span>Digest</span></div>
+            <div class="course-pill active">传播学概论</div>
+            <div class="course-pill">法学导论</div>
+            <div class="course-pill">新闻采访写作</div>
+            <div class="course-pill">社会调查方法</div>
+          </div>
+          <div class="app-main">
+            <div class="app-title">资料归入课程</div>
+            <div class="app-sub">拖入 PPT、录音、网页、视频，系统自动提炼知识点</div>
+            <div class="ingest-lane">
+              <div class="drop-item ingest"><span class="drop-icon"></span>PPT 截图</div>
+              <div class="drop-item ingest"><span class="drop-icon"></span>课堂录音</div>
+              <div class="drop-item ingest"><span class="drop-icon"></span>网页文章</div>
+              <div class="drop-item ingest"><span class="drop-icon"></span>学习视频</div>
+            </div>
+            <div class="analysis-panel">
+              <div style="font-size:28px; font-weight:900">AI 分析进度</div>
+              <div class="progress-row"><div class="txt"><span>识别文字</span><span>OCR</span></div><div class="bar"><div class="fill f1"></div></div></div>
+              <div class="progress-row"><div class="txt"><span>提炼概念</span><span>Concept</span></div><div class="bar"><div class="fill f2"></div></div></div>
+              <div class="progress-row"><div class="txt"><span>生成问题</span><span>Recall</span></div><div class="bar"><div class="fill f3"></div></div></div>
+              <div class="progress-row"><div class="txt"><span>保存节点</span><span>Graph</span></div><div class="bar"><div class="fill f4"></div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="caption">把每天看到的资料，<span class="accent">归入一门课。</span></div>
+      </section>
+
+      <section id="scene5" class="scene">
+        <div class="backdrop"></div>
+        <div class="top-label">知识沉淀</div>
+        <div class="graph-area screenshot-slot" data-replaceable-slot="knowledge-graph">
+          <div class="edge" id="e1" style="left:455px; top:245px; width:350px; transform:rotate(12deg)"></div>
+          <div class="edge" id="e2" style="left:725px; top:325px; width:310px; transform:rotate(-28deg)"></div>
+          <div class="edge" id="e3" style="left:520px; top:420px; width:445px; transform:rotate(-8deg)"></div>
+          <div class="edge" id="e4" style="left:840px; top:430px; width:280px; transform:rotate(26deg)"></div>
+          <div class="edge" id="e5" style="left:590px; top:560px; width:520px; transform:rotate(-22deg)"></div>
+          <div class="node graph-node" style="left:440px; top:210px">议程设置<div class="source-tag">第 5 周 PPT</div></div>
+          <div class="node graph-node" style="left:810px; top:270px">沉默的螺旋<div class="source-tag">课堂录音 12:35</div></div>
+          <div class="node graph-node" style="left:1050px; top:180px">把关人理论<div class="source-tag">网页资料</div></div>
+          <div class="node graph-node" style="left:610px; top:420px">平台算法<div class="source-tag">学习视频 06:42</div></div>
+          <div class="node graph-node" style="left:1060px; top:520px">媒介依赖<div class="source-tag">论文文献</div></div>
+        </div>
+        <div class="caption">不是一次性总结，<span class="accent">而是一学期的知识沉淀。</span></div>
+      </section>
+
+      <section id="scene6" class="scene">
+        <div class="backdrop"></div>
+        <div class="top-label">期末复习包生成</div>
+        <div class="pack-grid">
+          <div class="pack-card"><div class="pack-title">重点概念表</div><div class="pack-line" style="width:90%"></div><div class="pack-line" style="width:72%"></div><div class="pack-line" style="width:84%"></div></div>
+          <div class="pack-card"><div class="pack-title">章节框架</div><div class="pack-line cyan" style="width:72%"></div><div class="pack-line" style="width:88%"></div><div class="pack-line" style="width:60%"></div></div>
+          <div class="pack-card"><div class="pack-title">自测题</div><div class="pack-line" style="width:80%"></div><div class="pack-line" style="width:58%"></div><div class="pack-line cyan" style="width:74%"></div></div>
+          <div class="pack-card"><div class="pack-title">图谱复习视图</div><div class="pack-line cyan" style="width:66%"></div><div class="pack-line" style="width:78%"></div><div class="pack-line" style="width:50%"></div></div>
+        </div>
+        <div class="file-card"><div class="brand-mark"></div><div><div style="font-size:26px; font-weight:900">期末复习包</div><div class="small">传播学概论 · ready to export</div></div></div>
+        <div class="caption">一门课的零散资料，<span class="accent">变成一套复习包。</span></div>
+      </section>
+
+      <section id="scene7" class="scene">
+        <div class="backdrop"></div>
+        <div class="compare-wrap">
+          <div class="compare-panel chat-panel">
+            <div class="eyebrow">普通 AI</div>
+            <div class="title" style="font-size:54px; margin-top:24px">单次总结完成</div>
+            <div class="fade-chat">本次对话已生成摘要。下一次学习，需要重新开始。</div>
+          </div>
+          <div class="compare-panel digest-panel">
+            <div class="eyebrow">Digest</div>
+            <div class="title" style="font-size:54px; margin-top:24px">持续沉淀中</div>
+            <div class="growth-stat">
+              <div class="stat"><b>86</b><span>知识节点</span></div>
+              <div class="stat"><b>42</b><span>复习问题</span></div>
+              <div class="stat"><b>1</b><span>课程图谱</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="caption">普通 AI 回答一次，<span class="accent">Digest 陪你沉淀一学期。</span></div>
+      </section>
+
+      <section id="scene8" class="scene">
+        <div class="backdrop"></div>
+        <div class="terminal-lines"><div style="left:120px; top:220px; width:680px"></div><div style="left:920px; top:340px; width:720px"></div><div style="left:260px; top:720px; width:1260px"></div></div>
+        <div class="graph-area" style="opacity:.65">
+          <div class="node final-node" style="left:390px; top:230px">PPT</div>
+          <div class="node final-node" style="left:1260px; top:230px">录音</div>
+          <div class="node final-node" style="left:330px; top:610px">网页</div>
+          <div class="node final-node" style="left:1190px; top:620px">视频</div>
+          <div class="node final-node" style="left:760px; top:440px">知识</div>
+        </div>
+        <div class="final-logo">
+          <div class="name">沉淀 Digest</div>
+          <div class="slogan">今天随手存，期末不用崩</div>
+          <div class="leave">让每天学过的东西，真正留下来。</div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const scenes = ["#scene1", "#scene2", "#scene3", "#scene4", "#scene5", "#scene6", "#scene7", "#scene8"];
+
+      function sceneIn(id, at) {
+        tl.to(id, { opacity: 1, duration: 0.65, ease: "sine.inOut" }, at);
+      }
+
+      function sceneCross(from, to, at) {
+        tl.to(to, { opacity: 1, duration: 0.72, ease: "sine.inOut" }, at);
+        tl.to(from, { opacity: 0, duration: 0.72, ease: "sine.inOut" }, at);
+      }
+
+      tl.set(scenes, { opacity: 0 });
+      sceneIn("#scene1", 0.1);
+      tl.from("#scene1 .laptop", { y: 60, rotationX: 18, opacity: 0, duration: 1.15, ease: "expo.out" }, 0.35);
+      tl.from("#scene1 .phone", { x: 90, y: 50, rotation: 18, opacity: 0, duration: 0.9, ease: "power3.out" }, 0.9);
+      tl.from("#scene1 .s1-card", { y: -90, x: 40, rotation: -18, opacity: 0, duration: 0.75, stagger: { each: 0.13, from: "edges" }, ease: "back.out(1.35)" }, 1.15);
+      tl.from("#scene1 .caption", { y: 46, opacity: 0, duration: 0.72, ease: "power4.out" }, 2.25);
+      tl.to("#scene1 .s1-card", { y: "+=16", rotation: "+=2", duration: 3.4, stagger: 0.08, ease: "sine.inOut" }, 3.1);
+
+      sceneCross("#scene1", "#scene2", 6.6);
+      tl.from("#scene2 .flash-card", { scale: 0.78, y: 80, opacity: 0, duration: 0.58, stagger: { each: 0.08, from: "center" }, ease: "expo.out" }, 7.05);
+      tl.from("#scene2 .caption", { y: 44, opacity: 0, duration: 0.58, ease: "power3.out" }, 8.2);
+      tl.to("#scene2 .flash-card", { y: -10, duration: 3.8, stagger: 0.04, ease: "sine.inOut" }, 9.1);
+
+      sceneCross("#scene2", "#scene3", 13.4);
+      tl.from("#scene3 .workbench", { scale: 0.84, y: 80, opacity: 0, duration: 1.08, ease: "expo.out" }, 14.0);
+      tl.from("#scene3 .brand", { x: -36, opacity: 0, duration: 0.52, ease: "power4.out" }, 14.55);
+      tl.from("#scene3 .course-pill", { x: -45, opacity: 0, duration: 0.52, stagger: 0.08, ease: "power2.out" }, 14.85);
+      tl.from("#scene3 .slot-note > div", { y: 48, opacity: 0, duration: 0.62, stagger: 0.14, ease: "circ.out" }, 15.3);
+      tl.from("#scene3 .caption", { y: 44, opacity: 0, duration: 0.7, ease: "power3.out" }, 16.4);
+
+      sceneCross("#scene3", "#scene4", 19.4);
+      tl.from("#scene4 .workbench", { scale: 0.94, x: 70, opacity: 0, duration: 0.75, ease: "power3.out" }, 20.0);
+      tl.from("#scene4 .ingest", { x: -130, opacity: 0, duration: 0.65, stagger: 0.42, ease: "expo.out" }, 20.7);
+      tl.to("#scene4 .f1", { width: "100%", duration: 1.15, ease: "power1.inOut" }, 22.1);
+      tl.to("#scene4 .f2", { width: "96%", duration: 1.2, ease: "power2.inOut" }, 23.35);
+      tl.to("#scene4 .f3", { width: "88%", duration: 1.25, ease: "sine.inOut" }, 24.7);
+      tl.to("#scene4 .f4", { width: "100%", duration: 1.1, ease: "power3.inOut" }, 26.15);
+      tl.from("#scene4 .caption", { y: 44, opacity: 0, duration: 0.7, ease: "power4.out" }, 27.6);
+
+      sceneCross("#scene4", "#scene5", 31.2);
+      tl.from("#scene5 .graph-node", { scale: 0.2, opacity: 0, y: 30, duration: 0.62, stagger: { each: 0.22, from: "center" }, ease: "back.out(1.45)" }, 32.0);
+      tl.to("#scene5 .edge", { opacity: 1, scaleX: 1, duration: 0.72, stagger: 0.18, ease: "power2.out" }, 33.2);
+      tl.from("#scene5 .source-tag", { opacity: 0, y: 18, duration: 0.42, stagger: 0.12, ease: "power1.out" }, 34.0);
+      tl.from("#scene5 .caption", { y: 44, opacity: 0, duration: 0.72, ease: "expo.out" }, 35.3);
+      tl.to("#scene5 .graph-area", { scale: 1.06, duration: 5.6, ease: "sine.inOut" }, 36.0);
+
+      sceneCross("#scene5", "#scene6", 41.2);
+      tl.from("#scene6 .pack-card", { y: 85, scale: 0.9, opacity: 0, duration: 0.72, stagger: 0.13, ease: "expo.out" }, 42.1);
+      tl.from("#scene6 .pack-line", { scaleX: 0, transformOrigin: "left center", duration: 0.55, stagger: 0.045, ease: "power2.out" }, 43.1);
+      tl.from("#scene6 .file-card", { scale: 0.86, y: 40, opacity: 0, duration: 0.72, ease: "back.out(1.2)" }, 45.0);
+      tl.from("#scene6 .caption", { y: 44, opacity: 0, duration: 0.7, ease: "power3.out" }, 46.0);
+
+      sceneCross("#scene6", "#scene7", 50.0);
+      tl.from("#scene7 .compare-panel", { y: 70, opacity: 0, duration: 0.78, stagger: 0.18, ease: "power4.out" }, 50.7);
+      tl.to("#scene7 .chat-panel", { opacity: 0.38, scale: 0.97, duration: 1.2, ease: "sine.inOut" }, 52.0);
+      tl.from("#scene7 .stat", { y: 34, opacity: 0, duration: 0.5, stagger: 0.1, ease: "back.out(1.25)" }, 52.1);
+      tl.from("#scene7 .caption", { y: 44, opacity: 0, duration: 0.58, ease: "power3.out" }, 53.1);
+
+      sceneCross("#scene7", "#scene8", 55.4);
+      tl.from("#scene8 .final-node", { scale: 0.2, opacity: 0, duration: 0.52, stagger: 0.08, ease: "back.out(1.3)" }, 56.0);
+      tl.to("#scene8 .final-node", { left: 850, top: 460, scale: 0.35, opacity: 0.0, duration: 1.2, stagger: 0.05, ease: "power3.inOut" }, 57.0);
+      tl.from("#scene8 .name", { scale: 0.82, opacity: 0, duration: 0.9, ease: "expo.out" }, 57.7);
+      tl.from("#scene8 .slogan", { y: 34, opacity: 0, duration: 0.66, ease: "power3.out" }, 58.45);
+      tl.from("#scene8 .leave", { y: 28, opacity: 0, duration: 0.66, ease: "sine.out" }, 59.1);
+      tl.to("#scene8", { opacity: 0, duration: 0.65, ease: "sine.inOut" }, 61.0);
+      tl.set("#scene8", { visibility: "hidden" }, 61.5);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <radialGradient id="glowBlue" cx="74%" cy="28%" r="48%">
+      <stop offset="0%" stop-color="#3BA7FF" stop-opacity="0.28" />
+      <stop offset="100%" stop-color="#3BA7FF" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glowGreen" cx="26%" cy="74%" r="48%">
+      <stop offset="0%" stop-color="#20E3B2" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="#20E3B2" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="titleLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#20E3B2" />
+      <stop offset="54%" stop-color="#3BA7FF" />
+      <stop offset="100%" stop-color="#7C5CFF" />
+    </linearGradient>
+  </defs>
+  <g id="background">
+    <rect width="1280" height="720" fill="#08111F" />
+    <rect width="1280" height="720" fill="url(#glowBlue)" />
+    <rect width="1280" height="720" fill="url(#glowGreen)" />
+    <path d="M 68 144 L 1216 144" stroke="#31506F" stroke-width="1" stroke-opacity="0.22" />
+    <path d="M 68 260 L 1216 260" stroke="#31506F" stroke-width="1" stroke-opacity="0.14" />
+    <path d="M 68 376 L 1216 376" stroke="#31506F" stroke-width="1" stroke-opacity="0.14" />
+    <path d="M 68 492 L 1216 492" stroke="#31506F" stroke-width="1" stroke-opacity="0.14" />
+    <path d="M 68 608 L 1216 608" stroke="#31506F" stroke-width="1" stroke-opacity="0.22" />
+    <path d="M 190 86 L 190 642" stroke="#31506F" stroke-width="1" stroke-opacity="0.12" />
+    <path d="M 410 86 L 410 642" stroke="#31506F" stroke-width="1" stroke-opacity="0.12" />
+    <path d="M 630 86 L 630 642" stroke="#31506F" stroke-width="1" stroke-opacity="0.12" />
+    <path d="M 850 86 L 850 642" stroke="#31506F" stroke-width="1" stroke-opacity="0.12" />
+    <path d="M 1070 86 L 1070 642" stroke="#31506F" stroke-width="1" stroke-opacity="0.12" />
+  </g>
+  <g id="knowledge-network">
+    <path d="M 704 150 C 796 178, 828 250, 924 286" fill="none" stroke="#3BA7FF" stroke-width="2" stroke-opacity="0.46" />
+    <path d="M 924 286 C 1014 334, 1048 402, 1144 438" fill="none" stroke="#20E3B2" stroke-width="2" stroke-opacity="0.45" />
+    <path d="M 704 150 C 650 244, 694 334, 618 426" fill="none" stroke="#7C5CFF" stroke-width="2" stroke-opacity="0.36" />
+    <path d="M 618 426 C 748 456, 832 548, 990 574" fill="none" stroke="#3BA7FF" stroke-width="2" stroke-opacity="0.32" />
+    <path d="M 470 556 C 578 500, 630 510, 764 466" fill="none" stroke="#20E3B2" stroke-width="2" stroke-opacity="0.28" />
+    <circle cx="704" cy="150" r="8" fill="#3BA7FF" />
+    <circle cx="924" cy="286" r="11" fill="#20E3B2" />
+    <circle cx="1144" cy="438" r="7" fill="#3BA7FF" />
+    <circle cx="618" cy="426" r="10" fill="#7C5CFF" />
+    <circle cx="990" cy="574" r="8" fill="#20E3B2" />
+    <circle cx="470" cy="556" r="6" fill="#3BA7FF" />
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M761,204 H845 A17,17 0 0 1 862,221 V221 A17,17 0 0 1 845,238 H761 A17,17 0 0 1 744,221 V221 A17,17 0 0 1 761,204 Z" />
+    <text x="803" y="226" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">课程知识点</text>
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M983,344 H1057 A17,17 0 0 1 1074,361 V361 A17,17 0 0 1 1057,378 H983 A17,17 0 0 1 966,361 V361 A17,17 0 0 1 983,344 Z" />
+    <text x="1020" y="366" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">复习问题</text>
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M569,490 H665 A17,17 0 0 1 682,507 V507 A17,17 0 0 1 665,524 H569 A17,17 0 0 1 552,507 V507 A17,17 0 0 1 569,490 Z" />
+    <text x="617" y="512" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">期末资料包</text>
+  </g>
+  <g id="title-block">
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1" d="M74,58 H330 A18,18 0 0 1 348,76 V76 A18,18 0 0 1 330,94 H74 A18,18 0 0 1 56,76 V76 A18,18 0 0 1 74,58 Z" />
+    <text x="202" y="82" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" font-weight="700" fill="#20E3B2">大学生创新创业训练计划开题答辩</text>
+    <text x="56" y="276" font-family="Microsoft YaHei, Arial, sans-serif" font-size="76" font-weight="800" fill="#F4F8FF">沉淀 Digest</text>
+    <path fill="url(#titleLine)" d="M63,306 H449 A3,3 0 0 1 452,309 V309 A3,3 0 0 1 449,312 H63 A3,3 0 0 1 60,309 V309 A3,3 0 0 1 63,306 Z" />
+    <text x="56" y="360" font-family="Microsoft YaHei, Arial, sans-serif" font-size="26" font-weight="700" fill="#A9B8CD">面向高校学生的 AI 知识内化</text>
+    <text x="56" y="396" font-family="Microsoft YaHei, Arial, sans-serif" font-size="26" font-weight="700" fill="#A9B8CD">与自主学习能力提升平台</text>
+    <path fill="#20E3B2" fill-opacity="0.12" stroke="#20E3B2" stroke-width="1.5" d="M88,452 H444 A32,32 0 0 1 476,484 V484 A32,32 0 0 1 444,516 H88 A32,32 0 0 1 56,484 V484 A32,32 0 0 1 88,452 Z" />
+    
+  <g transform="translate(86.0, 470.0) scale(1.75)" fill="#20E3B2">
+    <path d="M8 3L10.5 2.5L11 0H12L12.5 2.5L15 3V4L12.5 4.5L12 7H11L10.5 4.5L8 4V3Z" />
+    <path d="M0 11V10L4 9L5 5H6L7 9L11 10V11L7 12L6 16H5L4 12L0 11Z" />
+    <path d="M1 2L2.5 0.5L4 2L2.5 3.5L1 2Z" />
+    <path d="M15 14L13 12L11 14L13 16L15 14Z" />
+    <path d="M15 10C15.5523 10 16 9.55229 16 9C16 8.44771 15.5523 8 15 8C14.4477 8 14 8.44771 14 9C14 9.55229 14.4477 10 15 10Z" />
+  </g>
+    <text x="132" y="493" font-family="Microsoft YaHei, Arial, sans-serif" font-size="28" font-weight="800" fill="#F4F8FF">今天随手存，期末不用崩</text>
+  </g>
+  <g id="info-footer">
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1" d="M68,604 H604 A12,12 0 0 1 616,616 V664 A12,12 0 0 1 604,676 H68 A12,12 0 0 1 56,664 V616 A12,12 0 0 1 68,604 Z" />
+    <text x="82" y="632" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="700" fill="#F4F8FF">项目负责人：张少毅</text>
+    <text x="82" y="658" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">学院：上海政法学院上海纪录片学院　专业：网络与新媒体</text>
+    
+  <g transform="translate(1164.0, 620.0) scale(2.25)" fill="#3BA7FF">
+    <path d="M11 6C12.6569 6 14 4.65685 14 3C14 1.34315 12.6569 0 11 0C9.34315 0 8 1.34315 8 3C8 3.22371 8.02449 3.44169 8.07092 3.65143L4.86861 5.65287C4.35599 5.24423 3.70652 5 3 5C1.34315 5 0 6.34315 0 8C0 9.65685 1.34315 11 3 11C3.70652 11 4.35599 10.7558 4.86861 10.3471L8.07092 12.3486C8.02449 12.5583 8 12.7763 8 13C8 14.6569 9.34315 16 11 16C12.6569 16 14 14.6569 14 13C14 11.3431 12.6569 10 11 10C10.2935 10 9.644 10.2442 9.13139 10.6529L5.92908 8.65143C5.97551 8.44169 6 8.22371 6 8C6 7.77629 5.97551 7.55831 5.92908 7.34857L9.13139 5.34713C9.644 5.75577 10.2935 6 11 6Z" />
+  </g>
+    <text x="1224" y="686" text-anchor="end" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">01 / 10</text>
+  </g>
+</svg>

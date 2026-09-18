@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <marker id="loopArrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#20E3B2" />
+    </marker>
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#20E3B2" stop-opacity="0.28" />
+      <stop offset="100%" stop-color="#20E3B2" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <g id="background">
+    <rect width="1280" height="720" fill="#08111F" />
+    <circle cx="640" cy="390" r="270" fill="url(#centerGlow)" />
+  </g>
+  <g id="header">
+    <text x="56" y="72" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="700" fill="#20E3B2">产品核心功能</text>
+    <text x="56" y="118" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="800" fill="#F4F8FF">从“资料输入”到“知识资产”</text>
+    <text x="56" y="151" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">六个模块构成持续学习闭环，每次学习都可以复用。</text>
+  </g>
+  <g id="loop-lines">
+    <path d="M 410 236 C 500 184, 780 184, 870 236" fill="none" stroke="#20E3B2" stroke-width="3" stroke-opacity="0.55" marker-end="url(#loopArrow)" />
+    <path d="M 936 304 C 1018 384, 940 518, 826 558" fill="none" stroke="#20E3B2" stroke-width="3" stroke-opacity="0.55" marker-end="url(#loopArrow)" />
+    <path d="M 700 610 C 592 656, 372 590, 344 462" fill="none" stroke="#20E3B2" stroke-width="3" stroke-opacity="0.55" marker-end="url(#loopArrow)" />
+    <path d="M 330 360 C 286 286, 322 240, 410 236" fill="none" stroke="#20E3B2" stroke-width="3" stroke-opacity="0.55" marker-end="url(#loopArrow)" />
+  </g>
+  <g id="center-asset">
+    <circle cx="640" cy="398" r="108" fill="#101B2E" stroke="#20E3B2" stroke-width="2" />
+    <circle cx="640" cy="398" r="78" fill="#20E3B2" fill-opacity="0.08" stroke="#243A55" stroke-width="1" />
+    
+  <g transform="translate(604.0, 348.0) scale(4.5)" fill="#20E3B2">
+    <path d="M11 6C12.6569 6 14 4.65685 14 3C14 1.34315 12.6569 0 11 0C9.34315 0 8 1.34315 8 3C8 3.22371 8.02449 3.44169 8.07092 3.65143L4.86861 5.65287C4.35599 5.24423 3.70652 5 3 5C1.34315 5 0 6.34315 0 8C0 9.65685 1.34315 11 3 11C3.70652 11 4.35599 10.7558 4.86861 10.3471L8.07092 12.3486C8.02449 12.5583 8 12.7763 8 13C8 14.6569 9.34315 16 11 16C12.6569 16 14 14.6569 14 13C14 11.3431 12.6569 10 11 10C10.2935 10 9.644 10.2442 9.13139 10.6529L5.92908 8.65143C5.97551 8.44169 6 8.22371 6 8C6 7.77629 5.97551 7.55831 5.92908 7.34857L9.13139 5.34713C9.644 5.75577 10.2935 6 11 6Z" />
+  </g>
+    <text x="640" y="454" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="26" font-weight="800" fill="#F4F8FF">知识资产</text>
+    <text x="640" y="482" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="14" fill="#A9B8CD">可检索、可复习、可导出</text>
+  </g>
+  <g id="module-input">
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M122,248 H336 A18,18 0 0 1 354,266 V342 A18,18 0 0 1 336,360 H122 A18,18 0 0 1 104,342 V266 A18,18 0 0 1 122,248 Z" />
+    
+  <g transform="translate(128.0, 276.0) scale(2.25)" fill="#3BA7FF">
+    <path d="M11 0H5V12H15V4L11 0Z" />
+    <path d="M1 4V16H11V14H3V4H1Z" />
+  </g>
+    <text x="180" y="292" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">多源输入</text>
+    <text x="180" y="322" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">文本、网页、课程资料</text>
+    <text x="180" y="346" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">后续拓展截图、录音、视频</text>
+  </g>
+  <g id="module-summary">
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M424,184 H638 A18,18 0 0 1 656,202 V278 A18,18 0 0 1 638,296 H424 A18,18 0 0 1 406,278 V202 A18,18 0 0 1 424,184 Z" />
+    
+  <g transform="translate(430.0, 212.0) scale(2.25)" fill="#20E3B2">
+    <path d="M0 12.5L3.5 16L8 11L10 6L16 1.5L14.5 0L8 4L6.5 7L0 12.5Z" />
+    <path d="M11 15C11.5523 15 12 14.5523 12 14C12 13.4477 11.5523 13 11 13C10.4477 13 10 13.4477 10 14C10 14.5523 10.4477 15 11 15Z" />
+    <path d="M12 9L14 7L16 9L14 11L12 9Z" />
+    <path d="M3.5 2L2 3.5L3.5 5L5 3.5L3.5 2Z" />
+  </g>
+    <text x="482" y="228" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">AI 结构化摘要</text>
+    <text x="482" y="258" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">核心观点、文章结构</text>
+    <text x="482" y="282" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">论据与重点概念</text>
+  </g>
+  <g id="module-question">
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M726,184 H940 A18,18 0 0 1 958,202 V278 A18,18 0 0 1 940,296 H726 A18,18 0 0 1 708,278 V202 A18,18 0 0 1 726,184 Z" />
+    
+  <g transform="translate(732.0, 212.0) scale(2.25)" fill="#FFC857">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M8 16C12.4183 16 16 12.4183 16 8C16 3.58172 12.4183 0 8 0C3.58172 0 0 3.58172 0 8C0 12.4183 3.58172 16 8 16ZM8 5C7.17157 5 6.5 5.67157 6.5 6.5V7H4.5V6.5C4.5 4.567 6.067 3 8 3C9.933 3 11.5 4.567 11.5 6.5C11.5 8.433 9.933 10 8 10H7V8H8C8.82843 8 9.5 7.32843 9.5 6.5C9.5 5.67157 8.82843 5 8 5ZM9 11V13H7V11H9Z" />
+  </g>
+    <text x="784" y="228" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">复习问题生成</text>
+    <text x="784" y="258" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">基于主动回忆机制</text>
+    <text x="784" y="282" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">生成自测题与思考题</text>
+  </g>
+  <g id="module-node">
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M946,332 H1160 A18,18 0 0 1 1178,350 V426 A18,18 0 0 1 1160,444 H946 A18,18 0 0 1 928,426 V350 A18,18 0 0 1 946,332 Z" />
+    
+  <g transform="translate(952.0, 360.0) scale(2.25)" fill="#7C5CFF">
+    <path d="M13.1371 6.91018C13.4184 6.7695 13.7123 6.59981 14 6.40001V8C14 9.65685 11.3137 11 8 11C4.68629 11 2 9.65685 2 8V6.40001C2.28772 6.59981 2.58158 6.7695 2.86293 6.91018C4.28096 7.61919 6.09998 8 8 8C9.90002 8 11.719 7.61919 13.1371 6.91018Z" />
+    <path d="M2 11.4V13C2 14.6569 4.68629 16 8 16C11.3137 16 14 14.6569 14 13V11.4C13.7123 11.5998 13.4184 11.7695 13.1371 11.9102C11.719 12.6192 9.90002 13 8 13C6.09998 13 4.28096 12.6192 2.86293 11.9102C2.58158 11.7695 2.28772 11.5998 2 11.4Z" />
+    <path d="M8 0C11.3137 0 14 1.34315 14 3C14 4.65685 11.3137 6 8 6C4.68629 6 2 4.65685 2 3C2 1.34315 4.68629 0 8 0Z" />
+  </g>
+    <text x="1004" y="376" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">知识节点沉淀</text>
+    <text x="1004" y="406" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">每一次学习内容</text>
+    <text x="1004" y="430" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">保存为可复用节点</text>
+  </g>
+  <g id="module-graph">
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M726,520 H940 A18,18 0 0 1 958,538 V614 A18,18 0 0 1 940,632 H726 A18,18 0 0 1 708,614 V538 A18,18 0 0 1 726,520 Z" />
+    
+  <g transform="translate(732.0, 548.0) scale(2.25)" fill="#3BA7FF">
+    <path d="M11 6C12.6569 6 14 4.65685 14 3C14 1.34315 12.6569 0 11 0C9.34315 0 8 1.34315 8 3C8 3.22371 8.02449 3.44169 8.07092 3.65143L4.86861 5.65287C4.35599 5.24423 3.70652 5 3 5C1.34315 5 0 6.34315 0 8C0 9.65685 1.34315 11 3 11C3.70652 11 4.35599 10.7558 4.86861 10.3471L8.07092 12.3486C8.02449 12.5583 8 12.7763 8 13C8 14.6569 9.34315 16 11 16C12.6569 16 14 14.6569 14 13C14 11.3431 12.6569 10 11 10C10.2935 10 9.644 10.2442 9.13139 10.6529L5.92908 8.65143C5.97551 8.44169 6 8.22371 6 8C6 7.77629 5.97551 7.55831 5.92908 7.34857L9.13139 5.34713C9.644 5.75577 10.2935 6 11 6Z" />
+  </g>
+    <text x="784" y="564" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">知识图谱展示</text>
+    <text x="784" y="594" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">可视化知识点关系</text>
+    <text x="784" y="618" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">帮助回到课程框架</text>
+  </g>
+  <g id="module-review">
+    <path fill="#101B2E" stroke="#20E3B2" stroke-width="1.2" d="M424,520 H638 A18,18 0 0 1 656,538 V614 A18,18 0 0 1 638,632 H424 A18,18 0 0 1 406,614 V538 A18,18 0 0 1 424,520 Z" />
+    
+  <g transform="translate(430.0, 548.0) scale(2.25)" fill="#20E3B2">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M8 16C12.4183 16 16 12.4183 16 8C16 3.58172 12.4183 0 8 0C3.58172 0 0 3.58172 0 8C0 12.4183 3.58172 16 8 16ZM7 3V8.41421L10.2929 11.7071L11.7071 10.2929L9 7.58579V3H7Z" />
+  </g>
+    <text x="482" y="564" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">期末复习包</text>
+    <text x="482" y="594" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">重点、框架、题目训练</text>
+    <text x="482" y="618" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">支持导出可打印资料</text>
+  </g>
+  <g id="module-loop">
+    <path fill="#101B2E" stroke="#243A55" stroke-width="1.2" d="M122,432 H336 A18,18 0 0 1 354,450 V526 A18,18 0 0 1 336,544 H122 A18,18 0 0 1 104,526 V450 A18,18 0 0 1 122,432 Z" />
+    
+  <g transform="translate(128.0, 460.0) scale(2.25)" fill="#20E3B2">
+    <path d="M10 7L9 6L11.2929 3.70711L10.7071 3.12132C9.98914 2.40335 9.01536 2 8 2C6.98464 2 6.01086 2.40335 5.29289 3.12132L5.20711 3.20711C4.43421 3.98 4 5.02828 4 6.12132L4 7L2 7V6.12132C2 4.49785 2.64492 2.94086 3.79289 1.79289L3.87868 1.70711C4.97172 0.614064 6.4542 0 8 0C9.54579 0 11.0283 0.614064 12.1213 1.70711L12.7071 2.29289L15 0L16 1V7H10Z" />
+    <path d="M5.29289 12.8787C6.01086 13.5966 6.98464 14 8 14C9.01536 14 9.98914 13.5967 10.7071 12.8787L10.7929 12.7929C11.5658 12.02 12 10.9717 12 9.87868V9L14 9V9.87868C14 11.5022 13.3551 13.0591 12.2071 14.2071L12.1213 14.2929C11.0283 15.3859 9.5458 16 8 16C6.45421 16 4.97172 15.3859 3.87868 14.2929L3.29289 13.7071L1 16L0 15L9.53674e-07 9L6 9L7 10L4.70711 12.2929L5.29289 12.8787Z" />
+  </g>
+    <text x="180" y="476" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">后续复习</text>
+    <text x="180" y="506" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">错题回流、节点更新</text>
+    <text x="180" y="530" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">形成持续学习循环</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="684" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">沉淀 Digest 开题答辩</text>
+    <text x="1224" y="684" text-anchor="end" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">05 / 10</text>
+  </g>
+</svg>

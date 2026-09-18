@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <linearGradient id="timelineGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3BA7FF"/>
+      <stop offset="55%" stop-color="#20E3B2"/>
+      <stop offset="100%" stop-color="#7C5CFF"/>
+    </linearGradient>
+  </defs>
+  <g id="background">
+    <rect width="1280" height="720" fill="#08111F"/>
+    <circle cx="240" cy="426" r="260" fill="#3BA7FF" fill-opacity="0.05"/>
+  </g>
+  <g id="header">
+    <text x="56" y="72" font-family="Microsoft YaHei, Arial, sans-serif" font-size="16" font-weight="700" fill="#20E3B2">经费预算与实施计划</text>
+    <text x="56" y="118" font-family="Microsoft YaHei, Arial, sans-serif" font-size="34" font-weight="800" fill="#F4F8FF">15000 元经费，聚焦原型开发、用户验证与校内试用</text>
+    <text x="56" y="151" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">预算投向清晰，计划覆盖 2026.6 到 2027.4，一年内可落地。</text>
+  </g>
+  <g id="budget-panel">
+    <rect x="56" y="202" width="500" height="430" rx="22" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <use data-icon="chunk-filled/chart-pie" x="88" y="232" width="34" height="34" fill="#20E3B2"/>
+    <text x="138" y="256" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">预算分配</text>
+    <g id="chartArea">
+      <!-- chart-plot-area: donut | center: 266,420 | outer-radius: 132 | inner-radius: 78 -->
+      <path d="M 266,288 A 132,132 0 0,1 397.3,433.8 L 343.6,428.2 A 78,78 0 0,0 266,342 Z" fill="#3BA7FF"/>
+      <path d="M 397.3,433.8 A 132,132 0 0,1 293.4,549.1 L 282.2,496.3 A 78,78 0 0,0 343.6,428.2 Z" fill="#20E3B2"/>
+      <path d="M 293.4,549.1 A 132,132 0 0,1 188.4,526.8 L 220.2,483.1 A 78,78 0 0,0 282.2,496.3 Z" fill="#7C5CFF"/>
+      <path d="M 188.4,526.8 A 132,132 0 0,1 134.7,433.8 L 188.4,428.2 A 78,78 0 0,0 220.2,483.1 Z" fill="#FFC857"/>
+      <path d="M 134.7,433.8 A 132,132 0 0,1 167.9,331.7 L 208.0,367.8 A 78,78 0 0,0 188.4,428.2 Z" fill="#FF5A7A"/>
+      <path d="M 167.9,331.7 A 132,132 0 0,1 238.6,290.9 L 249.8,343.7 A 78,78 0 0,0 208.0,367.8 Z" fill="#31506F"/>
+      <path d="M 238.6,290.9 A 132,132 0 0,1 266,288 L 266,342 A 78,78 0 0,0 249.8,343.7 Z" fill="#6D7E96"/>
+      <circle cx="266" cy="420" r="74" fill="#101B2E"/>
+      <text x="266" y="410" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="40" font-weight="800" fill="#F4F8FF">15000</text>
+      <text x="266" y="442" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="18" fill="#A9B8CD">元合计</text>
+    </g>
+    <g id="budget-legend">
+      <rect x="410" y="300" width="12" height="12" rx="3" fill="#3BA7FF"/>
+      <text x="432" y="311" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">产品开发 4000</text>
+      <rect x="410" y="328" width="12" height="12" rx="3" fill="#20E3B2"/>
+      <text x="432" y="339" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">API 与服务器 3000</text>
+      <rect x="410" y="356" width="12" height="12" rx="3" fill="#7C5CFF"/>
+      <text x="432" y="367" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">用户调研 2000</text>
+      <rect x="410" y="384" width="12" height="12" rx="3" fill="#FFC857"/>
+      <text x="432" y="395" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">UI 视觉 2000</text>
+      <rect x="410" y="412" width="12" height="12" rx="3" fill="#FF5A7A"/>
+      <text x="432" y="423" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">测试推广 2000</text>
+      <rect x="410" y="440" width="12" height="12" rx="3" fill="#31506F"/>
+      <text x="432" y="451" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">展示视频 1500</text>
+      <rect x="410" y="468" width="12" height="12" rx="3" fill="#6D7E96"/>
+      <text x="432" y="479" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">其他支出 500</text>
+    </g>
+  </g>
+  <g id="plan-panel">
+    <rect x="586" y="202" width="638" height="430" rx="22" fill="#101B2E" stroke="#243A55" stroke-width="1.2"/>
+    <use data-icon="chunk-filled/route" x="618" y="232" width="34" height="34" fill="#3BA7FF"/>
+    <text x="668" y="256" font-family="Microsoft YaHei, Arial, sans-serif" font-size="22" font-weight="800" fill="#F4F8FF">实施计划</text>
+    <line x1="646" y1="350" x2="1174" y2="350" stroke="url(#timelineGrad)" stroke-width="6" stroke-linecap="round"/>
+    <g id="milestone-1">
+      <circle cx="646" cy="350" r="10" fill="#3BA7FF"/>
+      <text x="646" y="314" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" font-weight="800" fill="#3BA7FF">2026.6-7</text>
+      <text x="646" y="390" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">资料查阅</text>
+      <text x="646" y="410" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">项目定位</text>
+    </g>
+    <g id="milestone-2">
+      <circle cx="722" cy="350" r="10" fill="#3BA7FF"/>
+      <text x="722" y="314" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" font-weight="800" fill="#3BA7FF">7-8</text>
+      <text x="722" y="390" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">产品方案</text>
+      <text x="722" y="410" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">设计</text>
+    </g>
+    <g id="milestone-3">
+      <circle cx="798" cy="350" r="10" fill="#20E3B2"/>
+      <text x="798" y="314" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" font-weight="800" fill="#20E3B2">8-9</text>
+      <text x="798" y="390" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">原型优化</text>
+      <text x="798" y="410" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">开题准备</text>
+    </g>
+    <g id="milestone-4">
+      <circle cx="874" cy="350" r="10" fill="#20E3B2"/>
+      <text x="874" y="314" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" font-weight="800" fill="#20E3B2">9-11</text>
+      <text x="874" y="390" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">用户调研</text>
+      <text x="874" y="410" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">竞品分析</text>
+    </g>
+    <g id="milestone-5">
+      <circle cx="950" cy="350" r="10" fill="#20E3B2"/>
+      <text x="950" y="314" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" font-weight="800" fill="#20E3B2">11-12</text>
+      <text x="950" y="390" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">校内试用</text>
+      <text x="950" y="410" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">中期检查</text>
+    </g>
+    <g id="milestone-6">
+      <circle cx="1026" cy="350" r="10" fill="#7C5CFF"/>
+      <text x="1026" y="314" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" font-weight="800" fill="#7C5CFF">12-1</text>
+      <text x="1026" y="390" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">反馈整理</text>
+      <text x="1026" y="410" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">产品迭代</text>
+    </g>
+    <g id="milestone-7">
+      <circle cx="1102" cy="350" r="10" fill="#7C5CFF"/>
+      <text x="1102" y="314" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" font-weight="800" fill="#7C5CFF">2027.1-3</text>
+      <text x="1102" y="390" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">创业材料</text>
+      <text x="1102" y="410" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">撰写</text>
+    </g>
+    <g id="milestone-8">
+      <circle cx="1174" cy="350" r="10" fill="#7C5CFF"/>
+      <text x="1174" y="314" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" font-weight="800" fill="#7C5CFF">3-4</text>
+      <text x="1174" y="390" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">结项答辩</text>
+      <text x="1174" y="410" text-anchor="middle" font-family="Microsoft YaHei, Arial, sans-serif" font-size="13" fill="#A9B8CD">成果推广</text>
+    </g>
+    <rect x="636" y="472" width="540" height="78" rx="16" fill="#13243A" stroke="#243A55" stroke-width="1"/>
+    <use data-icon="chunk-filled/calendar" x="664" y="494" width="32" height="32" fill="#20E3B2"/>
+    <text x="714" y="510" font-family="Microsoft YaHei, Arial, sans-serif" font-size="20" font-weight="800" fill="#F4F8FF">一年内可交付</text>
+    <text x="714" y="538" font-family="Microsoft YaHei, Arial, sans-serif" font-size="15" fill="#A9B8CD">网页原型 + 用户验证 + 校内试用 + 结项材料</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="684" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">沉淀 Digest 开题答辩</text>
+    <text x="1224" y="684" text-anchor="end" font-family="Microsoft YaHei, Arial, sans-serif" font-size="12" fill="#6D7E96">09 / 10</text>
+  </g>
+</svg>
