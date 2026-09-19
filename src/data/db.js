@@ -1,5 +1,5 @@
 export const DB_NAME = "digest-v02";
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 export const STORES = Object.freeze({
   documents: "documents",
   readingResults: "readingResults",
@@ -9,6 +9,10 @@ export const STORES = Object.freeze({
   relations: "relations",
   activities: "activities",
   settings: "settings",
+  courses: "courses",
+  tasks: "tasks",
+  attempts: "attempts",
+  feedback: "feedback",
 });
 
 let databasePromise;
@@ -55,7 +59,22 @@ export function openDatabase(indexedDBImpl = globalThis.indexedDB) {
           db.createObjectStore(storeName, { keyPath: "id" });
       }
     };
-    request.onsuccess = () => resolve(request.result);
+    let blocked = false;
+    request.onblocked = () => {
+      blocked = true;
+      reject(new Error("请关闭其他 Digest 标签页后刷新，以安全升级资料库。"));
+    };
+    request.onsuccess = () => {
+      if (blocked) {
+        request.result.close();
+        return;
+      }
+      request.result.onversionchange = () => {
+        request.result.close();
+        databasePromise = null;
+      };
+      resolve(request.result);
+    };
     request.onerror = () =>
       reject(request.error || new Error("无法打开 Digest 资料库"));
   });

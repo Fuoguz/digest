@@ -1,56 +1,59 @@
-# Digest · 沉淀
+# Digest · 课程学习训练工作台
 
-面向高校学生的 AI 研读与复习工作台，将课程资料、论文、案例和政策文本转化为可追溯、可复习、可关联的长期知识资产。
+当前版本：**0.2.1 Pilot candidate**（2026-09-18）。代码与本地浏览器闭环已验证；**真实模型与公网部署验收未通过放行**，详见 [NEXT_RELEASE_REPORT.md](NEXT_RELEASE_REPORT.md)。
 
-## v0.2 Core
+Digest 面向论述型、案例型、材料密集型课程，帮助学生检查“我自己的答案差在哪里”。
 
-- Library：导入文本、Markdown、带文本层的 PDF；搜索、标签/类型/模式筛选、收藏与待复习筛选。
-- Reader：四种研读模式；资料陈述、AI 推论、可复用洞见分别展示；点击可靠 Evidence 精确定位原文。
-- Review：从 Reader 选择问题，先回忆再揭示，可核查来源，Again / Hard / Good / Easy 按题安排下一次复习；暂停/恢复题目。
-- Knowledge Units：用户确认后沉淀知识点，保留 Document / Reading Result / Claim / Evidence；支持改名、取消沉淀。
-- Semantic Graph：AI 提议、用户确认/拒绝；只有确认关系入图。展示方向、类型、理由，支持搜索、标签筛选与来源核查；允许孤立节点。
-- Dashboard、全库搜索、设置与不含 Key 的 JSON 备份；可在空资料库恢复。
+课程材料 → 学习任务 → 独立作答 → 具体反馈 → 回原文核查 → 修订 → 保存 Attempt → 以后继续练习。
 
-当前真实模型验收待执行。自动测试和浏览器完整流程使用明确标记的 mock；它们验证交互、校验与持久化，不证明模型判断正确。详见 [真实模型验收](docs/V0.2_REAL_MODEL_ACCEPTANCE.md) 与 [发布报告](docs/V0.2_RELEASE_REPORT.md)。
+## 本地运行
 
-## 运行
+需要 Node.js 22+（本轮使用 24.14.0）。
 
-需要支持 ES Modules 的现代浏览器与 Node.js 22+（本次验收为 Node.js 24）。
+```sh
+npm install
+npm start
+npm test
+npm run build
+```
 
-    npm install
-    npm start
+固定使用 http://127.0.0.1:5180/app/ 。不同域名、端口和浏览器不共享本地数据。
 
-打开 http://127.0.0.1:5180/ 。官网在 `/`，工作台在 `/app/`。请使用 HTTP 服务，不要直接双击 HTML。
+首次使用：创建课程 → 用顶部“导入资料”导入 TXT、Markdown、文本层 PDF 或粘贴正文 → 回课程关联材料 → 创建问题与可选评价标准 → 先写自己的答案。首次答案在 AI 调用前保存；失败可以重试。反馈中的依据可打开 Reader 并返回原反馈。修订追加保存，不覆盖首次作答。
 
-    npm test
-    npm run build
+## 已实现
 
-测试离线运行，不要求 AI Key。构建输出 `dist/`；部署时仅发布 dist，并将 `/app/*` 路由回退至 `app/index.html`。本地服务仅监听 loopback。
+- Course、Task、Attempt、Feedback；课程与任务编辑/删除；删除课程不删除 Library 原文或旧学习资产。
+- 首次答案、草稿、历史作答、反馈、修订说明与修订历史；Dashboard 优先继续任务。
+- Feedback 严格运行时结构校验、安全文本渲染、原文逐字校验、版本失效提示、取消与旧请求保护。
+- Reader 四模式研读、原文定位、现有 Active Recall、Knowledge Unit 与用户确认关系的 Graph 均保留。Graph 移至工具区。
+- IndexedDB v1 → v2 增量建表，不清库；备份 v2 包含全部已提交学习记录，兼容导入旧 v1 备份。
+- 本地 metadata 事件，不记录正文/答案到 analytics，不向外部统计平台发送事件。
 
-## AI 配置
+## AI 与隐私
 
-资料导入与阅读不需要 AI 配置。点击 Reader 的分析按钮，或设置中的 Developer AI Service，填写兼容 OpenAI Chat Completions 的 endpoint / model / Key。服务必须允许浏览器 CORS，并支持 JSON 输出。一次分析请求，结构错误最多一次修复；关系建议为独立显式请求。
+生产默认 Browser → 同源 `/api/digest` → Serverless → 服务端配置的模型。普通学生只需试用码，不需 API Key。Key、固定 endpoint/model 与试用码由服务器环境变量配置，见 [Pilot 配置](docs/V0.2_PILOT_DEPLOYMENT.md)。本轮没有修改生产环境变量或发布线上版本。
 
-Developer Mode 的 Key 保存在当前浏览器 localStorage；不会打包进代码或 JSON 备份。只有用户发起分析时才发送当前正文，关系建议只发送筛选后的知识点及可靠引文。Production API Proxy、账号和云同步未实现。
+本地 loopback 默认 Developer 模式，可在设置中配置兼容 Chat Completions 的服务；此模式的 Key 存在浏览器 localStorage，仅供开发，不进入备份。公网也允许开发者显式切换此模式。普通试用用户应保持 Pilot 模式。
 
-## 数据与恢复
+只有主动请求研读/反馈/关系建议时才发送所选内容。训练反馈会发送任务、评价标准、答案、课程名称/说明与所选材料。AI 可以出错；**引用存在不等于它支持 AI 判断**。修订保存不代表学习效果已被验证。
 
-IndexedDB 数据仅属于当前浏览器与 origin（协议、主机、端口）。不同端口、localhost 与 127.0.0.1 不共享资料。请固定使用一个地址，并在设置中定期导出 JSON 备份。备份恢复只允许空资料库，失败不写入、不覆盖现有记录。
+## 数据与边界
 
-旧 Demo 数据保留原 localStorage key；迁移只提取已有内容，缺原文标记 legacy_incomplete，不伪造依据、问题或图谱。迁移备份路径继续保留。
+全部学习记录属于当前浏览器/origin，无账号或云同步。请在设置导出完整 JSON 备份；文件包含私人正文和答案，未加密。恢复仅允许空学习库，拒绝覆盖或静默合并。未提交的修订草稿留在本地 settings，不包含在备份内。首次答案、已保存修订完整备份。
 
-## 开发结构
+每个训练任务最多 60,000 字符材料、16,000 字符答案；超限明确拒绝，不静默截断。适用于少量精选材料，不承诺整学期文库检索。暂不自动生成新题、不自动评分、不展示掌握率。可在同一课程手动创建不同案例再检验；同题独立重答入口不展示旧答案。
 
-- `src/workspace/`：路由、Dashboard/Library、Review、Graph、Search/Settings。
-- `src/reader/`：原文/AI 双栏、安全文本渲染、Evidence、学习动作。
-- `src/ai/`：四模式 runtime schema、一次研读服务、DeveloperTransport、取消控制。
-- `src/domain/`：Document、Evidence、复习调度、关系校验。
-- `src/data/`：IndexedDB、原子研读/学习事务、备份、旧数据迁移。
-- `src/importers/`、`src/styles/`、`vendor/`：文本/PDF、设计系统、本地 D3/PDF.js。
-- `tests/unit/`：离线关键逻辑；`tests/fixtures/`：明确隔离的 mock，不进入构建。
+不做 OCR、Word/PPT 导入、复杂 PDF 版面重建；不保存原 PDF 二进制，只保存提取正文。无教师后台、积分、支付、向量数据库或 Graph RAG。
 
-独立浏览器 QA：运行 `node tests/fixtures/mock-ai-server.mjs` 后访问 http://127.0.0.1:5185/app/ ，仅在此测试 origin 配置 `http://127.0.0.1:5185/success/v1`、任意 mock 模型名和 `fixture-only`。不得将 mock 结果称为真实模型验收。
+## 验证与结构
 
-## 边界
+```sh
+npm test          # 60 个离线测试，保留原有 40 项
+npm run qa:browser
+npm run build
+```
 
-不包含 OCR、Word/PPT、复杂 PDF 版式重建、FSRS、向量库、账户、支付、协作或云同步。原始 PDF 二进制不持久化，保存的是提取正文及 metadata。JSON 备份不加密，请自行妥善保管。
+浏览器 QA 使用独立端口 5193、全新 Chrome context 和明确标记的 mock AI，实际操作 UI、下载文件再上传恢复，不接触真实用户资料库。脚本需要 Playwright 与 Chrome。Playwright 由 npm 安装，默认使用本机已安装的 Chrome；可通过 `DIGEST_BROWSER_CHANNEL` 选择已安装的浏览器通道。截图与结果写入 `qa-artifacts/next-release/`，不进入构建。
+
+运行入口：`index.html / src/landing.js` 与 `app/index.html / src/workspace/main.js`。领域：`src/domain/`；持久化：`src/data/`；AI：`src/ai/`；训练 UI：`src/workspace/training.js`。继续使用 Vanilla JS / ES Modules，无框架迁移。详细结构见 [架构](docs/V0.2_ARCHITECTURE.md)。

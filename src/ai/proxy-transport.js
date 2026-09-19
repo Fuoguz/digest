@@ -79,34 +79,58 @@ function accessDialog(signal) {
   });
 }
 export class ProxyTransport {
-  constructor(kind = "digest") {
+  constructor(
+    kind = "digest",
+    { timeoutMs = 175000, fetchImpl = globalThis.fetch.bind(globalThis) } = {},
+  ) {
     this.kind = kind;
+    this.timeoutMs = timeoutMs;
+    this.fetchImpl = fetchImpl;
   }
   async request(messages, { signal } = {}) {
+    const deadline = AbortSignal.timeout(this.timeoutMs);
+    const combined = signal ? AbortSignal.any([signal, deadline]) : deadline;
     const call = () =>
-      fetch("/api/" + this.kind, {
+      this.fetchImpl("/api/" + this.kind, {
         method: "POST",
         credentials: "same-origin",
-        signal,
+        signal: combined,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages }),
       });
     try {
       let response = await call();
       if (response.status === 401) {
-        await accessDialog(signal);
+        await accessDialog(combined);
         response = await call();
       }
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (error) {
+        combined.throwIfAborted();
+        throw new AnalysisError(
+          "invalid_response",
+          response.ok
+            ? "AI 服务返回了无法读取的响应，请重试。"
+            : "试用服务返回 HTTP " + response.status + "，请稍后重试。",
+        );
+      }
+      combined.throwIfAborted();
       if (!response.ok)
         throw new AnalysisError(
-          data.code || "proxy_error",
-          data.message || "试用 AI 暂时不可用，请重试",
+          data?.code || "proxy_error",
+          data?.message || "试用 AI 暂时不可用，请重试",
         );
-      if (typeof data.text !== "string")
+      if (typeof data?.text !== "string" || !data.text.trim())
         throw new AnalysisError("empty_result", "AI 返回为空");
       return data.text;
     } catch (error) {
+      if (deadline.aborted && !signal?.aborted)
+        throw new AnalysisError(
+          "timeout",
+          "AI 响应超时，已有答案与结果保留，请稍后重试。",
+        );
       if (error instanceof AnalysisError || error.name === "AbortError")
         throw error;
       throw new AnalysisError(

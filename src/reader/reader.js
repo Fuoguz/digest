@@ -1,6 +1,8 @@
 import { createTransport, useProxy } from "../ai/proxy-transport.js";
 import { el, button, highlightQuote } from "./dom.js";
-import { documentSnapshot } from "../domain/evidence.js";
+import { documentSnapshot, restoreAnchor } from "../domain/evidence.js";
+import { getRecord } from "../data/db.js";
+import { TrainingRepository } from "../data/training-repository.js";
 import { READING_MODES, SOURCE_TYPES } from "../domain/documents.js";
 import { MODE_SECTIONS, CLAIM_KINDS } from "../ai/schema.js";
 import { DigestAIService } from "../ai/service.js";
@@ -18,6 +20,11 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   const repository = new ReadingRepository(db);
   const routeParams = new URLSearchParams(location.search);
   let saved = await repository.load(snapshot, routeParams.get("result"));
+  const externalAnchor = routeParams.get("evidence")
+    ? await getRecord("evidenceAnchors", routeParams.get("evidence"), db)
+    : null;
+  if (externalAnchor && !saved.anchors.some((a) => a.id === externalAnchor.id))
+    saved.anchors.push(restoreAnchor(externalAnchor, snapshot));
   if (!isCurrent()) return () => {};
   const session = new AnalysisSession(repository);
   let disposed = false,
@@ -74,7 +81,12 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   headerActions.append(analyzeButton, more);
   header.append(back, heading, headerActions);
   const returnPath = routeParams.get("return");
-  if (returnPath && /^\/app\/(review|graph|search)(\?|$)/.test(returnPath)) {
+  if (
+    returnPath &&
+    /^(?:\/app\/(?:review|graph|search)(?:\?|$)|\/app\/(?:tasks|courses)\/[a-zA-Z0-9_-]+(?:\?|$))/.test(
+      returnPath,
+    )
+  ) {
     const returnLink = el("a", "reader-back", "← 返回学习任务");
     returnLink.href = returnPath;
     returnLink.dataset.route = "";
@@ -151,6 +163,13 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   const returnButton = button(
     "← 返回 AI 判断",
     () => {
+      if (!activeClaim && returnPath) {
+        const target = headerActions.querySelector("a[data-route]");
+        if (target) {
+          target.click();
+          return;
+        }
+      }
       setTab("ai");
       const target = claimNodes.get(activeClaim);
       if (target) {
@@ -192,7 +211,10 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
           ? c.evidenceIds.includes(initialAnchor.id)
           : c.id === routeParams.get("claim"),
       );
-  if (initialAnchor && initialClaim) locate(initialAnchor, initialClaim.id);
+  if (initialAnchor) {
+    locate(initialAnchor, initialClaim?.id || null);
+    if (!initialClaim && returnPath) returnButton.textContent = "← 返回反馈";
+  }
 
   function setTab(tab) {
     root.dataset.tab = tab;
@@ -213,6 +235,9 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   }
   function locate(anchor, claimId) {
     if (anchor.validationStatus !== "matched") return;
+    new TrainingRepository(db)
+      .track("evidence_opened", { documentId: item.id, evidenceId: anchor.id })
+      .catch(() => {});
     activeClaim = claimId;
     selectedAnchor = anchor.id;
     for (const [index, nodes] of paragraphNodes) {
@@ -429,6 +454,9 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     errorMessage = "";
     errorCode = "";
     status = "analyzing";
+    new TrainingRepository(db)
+      .track("reading_started", { documentId: item.id })
+      .catch(() => {});
     renderAI();
     try {
       const payload = await session.run(

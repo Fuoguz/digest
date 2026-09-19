@@ -2,6 +2,7 @@ import { atomic } from "./learning-repository.js";
 import { documentSnapshot, restoreAnchor } from "../domain/evidence.js";
 import { MODE_SECTIONS, CLAIM_KINDS } from "../ai/schema.js";
 import { RELATION_TYPES, RATINGS } from "../domain/learning.js";
+import { validateTrainingBackup } from "./training-backup.js";
 export const BACKUP_STORES = [
   "documents",
   "readingResults",
@@ -10,11 +11,15 @@ export const BACKUP_STORES = [
   "knowledgeUnits",
   "relations",
   "activities",
+  "courses",
+  "tasks",
+  "attempts",
+  "feedback",
 ];
 export function exportBackup(db) {
   return atomic(db, BACKUP_STORES, (data) => ({
     format: "digest-v02",
-    version: 1,
+    version: 2,
     createdAt: new Date().toISOString(),
     stores: data,
   }));
@@ -26,9 +31,16 @@ export async function restoreBackup(db, backup) {
   const text = (v) => typeof v === "string",
     list = (v) => Array.isArray(v),
     date = (v) => text(v) && Number.isFinite(Date.parse(v));
-  if (backup?.format !== "digest-v02" || backup.version !== 1 || !backup.stores)
+  if (
+    backup?.format !== "digest-v02" ||
+    ![1, 2].includes(backup.version) ||
+    !backup.stores
+  )
     fail();
   const data = structuredClone(backup.stores);
+  if (backup.version === 1)
+    for (const name of ["courses", "tasks", "attempts", "feedback"])
+      data[name] ??= [];
   for (const name of BACKUP_STORES) {
     if (!list(data[name])) fail();
     const ids = new Set();
@@ -139,6 +151,7 @@ export async function restoreBackup(db, backup) {
       fail();
   for (const a of data.activities)
     if (!text(a.type) || !date(a.createdAt)) fail();
+  validateTrainingBackup(data, fail);
   return atomic(db, BACKUP_STORES, (current, tx) => {
     // Restore into an empty study space: no silent merge, overwrite or clearing.
     if (BACKUP_STORES.some((name) => current[name].length))

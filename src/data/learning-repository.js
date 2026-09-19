@@ -8,16 +8,32 @@ import {
 import { getAllRecords } from "./db.js";
 
 // All reads finish inside one transaction; mutation is synchronous, atomic and retryable.
-export function atomic(db, names, mutate) {
+export function atomic(db, names, mutate, signal) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(names, "readwrite"),
       data = {};
     let pending = names.length,
       output,
       failure;
-    tx.oncomplete = () => resolve(output);
-    tx.onabort = tx.onerror = () =>
+    const cancel = () => {
+      failure = new DOMException("Cancelled", "AbortError");
+      try {
+        tx.abort();
+      } catch {}
+    };
+    signal?.addEventListener("abort", cancel, { once: true });
+    tx.oncomplete = () => {
+      signal?.removeEventListener("abort", cancel);
+      resolve(output);
+    };
+    tx.onabort = tx.onerror = () => {
+      signal?.removeEventListener("abort", cancel);
       reject(failure || tx.error || new Error("本地保存失败，请重试"));
+    };
+    if (signal?.aborted) {
+      cancel();
+      return;
+    }
     for (const name of names) {
       const request = tx.objectStore(name).getAll();
       request.onsuccess = () => {
@@ -128,6 +144,13 @@ export class LearningRepository {
         tx.objectStore("activities").put({
           id: makeId("activity"),
           type: "review_rated",
+          cardId: id,
+          documentId: card.documentId,
+          createdAt: now.toISOString(),
+        });
+        tx.objectStore("activities").put({
+          id: makeId("activity"),
+          type: "review_completed",
           cardId: id,
           documentId: card.documentId,
           createdAt: now.toISOString(),

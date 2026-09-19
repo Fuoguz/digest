@@ -124,7 +124,7 @@ export async function mountSettings(container, db, isCurrent) {
     el(
       "p",
       "reader-muted",
-      "备份包含正文、研读、依据、复习历史、知识点和关系。请保存到自己可信的位置。",
+      "备份包含正文、研读、依据、复习历史、知识点、关系、课程、任务、首次答案、反馈和已保存修订。未提交的修订草稿不在备份中。请保存到可信位置。",
     ),
   );
   const restore = el("input");
@@ -188,7 +188,11 @@ export async function mountSettings(container, db, isCurrent) {
     feedback,
     data,
     ai,
-    el("p", "reader-muted", "Digest v0.2 Core · 不提供云同步、账号或 OCR。"),
+    el(
+      "p",
+      "reader-muted",
+      "Digest 0.2.1 Pilot candidate · 不提供云同步、账号或 OCR。",
+    ),
     link("了解 Digest", "/"),
   );
   return () => {};

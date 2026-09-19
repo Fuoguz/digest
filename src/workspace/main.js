@@ -11,12 +11,7 @@ import {
 } from "../data/legacy-migration.js";
 import { extractTextFile, fileExtension } from "../importers/text.js";
 import { extractPdfFile } from "../importers/pdf.js";
-import {
-  shellHTML,
-  renderDashboard,
-  renderLibrary,
-  renderComingSoon,
-} from "./views.js";
+import { shellHTML, renderLibrary, renderComingSoon } from "./views.js";
 import { mountReader } from "../reader/reader.js";
 import { mountReview } from "./review.js";
 import { mountGraph } from "./graph.js";
@@ -25,6 +20,7 @@ import { learningStats } from "../domain/learning.js";
 import { el, button, link } from "./components.js";
 import { sourceSignature } from "../domain/evidence.js";
 import { atomic } from "../data/learning-repository.js";
+import { mountTraining } from "./training.js";
 
 const root = document.querySelector("#app");
 const state = {
@@ -54,6 +50,8 @@ function normalizedPath() {
 
 function currentTitle(path) {
   if (path === "/app/") return "Dashboard";
+  if (path.startsWith("/app/courses")) return "课程";
+  if (path.startsWith("/app/tasks")) return "学习任务";
   if (path.startsWith("/app/library")) return "资料库";
   if (path.startsWith("/app/reader")) return "Reader";
   if (path.startsWith("/app/review")) return "复习";
@@ -107,8 +105,20 @@ async function renderCurrent() {
       )
       .map((c) => c.documentId),
   );
-  if (path === "/app/") page.innerHTML = renderDashboard(state);
-  else if (path === "/app/library") {
+  if (
+    path === "/app/" ||
+    path === "/app/courses" ||
+    path.startsWith("/app/courses/") ||
+    path.startsWith("/app/tasks/")
+  ) {
+    const dispose = await mountTraining(
+      page,
+      db,
+      () => version === routeVersion,
+    );
+    if (version === routeVersion) disposeReader = dispose;
+    else dispose?.();
+  } else if (path === "/app/library") {
     page.innerHTML = renderLibrary(state);
     const source = page.querySelector("[data-source-filter]");
     if (source) source.value = state.filters.sourceType;
@@ -173,6 +183,7 @@ async function renderCurrent() {
     mobile.append(
       link("搜索", "/app/search"),
       link("设置与备份", "/app/settings"),
+      link("知识图谱", "/app/graph"),
     );
     page.append(mobile);
   }
@@ -344,6 +355,11 @@ async function toggleFavorite(id) {
 
 function bindEvents() {
   document.addEventListener("click", (event) => {
+    if (event.target.closest(".skip-link")) {
+      event.preventDefault();
+      document.querySelector("#page-root")?.focus();
+      return;
+    }
     const route = event.target.closest("[data-route]");
     if (route) {
       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)

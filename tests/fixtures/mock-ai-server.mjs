@@ -3,6 +3,7 @@ import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { outputFor } from "./reading-output.mjs";
+import { feedbackOutput } from './feedback-output.mjs';
 const port = Number(process.env.DIGEST_QA_PORT || 5185);
 const server = http.createServer(async (request, response) => {
   console.log(
@@ -58,6 +59,7 @@ const server = http.createServer(async (request, response) => {
     response.end();
     return;
   }
+  if (request.url.startsWith('/rate-limit')) { response.writeHead(429); response.end(); return; }
   const chunks = [];
   for await (const chunk of request) chunks.push(chunk);
   try {
@@ -67,7 +69,15 @@ const server = http.createServer(async (request, response) => {
     );
     const snapshot = { ...prompt.document, readingMode: prompt.readingMode };
     let output;
-    if (prompt.task === "suggest_relations") {
+    if (prompt.task === 'course_feedback') {
+      output = feedbackOutput(prompt);
+      if (request.url.startsWith('/partial')) output.gaps[0].evidenceCandidates[0].quote = '不存在的引文';
+      if (request.url.startsWith('/missing')) delete output.gaps;
+      if (request.url.startsWith('/long')) {
+        output.gaps[0].explanation = 'QA 长反馈：请核对概念、证据与适用条件。'.repeat(160);
+        output.gaps = Array.from({ length: 8 }, () => structuredClone(output.gaps[0]));
+      }
+    } else if (prompt.task === "suggest_relations") {
       // Deliberately bounded QA fixture, not a production relation generator.
       const a = prompt.units.find((u) => u.label === "主动回忆"),
         b = prompt.units.find((u) => u.label === "间隔复习");
@@ -96,7 +106,7 @@ const server = http.createServer(async (request, response) => {
     response.setHeader("Content-Type", "application/json");
     response.end(
       JSON.stringify({
-        choices: [{ message: { content: JSON.stringify(output) } }],
+        choices: [{ message: { content: request.url.startsWith('/empty') ? '' : request.url.startsWith('/malformed') ? '{invalid' : JSON.stringify(output) } }],
       }),
     );
   } catch {

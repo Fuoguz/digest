@@ -1,0 +1,20 @@
+# Local dependencies, output and browser QA
+node_modules/
+dist/
+qa-artifacts/
+.pilot-deploy/
+.vercel/
+playwright-report/
+test-results/
+
+# Never publish credentials or developer-only configuration
+.env
+.env.*
+!.env.example
+*.local
+*.log
+
+# Historical tracked materials remain versioned; ignore future local additions
+.legacy-workspace/
+.DS_Store
+Thumbs.db

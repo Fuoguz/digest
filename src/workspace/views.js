@@ -37,7 +37,7 @@ const nav = [
   ["/app/", "dashboard", "Dashboard"],
   ["/app/library", "library", "资料库"],
   ["/app/review", "review", "复习"],
-  ["/app/graph", "graph", "知识图谱"],
+  ["/app/courses", "library", "课程"],
 ];
 
 export function shellHTML(path) {
@@ -62,9 +62,9 @@ export function shellHTML(path) {
     navHTML +
     '</nav><div class="nav-spacer"></div><p class="workspace-label">工具</p><nav class="nav-list"><a class="nav-item" data-route href="/app/search"><span class="nav-icon">' +
     icons.search +
-    '</span><span>搜索</span></a></nav><div class="sidebar-foot"><a class="nav-item" data-route href="/app/settings"><span class="nav-icon">' +
+    '</span><span>搜索</span></a><a class="nav-item" data-route href="/app/graph">知识图谱</a></nav><div class="sidebar-foot"><a class="nav-item" data-route href="/app/settings"><span class="nav-icon">' +
     icons.settings +
-    '</span><span>设置</span></a></div></aside><section class="workspace"><header class="topbar"><span class="mobile-head">Digest</span><div class="crumb" id="page-crumb">工作台 / <strong>Dashboard</strong></div><div class="topbar-actions"><button class="icon-button" type="button" aria-label="搜索" data-route-button="/app/search">⌕</button><button class="primary-action" type="button" data-open-import><span>＋</span> 导入资料</button></div></header><main id="page-root"></main></section></div>' +
+    '</span><span>设置</span></a></div></aside><section class="workspace"><header class="topbar"><span class="mobile-head">Digest</span><div class="crumb" id="page-crumb">工作台 / <strong>Dashboard</strong></div><div class="topbar-actions"><button class="icon-button" type="button" aria-label="搜索" data-route-button="/app/search">⌕</button><button class="primary-action" type="button" data-open-import><span>＋</span> 导入资料</button></div></header><main id="page-root" tabindex="-1"></main></section></div>' +
     importDialogHTML() +
     '<div id="toast-root" aria-live="polite"></div>'
   );

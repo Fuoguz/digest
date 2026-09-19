@@ -1,4 +1,5 @@
 import { LearningRepository } from "../data/learning-repository.js";
+import { TrainingRepository } from "../data/training-repository.js";
 import { sourceSignature } from "../domain/evidence.js";
 import { RATINGS, schedule } from "../domain/learning.js";
 import {
@@ -13,9 +14,11 @@ import {
 
 export async function mountReview(container, db, isCurrent) {
   const repo = new LearningRepository(db);
+  const analytics = new TrainingRepository(db);
   let cards = await repo.list("reviewCards"),
     documents = await repo.list("documents");
   if (!isCurrent()) return () => {};
+  analytics.track("review_started").catch(() => {});
   let manage = new URLSearchParams(location.search).get("manage") === "1",
     revealed = new URLSearchParams(location.search).get("reveal") === "1",
     busy = false,
@@ -26,6 +29,7 @@ export async function mountReview(container, db, isCurrent) {
     "先试着回忆，再核对答案。困难程度决定下次相见的时间。",
   );
   container.replaceChildren(root);
+  root.append(link("用课程中的新问题再次检验理解 →", "/app/courses"));
   const toolbar = el("div", "core-toolbar"),
     body = el("div", "review-body"),
     feedback = el("p");
