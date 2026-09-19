@@ -1,6 +1,6 @@
 # Digest · 课程学习训练工作台
 
-当前版本：**0.2.1 Pilot candidate**（2026-09-18）。代码与本地浏览器闭环已验证；**真实模型与公网部署验收未通过放行**，详见 [NEXT_RELEASE_REPORT.md](NEXT_RELEASE_REPORT.md)。
+当前版本：**0.2.1 Preview Pilot**（2026-09-19）。真实模型 10 案例与公网双端闭环已验收；**READY WITH KNOWN NON-BLOCKING LIMITATIONS**，限 5 名受邀学生短材料试用，详见 [NEXT_RELEASE_REPORT.md](NEXT_RELEASE_REPORT.md)。
 
 Digest 面向论述型、案例型、材料密集型课程，帮助学生检查“我自己的答案差在哪里”。
 
@@ -32,7 +32,7 @@ npm run build
 
 ## AI 与隐私
 
-生产默认 Browser → 同源 `/api/digest` → Serverless → 服务端配置的模型。普通学生只需试用码，不需 API Key。Key、固定 endpoint/model 与试用码由服务器环境变量配置，见 [Pilot 配置](docs/V0.2_PILOT_DEPLOYMENT.md)。本轮没有修改生产环境变量或发布线上版本。
+生产默认 Browser → 同源 `/api/digest` → Serverless → 服务端配置的模型。普通学生只需试用码，不需 API Key。Key、固定 endpoint/model 与试用码由服务器环境变量配置，见 [Pilot 配置](docs/V0.2_PILOT_DEPLOYMENT.md)。已发布独立 Preview；生产变量值、生产部署与域名保持不变。模型变量增加 Preview target，Preview 使用独立试用码。
 
 本地 loopback 默认 Developer 模式，可在设置中配置兼容 Chat Completions 的服务；此模式的 Key 存在浏览器 localStorage，仅供开发，不进入备份。公网也允许开发者显式切换此模式。普通试用用户应保持 Pilot 模式。
 
@@ -57,3 +57,5 @@ npm run build
 浏览器 QA 使用独立端口 5193、全新 Chrome context 和明确标记的 mock AI，实际操作 UI、下载文件再上传恢复，不接触真实用户资料库。脚本需要 Playwright 与 Chrome。Playwright 由 npm 安装，默认使用本机已安装的 Chrome；可通过 `DIGEST_BROWSER_CHANNEL` 选择已安装的浏览器通道。截图与结果写入 `qa-artifacts/next-release/`，不进入构建。
 
 运行入口：`index.html / src/landing.js` 与 `app/index.html / src/workspace/main.js`。领域：`src/domain/`；持久化：`src/data/`；AI：`src/ai/`；训练 UI：`src/workspace/training.js`。继续使用 Vanilla JS / ES Modules，无框架迁移。详细结构见 [架构](docs/V0.2_ARCHITECTURE.md)。
+
+真实模型逐案例结论见 [验收报告](docs/V0.2.1_REAL_MODEL_ACCEPTANCE.md)。Preview 需要私人分享入口及试用码，不要将邀请信息提交到 Git。资料仅属于同一浏览器/origin。
