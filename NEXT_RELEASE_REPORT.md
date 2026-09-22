@@ -1,6 +1,6 @@
 # NEXT_RELEASE_REPORT
 
-日期：2026-09-19。Digest 0.2.1 Preview Pilot 验收报告。
+最新复验日期：2026-09-22。Digest 0.2.1 Preview Pilot 验收报告。第1–12节保留2026-09-19交付背景；本轮新证据与结论见末尾2026-09-22章节及[详细逐案例审阅](docs/PILOT_ACCEPTANCE_2026-09-22.md)。
 
 本轮冻结产品能力，仅完成发布检查点、Preview 配置、真实模型与公网 QA。最终判定见第 10 节；不能把引用可定位等同于语义正确或学习效果。
 
@@ -115,6 +115,62 @@ Production 域名 digest-sigma.vercel.app 未修改。当前 production deployme
 
 Vercel 登录问题已解决。项目仍启用部署保护，仅为 Preview 创建七天分享入口，没有关闭项目保护。私人邀请文件在被忽略的 .vercel/PILOT_INVITATION.txt；不要提交或公开发布它。
 
-## Commands actually run
+## Commands actually run — 2026-09-19 historical
 
 Git status/diff/stat/check/branch/log/remote/worktree/reflog/ls-remote；npm install --save-dev --save-exact playwright@1.62.1 --ignore-scripts；npm test；npm run build；npm run qa:browser；node scripts/audit-pilot.mjs；git commit；git push -u origin codex/digest-v02；vercel whoami/project inspect/env ls/api；node scripts/prepare-pilot.mjs；vercel deploy --cwd .pilot-deploy（无 --prod）；node tests/browser/real-model.mjs；DIGEST_REAL_UI=1 node tests/browser/preview-pilot.mjs；node tests/browser/preview-api.mjs。
+
+# 2026-09-22 Independent Pilot Revalidation
+
+## Real Model Acceptance
+
+13个新案例，14次模型请求（政策研读一次自动结构修复），另4次真实双端UI反馈调用。逐条审阅 **7 PASS / 6 PARTIAL / 0 FAIL**；这是有限样本，不是准确率。检查清单在模型调用前制定，覆盖完整正确、部分正确、条件遗漏、概念混淆、无依据推论、不同合理观点与材料不足。详细A–H矩阵见 [本轮验收](docs/PILOT_ACCEPTANCE_2026-09-22.md)。
+
+## Evidence Support Quality
+
+139候选引文，138可定位，1因模型将分号改成句号被判invalid。匹配引用的段落、UTF-16 offsets、sourceRevision均一致；语义支持另行逐条审阅。错误候选未变成有效链接。没有把这些数量当成判断准确性。
+
+## Critical Omission Findings
+
+预写清单中的关键条件均被覆盖，包括非随机/无对照、适用范围、及时认可例外与长文末尾家庭事务例外。未发现本轮选定任务的阻塞性关键遗漏。这不等于完整材料所有命题都被覆盖。
+
+## Material / Model Boundary
+
+无金额/效果数据时能诚实说明，正确答案可得到空gaps。仍有非阻塞问题：泛化研究证据门槛、对已合理限定观点继续挑剔、附加缺口轻微误读；长文建议把某日期称为“公布日期”但输入未提供该背景。公网UI偶有answerChecks内部词。均已记录，未用新增功能掩盖。
+
+## Long-document Behavior
+
+官方2021年个人信息保护法第1–74条，9,341字符、181段；全部正文进入消息，无检索截断。一次反馈约45.4秒，找到第4、13、28、54、72、74条相关检查点，最后证据结束offset=9341。六项关键判断都有反馈；不是74条全覆盖认证，也不是完整英文论文或PDF图表能力证明。
+
+## Preview Deployment
+
+本轮未重新部署：产品源码与现有Preview一致，仅新增验收工具和报告。部署 `dpl_4JMA65M3afa1zk3qBUG6cXAmCA9Q`、源码 `0708820ff0006c467b38c3a7c6b847fd71fbab6b`，READY；[Preview地址](https://digest-rfu0e349k-fuoguzs-projects.vercel.app)。私密分享入口仍需单独使用，不能把裸URL当公共无保护入口。
+
+重新确认登录与环境变量target。Production仍为 `dpl_AG9s5qh2krmdQDD21zVgkUxTb7i8`；main未变，未改Production配置、域名或项目保护。模型Key仅服务端Pilot路径使用，未写入测试fixtures或报告。
+
+## Public E2E
+
+1440、390各两轮真实模型完成课程→文本材料→任务→原答→反馈→原文→返回→修订→完成→刷新，新页/课程继续可用。已查看截图；反馈偏长但学习路径可操作。
+
+公网故障最终独立回归15项通过：400/429/500/503/504、network、invalid/truncated JSON、缺字段、空回复、取消、连续点击与响应式。已部署仓储拒绝旧/取消请求，保留同一Attempt原答、Revision与Feedback。超时用已部署客户端注入50ms测试，服务器实际401/200/400/405已验证；不声称向供应商制造了真实限流故障。
+
+真实浏览器备份下载→新空context→上传→Evidence/Revision→再次下载比对通过；只按合同清理临时请求ID，学习字段完全一致。公网此样本含空的旧Reading/Graph stores；非空旧数据的十种store恢复在本轮本地16项浏览器QA中验证。
+
+两次集成QA的测试工具断言曾失败（人工dispatch绕过disabled；恢复补null字段），已修正测试并用无收费调用的故障/恢复脚本补验，不声称集成脚本原始退出码全绿。完整说明及证据路径见详细验收。
+
+## Remaining P0/P1 Issues
+
+在上述范围内未发现剩余P0/P1。非阻塞限制：样本小、无教师盲审和真实学生结果、英文短摘录、PDF不含OCR/图表完整性保证、AI偶有冗余/越界表达、无跨设备同步、同一origin与定期备份要求、分享入口需到期续发、未核实上游费用硬上限。没有将P2变成本轮开发任务。
+
+## Pilot Decision
+
+**READY FOR 5-USER PILOT WITH KNOWN NON-BLOCKING LIMITATIONS**
+
+可以邀请5名学生用精选材料进行探索性Pilot；停止功能开发。准备真实问题和可选rubric，告知AI传输及备份，记录反馈接受/拒绝与实际修正，由教师/研究者复核关键反馈；数日后用人工选择的新案例再测。不能将“完成修订”自动认定为学习效果。
+
+## Current changes and commands
+
+开始HEAD `ece4b735f7c743bb2c8aaa492da7a0106930faa5`，origin分支一致，开始工作树clean。仅修改README、NEXT_RELEASE_REPORT、历史验收入口、测试runner，新增本轮验收/参考/未来研究笔记、13案例fixture及公开法条fixture、恢复QA脚本；产品源码、数据库与配置无修改。交付commit以 `git log -1` 为准，产品部署SHA如上。
+
+本轮实际运行：git status/branch -vv/log -15/diff/remote/ls-remote；npm test（60/60）；npm run build（通过）；npm run qa:browser（16/16）；Vercel whoami与只读api配置/部署检查；两参考库只读sparse clone/git show；DIGEST_ACCEPTANCE=20260922 node tests/browser/real-model.mjs；DIGEST_REAL_UI=1 node tests/browser/preview-pilot.mjs（两轮真实双端UI）；DIGEST_REAL_UI=0 node tests/browser/preview-pilot.mjs（最终15项故障回归）；node tests/browser/preview-restore.mjs（退出0）；node tests/browser/preview-api.mjs；恢复比对器篡改负测；git diff --check；node scripts/audit-pilot.mjs。
+
+参考笔记：[PILOT_REFERENCE_NOTES](docs/PILOT_REFERENCE_NOTES.md)；未来候选仅记录于 [POST_PILOT_ARCHITECTURE_IDEAS](docs/POST_PILOT_ARCHITECTURE_IDEAS.md)，没有实现SourceBlock、SourceClaim、Coverage ledger、Graph或迁移题系统。

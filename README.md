@@ -58,4 +58,4 @@ npm run build
 
 运行入口：`index.html / src/landing.js` 与 `app/index.html / src/workspace/main.js`。领域：`src/domain/`；持久化：`src/data/`；AI：`src/ai/`；训练 UI：`src/workspace/training.js`。继续使用 Vanilla JS / ES Modules，无框架迁移。详细结构见 [架构](docs/V0.2_ARCHITECTURE.md)。
 
-真实模型逐案例结论见 [验收报告](docs/V0.2.1_REAL_MODEL_ACCEPTANCE.md)。Preview 需要私人分享入口及试用码，不要将邀请信息提交到 Git。资料仅属于同一浏览器/origin。
+2026-09-22 已重新验收，结论为 **READY FOR 5-USER PILOT WITH KNOWN NON-BLOCKING LIMITATIONS**；13个新真实模型案例及局限见 [最新验收报告](docs/PILOT_ACCEPTANCE_2026-09-22.md)，历史批次见 [早期报告](docs/V0.2.1_REAL_MODEL_ACCEPTANCE.md)。本轮只补验收工具和文档，未扩产品功能。Preview 需要私人分享入口及试用码，不要将邀请信息提交到 Git。资料仅属于同一浏览器/origin。
