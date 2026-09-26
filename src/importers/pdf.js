@@ -1,6 +1,7 @@
+import { t as tr, th } from "../workspace/i18n.js";
 import { buildParagraphs } from '../domain/documents.js';
 
-export const PDF_NO_TEXT_MESSAGE = '当前 PDF 未检测到可提取文本，请使用文本版 PDF 或粘贴正文。';
+export const PDF_NO_TEXT_MESSAGE = tr('当前 PDF 未检测到可提取文本，请使用文本版 PDF 或粘贴正文。');
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
 export function groupPageText(items = []) {
@@ -26,7 +27,7 @@ export function groupPageText(items = []) {
 }
 
 export async function extractPdfFile(file) {
-  if (file.size > MAX_FILE_SIZE) throw new Error('PDF 文件不能超过 20 MB');
+  if (file.size > MAX_FILE_SIZE) throw new Error(tr('PDF 文件不能超过 20 MB'));
   const pdfjs = await import('/vendor/pdfjs/pdf.mjs');
   pdfjs.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.mjs';
   const loadingTask = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });

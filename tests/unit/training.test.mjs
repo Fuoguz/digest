@@ -268,18 +268,17 @@ test("Physical schema upgrade preserves an existing v1 Document without clearing
   assert.equal((await getRecord("documents", "old", next)).title, "必须保留");
   assert.ok(next.objectStoreNames.contains("attempts"));
 });
-test("Oversized material is refused explicitly instead of silently truncated", async () => {
+test("Oversized material uses bounded retrieval without losing original source or hiding scope", async () => {
   const s = await setup();
-  await assert.rejects(
-    prepareFeedbackContext(
-      s.task,
-      s.course,
-      [{ ...s.doc, rawContent: "字".repeat(60001) }],
-      answer,
-    ),
-    /60,000/,
-  );
+  const source="字".repeat(60001);
+  const context=await prepareFeedbackContext(s.task,s.course,[{...s.doc,rawContent:source}],answer);
+  assert.equal(context.snapshots[0].source,source);
+  assert.equal(context.retrieval.scope.partial,true);
+  assert.ok(context.retrieval.scope.selectedCharacters<=24000);
+  assert.equal(context.retrieval.scope.totalCharacters,60001);
+  s.db.close();
 });
+
 test("Analytics contain metadata only, never the submitted answer or source text", async () => {
   const s = await setup();
   await reviewed(s);

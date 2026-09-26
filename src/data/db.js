@@ -1,3 +1,4 @@
+import { t as tr, th } from "../workspace/i18n.js";
 export const DB_NAME = "digest-v02";
 export const DB_VERSION = 2;
 export const STORES = Object.freeze({
@@ -21,7 +22,7 @@ function requestResult(request) {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () =>
-      reject(request.error || new Error("IndexedDB 请求失败"));
+      reject(request.error || new Error(tr("IndexedDB 请求失败")));
   });
 }
 
@@ -29,15 +30,15 @@ function transactionDone(transaction) {
   return new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve();
     transaction.onerror = () =>
-      reject(transaction.error || new Error("IndexedDB 事务失败"));
+      reject(transaction.error || new Error(tr("IndexedDB 事务失败")));
     transaction.onabort = () =>
-      reject(transaction.error || new Error("IndexedDB 事务已中止"));
+      reject(transaction.error || new Error(tr("IndexedDB 事务已中止")));
   });
 }
 
 export function openDatabase(indexedDBImpl = globalThis.indexedDB) {
   if (!indexedDBImpl)
-    return Promise.reject(new Error("当前浏览器不支持 IndexedDB"));
+    return Promise.reject(new Error(tr("当前浏览器不支持 IndexedDB")));
   if (indexedDBImpl === globalThis.indexedDB && databasePromise)
     return databasePromise;
   const opening = new Promise((resolve, reject) => {
@@ -62,7 +63,7 @@ export function openDatabase(indexedDBImpl = globalThis.indexedDB) {
     let blocked = false;
     request.onblocked = () => {
       blocked = true;
-      reject(new Error("请关闭其他 Digest 标签页后刷新，以安全升级资料库。"));
+      reject(new Error(tr("请关闭其他 Digest 标签页后刷新，以安全升级资料库。")));
     };
     request.onsuccess = () => {
       if (blocked) {
@@ -76,7 +77,7 @@ export function openDatabase(indexedDBImpl = globalThis.indexedDB) {
       resolve(request.result);
     };
     request.onerror = () =>
-      reject(request.error || new Error("无法打开 Digest 资料库"));
+      reject(request.error || new Error(tr("无法打开 Digest 资料库")));
   });
   if (indexedDBImpl === globalThis.indexedDB) {
     databasePromise = opening;

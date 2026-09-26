@@ -1,12 +1,12 @@
 # Digest · 课程学习训练工作台
 
-当前版本：**0.2.1 Preview Pilot**（2026-09-19）。真实模型 10 案例与公网双端闭环已验收；**READY WITH KNOWN NON-BLOCKING LIMITATIONS**，限 5 名受邀学生短材料试用，详见 [NEXT_RELEASE_REPORT.md](NEXT_RELEASE_REPORT.md)。
+当前版本：**0.2.1 UI & Long-reading Pilot Update**（2026-09-24）。稳定入口：[digest-sigma.vercel.app](https://digest-sigma.vercel.app)。本轮状态及限制见 [NEXT_RELEASE_REPORT](NEXT_RELEASE_REPORT.md)；历史真实模型结果不等于本轮或未来的可靠性保证。
 
 Digest 面向论述型、案例型、材料密集型课程，帮助学生检查“我自己的答案差在哪里”。
 
 课程材料 → 学习任务 → 独立作答 → 具体反馈 → 回原文核查 → 修订 → 保存 Attempt → 以后继续练习。
 
-## 本地运行
+## 运行与验证
 
 需要 Node.js 22+（本轮使用 24.14.0）。
 
@@ -14,48 +14,47 @@ Digest 面向论述型、案例型、材料密集型课程，帮助学生检查�
 npm install
 npm start
 npm test
+npm run qa:browser
+node tests/browser/upgrade.mjs
 npm run build
 ```
 
-固定使用 http://127.0.0.1:5180/app/ 。不同域名、端口和浏览器不共享本地数据。
+本地固定入口 http://127.0.0.1:5180/app/ 。不同域名、端口和浏览器不共享本地数据。
 
-首次使用：创建课程 → 用顶部“导入资料”导入 TXT、Markdown、文本层 PDF 或粘贴正文 → 回课程关联材料 → 创建问题与可选评价标准 → 先写自己的答案。首次答案在 AI 调用前保存；失败可以重试。反馈中的依据可打开 Reader 并返回原反馈。修订追加保存，不覆盖首次作答。
+升级浏览器测试默认使用构造文本；设置 `DIGEST_TEST_PDF` 为本机 PDF 路径即可实际上传该 PDF。本轮使用用户提供的 Guardian 文章 PDF（14 页，32,285 字符，54 段）。结果与截图留在被忽略的 qa-artifacts，不发布用户材料。
 
-## 已实现
+## 使用方式
 
-- Course、Task、Attempt、Feedback；课程与任务编辑/删除；删除课程不删除 Library 原文或旧学习资产。
-- 首次答案、草稿、历史作答、反馈、修订说明与修订历史；Dashboard 优先继续任务。
-- Feedback 严格运行时结构校验、安全文本渲染、原文逐字校验、版本失效提示、取消与旧请求保护。
-- Reader 四模式研读、原文定位、现有 Active Recall、Knowledge Unit 与用户确认关系的 Graph 均保留。Graph 移至工具区。
-- IndexedDB v1 → v2 增量建表，不清库；备份 v2 包含全部已提交学习记录，兼容导入旧 v1 备份。
-- 本地 metadata 事件，不记录正文/答案到 analytics，不向外部统计平台发送事件。
+创建课程 → 在课程中添加材料（自动关联） → 创建问题和可选评价标准 → 先写自己的答案 → 获取反馈 → 核查依据 → 修订。
 
-## AI 与隐私
+首次答案先于 AI 保存；失败可以重试。修订追加，不覆盖第一次回答。工作台优先显示未完成任务与最近课程，首次使用有简短步骤引导。Reader 以原文和重点概览为主，细节、旧答案和工具按需展开。
 
-生产默认 Browser → 同源 `/api/digest` → Serverless → 服务端配置的模型。普通学生只需试用码，不需 API Key。Key、固定 endpoint/model 与试用码由服务器环境变量配置，见 [Pilot 配置](docs/V0.2_PILOT_DEPLOYMENT.md)。已发布独立 Preview；生产变量值、生产部署与域名保持不变。模型变量增加 Preview target，Preview 使用独立试用码。
+界面支持中文 / English，记住选择，并在切换时保留表单与答案草稿。AI 输出语言可单独选择。原文、用户输入、已有模型结果不会被语言切换翻译或重写。
 
-本地 loopback 默认 Developer 模式，可在设置中配置兼容 Chat Completions 的服务；此模式的 Key 存在浏览器 localStorage，仅供开发，不进入备份。公网也允许开发者显式切换此模式。普通试用用户应保持 Pilot 模式。
+## 长资料与 AI
 
-只有主动请求研读/反馈/关系建议时才发送所选内容。训练反馈会发送任务、评价标准、答案、课程名称/说明与所选材料。AI 可以出错；**引用存在不等于它支持 AI 判断**。修订保存不代表学习效果已被验证。
+- Reader 按最多 10,000 字符的原文分段顺序研读；多段完成后生成整体概览。每次最多 12 段，超过范围请选择原文段落区间；原文完整保留。
+- 每段成功后保存本地进度。网络失败、取消或刷新后可复用进度；源版本、范围或输出语言变化会重新开始。未完成的研读不会覆盖旧成功结果。
+- 训练反馈按任务、rubric 与答案进行轻量词语检索，最多选取 24,000 字符课程片段；完整源快照用于验证。界面明确显示是否仅检查部分材料。不是跨语言语义检索，也不保证找齐所有相关证据。
+- 模型可选择程序提供的原文片段编号；程序取回精确原句，再验证段落、唯一匹配、offset 与 sourceRevision。错误编号、重复引文或版本变化不会伪造跳转。
+- 引文存在不等于支持判断。没有可靠依据时明确标注；反馈不代替教师评价，也不声称修订已证明掌握。
+
+生产调用 Browser → 同源 `/api/access` → `/api/digest` → 服务端配置模型。学生只需试用码，不需 API Key。Key 留在服务器环境。开发连接设置保留于本地开发模式，普通 Pilot 路径不突出开发选项。详见 [AI 架构](docs/V0.2_ARCHITECTURE.md) 与 [部署](docs/V0.2_PILOT_DEPLOYMENT.md)。
+
+只有主动请求 AI 时才发送任务、所选材料、答案等必要内容。没有外部行为统计 SDK；本地事件不包含正文或答案。反馈“有帮助 / 不准确 / 依据不相关”只保存反馈 ID 与类型。
 
 ## 数据与边界
 
-全部学习记录属于当前浏览器/origin，无账号或云同步。请在设置导出完整 JSON 备份；文件包含私人正文和答案，未加密。恢复仅允许空学习库，拒绝覆盖或静默合并。未提交的修订草稿留在本地 settings，不包含在备份内。首次答案、已保存修订完整备份。
+IndexedDB version 2 与既有全部数据兼容，无清库迁移。Course、Task、Attempt、Feedback、Document、ReadingResult、Evidence、Review、KnowledgeUnit、Relation 保留。删除课程不删除 Library 原文；Graph 与旧主动回忆功能继续可用。
 
-每个训练任务最多 60,000 字符材料、16,000 字符答案；超限明确拒绝，不静默截断。适用于少量精选材料，不承诺整学期文库检索。暂不自动生成新题、不自动评分、不展示掌握率。可在同一课程手动创建不同案例再检验；同题独立重答入口不展示旧答案。
+全部学习记录属于当前浏览器/origin，无账号或云同步。设置中可以导出完整 JSON 备份，文件未加密，包含私人正文和答案。恢复只允许空学习库，避免覆盖。已提交答案、反馈、修订与活动可备份；settings 中的未提交草稿、未完成研读进度、开发凭据不在备份内。
 
-不做 OCR、Word/PPT 导入、复杂 PDF 版面重建；不保存原 PDF 二进制，只保存提取正文。无教师后台、积分、支付、向量数据库或 Graph RAG。
+答案最多 16,000 字符；极大任务说明与答案组合仍受代理 95,000 字符上下文检查限制。AI 可能慢或失败，每次请求有超时，多段总耗时可能数分钟。可以取消、缩小范围、稍后继续；取消不保证供应商立刻停止计费。
 
-## 验证与结构
+PDF 只支持文本层提取，无 OCR、复杂版面重建，不保存 PDF 二进制。异常字符会提醒检查提取质量。无教师后台、自动评分、掌握率、自动题库、向量库或 Graph RAG。
 
-```sh
-npm test          # 60 个离线测试，保留原有 40 项
-npm run qa:browser
-npm run build
-```
+## 技术结构与发布
 
-浏览器 QA 使用独立端口 5193、全新 Chrome context 和明确标记的 mock AI，实际操作 UI、下载文件再上传恢复，不接触真实用户资料库。脚本需要 Playwright 与 Chrome。Playwright 由 npm 安装，默认使用本机已安装的 Chrome；可通过 `DIGEST_BROWSER_CHANNEL` 选择已安装的浏览器通道。截图与结果写入 `qa-artifacts/next-release/`，不进入构建。
+继续使用 Vanilla JS / ES Modules；入口 `index.html / src/landing.js` 和 `app/index.html / src/workspace/main.js`。领域在 src/domain，持久化在 src/data，AI 在 src/ai；新样式在 src/styles/upgrade.css，本地化在 src/workspace/i18n.js 与 messages-en.js。
 
-运行入口：`index.html / src/landing.js` 与 `app/index.html / src/workspace/main.js`。领域：`src/domain/`；持久化：`src/data/`；AI：`src/ai/`；训练 UI：`src/workspace/training.js`。继续使用 Vanilla JS / ES Modules，无框架迁移。详细结构见 [架构](docs/V0.2_ARCHITECTURE.md)。
-
-2026-09-22 已重新验收，结论为 **READY FOR 5-USER PILOT WITH KNOWN NON-BLOCKING LIMITATIONS**；13个新真实模型案例及局限见 [最新验收报告](docs/PILOT_ACCEPTANCE_2026-09-22.md)，历史批次见 [早期报告](docs/V0.2.1_REAL_MODEL_ACCEPTANCE.md)。本轮只补验收工具和文档，未扩产品功能。Preview 需要私人分享入口及试用码，不要将邀请信息提交到 Git。资料仅属于同一浏览器/origin。
+发布前运行测试和构建，然后执行 `node scripts/prepare-pilot.mjs`，仅从 `.pilot-deploy` 上传至已关联的 digest 项目。对外始终使用稳定域名，避免随机部署地址导致学生看不到原来的本地数据。不要改变生产环境变量来解决界面问题。

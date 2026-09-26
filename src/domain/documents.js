@@ -1,8 +1,9 @@
+import { t as tr, th } from "../workspace/i18n.js";
 export const READING_MODES = Object.freeze({
-  general: "General",
-  academic_paper: "Academic Paper",
-  legal_case: "Legal Case",
-  policy_document: "Policy Document",
+  general: tr("General"),
+  academic_paper: tr("Academic Paper"),
+  legal_case: tr("Legal Case"),
+  policy_document: tr("Policy Document"),
 });
 
 export const SOURCE_TYPES = Object.freeze({
@@ -56,7 +57,7 @@ export function createDocument(input = {}) {
     .replace(/\r\n?/g, "\n")
     .trim();
   if (!rawContent && input.status !== "legacy_incomplete")
-    throw new Error("资料正文不能为空");
+    throw new Error(tr("资料正文不能为空"));
   const readingMode = Object.hasOwn(READING_MODES, input.readingMode)
     ? input.readingMode
     : "general";
@@ -65,7 +66,7 @@ export function createDocument(input = {}) {
     : "text";
   return {
     id: input.id || makeId(),
-    title: String(input.title || "未命名资料")
+    title: String(input.title || tr("未命名资料"))
       .trim()
       .slice(0, 180),
     sourceType,

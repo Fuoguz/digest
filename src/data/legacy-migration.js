@@ -1,3 +1,4 @@
+import { t as tr, th } from "../workspace/i18n.js";
 import { createDocument } from "../domain/documents.js";
 import { getSetting, putSetting, saveDocument } from "./db.js";
 
@@ -46,7 +47,7 @@ export function extractLegacyNodes(snapshot) {
 }
 
 export function legacyNodeToDocument(node, index = 0) {
-  const title = String(node.title || node.label || "旧版知识条目").trim();
+  const title = String(node.title || node.label || tr("旧版知识条目")).trim();
   const insight = String(
     node.insight || node.mainPoint || node.content || "",
   ).trim();
@@ -63,7 +64,7 @@ export function legacyNodeToDocument(node, index = 0) {
     metadata: {
       legacyInsight: insight || null,
       hasOriginalSource: false,
-      migrationNote: "旧版未保存原文，未生成题目或 Evidence。",
+      migrationNote: tr("旧版未保存原文，未生成题目或 Evidence。"),
     },
   });
 }

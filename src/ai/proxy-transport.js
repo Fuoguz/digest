@@ -1,3 +1,4 @@
+import { t as tr, th } from "../workspace/i18n.js";
 import { AnalysisError } from "./schema.js";
 import {
   DeveloperTransport,
@@ -10,15 +11,17 @@ export function useProxy() {
     localStorage.getItem("digest:ai-mode") !== "developer"
   );
 }
-function accessDialog(signal) {
+export function accessDialog(signal) {
   return new Promise((resolve, reject) => {
     const dialog = el("dialog", "developer-dialog"),
       form = el("form", "developer-form"),
-      title = el("h2", "", "加入 Digest 试用"),
+      title = el("h2", "", tr("加入 Digest 试用")),
       info = el(
         "p",
         "",
-        "请输入邀请人提供的试用码。资料保存在此浏览器；分析时所选资料会发送至试用 AI 服务。",
+        tr(
+          "请输入邀请人提供的试用码。资料保存在此浏览器；分析时所选资料会发送至试用 AI 服务。",
+        ),
       ),
       input = el("input", "core-input"),
       status = el("p");
@@ -26,8 +29,8 @@ function accessDialog(signal) {
     input.autocomplete = "off";
     input.required = true;
     input.maxLength = 256;
-    input.setAttribute("aria-label", "试用码");
-    const submit = el("button", "primary-action", "验证并继续");
+    input.setAttribute("aria-label", tr("试用码"));
+    const submit = el("button", "primary-action", tr("验证并继续"));
     submit.type = "submit";
     let finished = false;
     const end = (error) => {
@@ -39,7 +42,7 @@ function accessDialog(signal) {
       error ? reject(error) : resolve();
     };
     const abort = () => end(new DOMException("Cancelled", "AbortError"));
-    form.append(title, info, input, status, submit, button("取消", abort));
+    form.append(title, info, input, status, submit, button(tr("取消"), abort));
     dialog.append(form);
     document.body.append(dialog);
     dialog.addEventListener("cancel", (e) => {
@@ -66,11 +69,11 @@ function accessDialog(signal) {
         });
         const data = await response.json();
         input.value = "";
-        if (!response.ok) throw Error(data.message || "验证失败");
+        if (!response.ok) throw Error(tr(data.message) || tr("验证失败"));
         end();
       } catch (error) {
         status.textContent =
-          error.name === "AbortError" ? "验证已取消" : error.message;
+          error.name === "AbortError" ? tr("验证已取消") : error.message;
         status.setAttribute("role", "alert");
       } finally {
         submit.disabled = false;
@@ -112,30 +115,30 @@ export class ProxyTransport {
         throw new AnalysisError(
           "invalid_response",
           response.ok
-            ? "AI 服务返回了无法读取的响应，请重试。"
-            : "试用服务返回 HTTP " + response.status + "，请稍后重试。",
+            ? tr("AI 服务返回了无法读取的响应，请重试。")
+            : tr("试用服务返回 HTTP ") + response.status + tr("，请稍后重试。"),
         );
       }
       combined.throwIfAborted();
       if (!response.ok)
         throw new AnalysisError(
           data?.code || "proxy_error",
-          data?.message || "试用 AI 暂时不可用，请重试",
+          tr(data?.message) || tr("试用 AI 暂时不可用，请重试"),
         );
       if (typeof data?.text !== "string" || !data.text.trim())
-        throw new AnalysisError("empty_result", "AI 返回为空");
+        throw new AnalysisError("empty_result", tr("AI 返回为空"));
       return data.text;
     } catch (error) {
       if (deadline.aborted && !signal?.aborted)
         throw new AnalysisError(
           "timeout",
-          "AI 响应超时，已有答案与结果保留，请稍后重试。",
+          tr("AI 响应超时，已有答案与结果保留，请稍后重试。"),
         );
       if (error instanceof AnalysisError || error.name === "AbortError")
         throw error;
       throw new AnalysisError(
         "network_error",
-        "无法连接试用服务，请检查网络后重试",
+        tr("无法连接试用服务，请检查网络后重试"),
       );
     }
   }

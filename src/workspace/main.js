@@ -1,3 +1,10 @@
+import { t as tr, th } from "./i18n.js";
+import {
+  installLanguageControl,
+  restoreLanguageDraft,
+  getLocale,
+} from "./i18n.js";
+import { TrainingRepository } from "../data/training-repository.js";
 import { createDocument, makeId } from "../domain/documents.js";
 import {
   openDatabase,
@@ -49,15 +56,15 @@ function normalizedPath() {
 }
 
 function currentTitle(path) {
-  if (path === "/app/") return "Dashboard";
-  if (path.startsWith("/app/courses")) return "课程";
-  if (path.startsWith("/app/tasks")) return "学习任务";
-  if (path.startsWith("/app/library")) return "资料库";
-  if (path.startsWith("/app/reader")) return "Reader";
-  if (path.startsWith("/app/review")) return "复习";
-  if (path.startsWith("/app/graph")) return "知识图谱";
-  if (path.startsWith("/app/search")) return "搜索";
-  return "设置";
+  if (path === "/app/") return tr("继续学习");
+  if (path.startsWith("/app/courses")) return tr("课程");
+  if (path.startsWith("/app/tasks")) return tr("学习任务");
+  if (path.startsWith("/app/library")) return tr("资料库");
+  if (path.startsWith("/app/reader")) return tr("原文研读");
+  if (path.startsWith("/app/review")) return tr("复习");
+  if (path.startsWith("/app/graph")) return tr("知识图谱");
+  if (path.startsWith("/app/search")) return tr("搜索");
+  return tr("设置");
 }
 
 function updateNavigation(path) {
@@ -70,7 +77,8 @@ function updateNavigation(path) {
   });
   const crumb = document.querySelector("#page-crumb");
   if (crumb)
-    crumb.innerHTML = "工作台 / <strong>" + currentTitle(path) + "</strong>";
+    crumb.innerHTML =
+      th("工作台 / <strong>") + currentTitle(path) + "</strong>";
   document.title = currentTitle(path) + " · Digest";
 }
 
@@ -125,7 +133,7 @@ async function renderCurrent() {
     const mode = page.querySelector("[data-mode-filter]");
     if (mode) mode.value = state.filters.readingMode;
   } else if (path.startsWith("/app/reader/")) {
-    page.textContent = "正在打开资料…";
+    page.textContent = tr("正在打开资料…");
     try {
       const item = await getDocument(
         decodeURIComponent(path.slice("/app/reader/".length)),
@@ -134,8 +142,8 @@ async function renderCurrent() {
       if (version !== routeVersion) return;
       if (!item) {
         page.replaceChildren(
-          el("p", "inline-feedback", "未找到这份资料。"),
-          link("返回资料库", "/app/library"),
+          el("p", "inline-feedback", tr("未找到这份资料。")),
+          link(tr("返回资料库"), "/app/library"),
         );
         return;
       }
@@ -150,15 +158,15 @@ async function renderCurrent() {
     } catch {
       if (version === routeVersion)
         page.replaceChildren(
-          el("p", "inline-feedback is-error", "资料加载失败。"),
-          button("重试", renderSafely, "secondary-action"),
-          link("返回资料库", "/app/library"),
+          el("p", "inline-feedback is-error", tr("资料加载失败。")),
+          button(tr("重试"), renderSafely, "secondary-action"),
+          link(tr("返回资料库"), "/app/library"),
         );
     }
   } else if (
     ["/app/review", "/app/graph", "/app/search", "/app/settings"].includes(path)
   ) {
-    page.textContent = "正在加载…";
+    page.textContent = tr("正在加载…");
     const mount = {
       "/app/review": mountReview,
       "/app/graph": mountGraph,
@@ -179,11 +187,11 @@ async function renderCurrent() {
   }
   if (!path.startsWith("/app/reader/")) {
     const mobile = el("nav", "mobile-tools");
-    mobile.setAttribute("aria-label", "更多工具");
+    mobile.setAttribute("aria-label", tr("更多工具"));
     mobile.append(
-      link("搜索", "/app/search"),
-      link("设置与备份", "/app/settings"),
-      link("知识图谱", "/app/graph"),
+      link(tr("搜索"), "/app/search"),
+      link(tr("设置与备份"), "/app/settings"),
+      link(tr("知识图谱"), "/app/graph"),
     );
     page.append(mobile);
   }
@@ -199,6 +207,7 @@ async function renderSafely() {
   const expectedVersion = routeVersion + 1;
   try {
     await renderCurrent();
+    restoreLanguageDraft();
   } catch (error) {
     if (expectedVersion !== routeVersion) return;
     const page = document.querySelector("#page-root");
@@ -206,10 +215,10 @@ async function renderSafely() {
       el(
         "p",
         "inline-feedback is-error",
-        "本地数据暂时不可用：" + error.message,
+        tr("本地数据暂时不可用：") + error.message,
       ),
-      button("重试", renderSafely, "secondary-action"),
-      link("返回资料库", "/app/library"),
+      button(tr("重试"), renderSafely, "secondary-action"),
+      link(tr("返回资料库"), "/app/library"),
     );
   }
 }
@@ -223,7 +232,8 @@ function showToast(message, type = "") {
   }, 3600);
 }
 
-function openImportDialog() {
+function openImportDialog(courseId = null) {
+  state.importCourseId = courseId;
   importVersion++;
   document.querySelector("#import-submit").disabled = false;
   state.importData = null;
@@ -251,7 +261,7 @@ async function processFile(file) {
   const version = ++importVersion;
   state.importData = null;
   document.querySelector("#import-submit").disabled = true;
-  setFileStatus("正在解析 " + file.name + "…");
+  setFileStatus(tr("正在解析 ") + file.name + "…");
   try {
     const extension = fileExtension(file.name);
     const result =
@@ -265,15 +275,20 @@ async function processFile(file) {
     setFileStatus(
       file.name +
         " · " +
-        result.rawContent.length.toLocaleString("zh-CN") +
-        " 字符 · " +
+        result.rawContent.length.toLocaleString(getLocale()) +
+        tr(" 字符 · ") +
         result.paragraphs.length +
-        " 个段落",
+        tr(" 个段落"),
       "ready",
     );
+    if (
+      (result.rawContent.match(/�/g) || []).length >
+      result.rawContent.length * 0.01
+    )
+      setFileStatus(tr("提取文本可能不完整，请先核对正文。"), "error");
   } catch (error) {
     if (version !== importVersion) return;
-    setFileStatus(error.message || "文件解析失败，请重试。", "error");
+    setFileStatus(error.message || tr("文件解析失败，请重试。"), "error");
   } finally {
     if (version === importVersion)
       document.querySelector("#import-submit").disabled = false;
@@ -285,13 +300,13 @@ async function saveImport(event) {
   if (state.importing) return;
   const content = document.querySelector("#import-content").value.trim();
   if (!content) {
-    setFileStatus("请先选择文件或粘贴正文。", "error");
+    setFileStatus(tr("请先选择文件或粘贴正文。"), "error");
     return;
   }
   state.importing = true;
   const submit = document.querySelector("#import-submit");
   submit.disabled = true;
-  submit.innerHTML = '<span class="button-spinner"></span> 正在保存';
+  submit.innerHTML = th('<span class="button-spinner"></span> 正在保存');
   try {
     const base = state.importData || {
       sourceType: "text",
@@ -303,7 +318,7 @@ async function saveImport(event) {
       title:
         document.querySelector("#import-title").value ||
         base.title ||
-        "未命名资料",
+        tr("未命名资料"),
       readingMode: document.querySelector("#import-mode").value,
       tags: document.querySelector("#import-tags").value,
     });
@@ -317,21 +332,30 @@ async function saveImport(event) {
       });
     });
     document.querySelector("#import-dialog").close();
-    showToast("“" + item.title + "”已保存到资料库");
-    navigate("/app/library");
+    showToast("“" + item.title + tr("”已保存到资料库"));
+    if (state.importCourseId) {
+      const repo = new TrainingRepository(db),
+        course = await repo.get("courses", state.importCourseId);
+      if (course)
+        await repo.saveCourse({
+          ...course,
+          documentIds: [...new Set([...course.documentIds, item.id])],
+        });
+      navigate("/app/courses/" + state.importCourseId);
+    } else navigate("/app/library");
   } catch (error) {
-    setFileStatus(error.message || "导入失败。", "error");
+    setFileStatus(error.message || tr("导入失败。"), "error");
   } finally {
     state.importing = false;
     submit.disabled = false;
-    submit.textContent = "保存到资料库";
+    submit.textContent = tr("保存到资料库");
   }
 }
 
 function downloadLegacyBackup() {
   const data = localStorage.getItem(LEGACY_BACKUP_KEY);
   if (!data) {
-    showToast("没有找到旧数据备份。", "error");
+    showToast(tr("没有找到旧数据备份。"), "error");
     return;
   }
   const link = document.createElement("a");
@@ -475,20 +499,25 @@ async function init() {
   try {
     root.innerHTML = shellHTML(normalizedPath());
     bindEvents();
+    installLanguageControl(document.querySelector(".topbar-actions"));
+    document.addEventListener("digest-import", (event) =>
+      openImportDialog(event.detail?.courseId),
+    );
     db = await openDatabase();
     state.migration = await runLegacyMigration({ db });
     state.documents = await listDocuments(db);
     await renderCurrent();
+    restoreLanguageDraft();
     if (state.migration.status === "failed")
       showToast(
-        "旧数据迁移未完成，下次启动会自动重试。旧数据仍保留。",
+        tr("旧数据迁移未完成，下次启动会自动重试。旧数据仍保留。"),
         "error",
       );
   } catch (error) {
     const box = el("div", "boot-screen");
     box.append(
-      el("p", "", "无法打开本地资料库：" + error.message),
-      button("刷新重试", () => location.reload(), "secondary-action"),
+      el("p", "", tr("无法打开本地资料库：") + error.message),
+      button(tr("刷新重试"), () => location.reload(), "secondary-action"),
     );
     root.replaceChildren(box);
   }

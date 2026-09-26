@@ -1,3 +1,4 @@
+import { t as tr, th } from "./i18n.js";
 import { el, button } from "../reader/dom.js";
 export { el, button };
 export function link(text, href, className = "quiet-link") {
@@ -6,7 +7,7 @@ export function link(text, href, className = "quiet-link") {
   a.dataset.route = "";
   return a;
 }
-export function sourceLink(item, text = "核对来源原文") {
+export function sourceLink(item, text = tr("核对来源原文")) {
   const params = new URLSearchParams();
   if (item.readingResultId) params.set("result", item.readingResultId);
   if (item.evidenceIds?.[0]) params.set("evidence", item.evidenceIds[0]);
@@ -27,7 +28,7 @@ export function page(title, kicker, description) {
   return p;
 }
 export function message(target, text, error = false) {
-  target.textContent = text;
+  target.textContent = tr(text);
   target.className = "inline-feedback" + (error ? " is-error" : "");
   target.setAttribute("role", error ? "alert" : "status");
 }
@@ -36,7 +37,7 @@ export function empty(
   title,
   description,
   href = "/app/library",
-  action = "打开资料库",
+  action = tr("打开资料库"),
 ) {
   const box = el("div", "core-empty");
   box.append(el("h2", "", title), el("p", "", description), link(action, href));
@@ -51,7 +52,7 @@ export function confirmAction(title, description, action) {
     dialog.remove();
   };
   const confirm = button(
-    "确认",
+    tr("确认"),
     async () => {
       confirm.disabled = true;
       try {
@@ -64,7 +65,7 @@ export function confirmAction(title, description, action) {
     },
     "primary-action",
   );
-  actions.append(button("取消", close, "secondary-action"), confirm);
+  actions.append(button(tr("取消"), close, "secondary-action"), confirm);
   dialog.append(
     el("h2", "", title),
     el("p", "", description),
@@ -88,7 +89,7 @@ export function editName(title, value, save) {
     dialog.remove();
   };
   const action = button(
-    "保存",
+    tr("保存"),
     async () => {
       action.disabled = true;
       try {
@@ -104,7 +105,7 @@ export function editName(title, value, save) {
   dialog.append(
     label,
     feedback,
-    button("取消", close, "secondary-action"),
+    button(tr("取消"), close, "secondary-action"),
     action,
   );
   document.body.append(dialog);

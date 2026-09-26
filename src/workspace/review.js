@@ -1,3 +1,5 @@
+import { getLocale } from "./i18n.js";
+import { t as tr, th } from "./i18n.js";
 import { LearningRepository } from "../data/learning-repository.js";
 import { TrainingRepository } from "../data/training-repository.js";
 import { sourceSignature } from "../domain/evidence.js";
@@ -24,12 +26,12 @@ export async function mountReview(container, db, isCurrent) {
     busy = false,
     disposed = false;
   const root = page(
-    "把理解，变成记忆",
-    "Active recall",
-    "先试着回忆，再核对答案。困难程度决定下次相见的时间。",
+    tr("把理解，变成记忆"),
+    tr("Active recall"),
+    tr("先试着回忆，再核对答案。困难程度决定下次相见的时间。"),
   );
   container.replaceChildren(root);
-  root.append(link("用课程中的新问题再次检验理解 →", "/app/courses"));
+  root.append(link(tr("用课程中的新问题再次检验理解 →"), "/app/courses"));
   const toolbar = el("div", "core-toolbar"),
     body = el("div", "review-body"),
     feedback = el("p");
@@ -46,7 +48,7 @@ export async function mountReview(container, db, isCurrent) {
   function render() {
     toolbar.replaceChildren(
       button(
-        manage ? "返回今日复习" : "管理复习题",
+        manage ? tr("返回今日复习") : tr("管理复习题"),
         () => {
           manage = !manage;
           revealed = false;
@@ -70,15 +72,15 @@ export async function mountReview(container, db, isCurrent) {
         el(
           "p",
           "inline-feedback",
-          staleCount + " 道题的来源已变化，已从本次队列排除。请在管理中核对。",
+          staleCount + tr(" 道题的来源已变化，已从本次队列排除。请在管理中核对。"),
         ),
       );
     if (manage) {
       if (!cards.length) {
         empty(
           body,
-          "还没有复习题",
-          "在 Reader 的研读问题中，选择值得记住的问题。",
+          tr("还没有复习题"),
+          tr("在 Reader 的研读问题中，选择值得记住的问题。"),
         );
         return;
       }
@@ -90,18 +92,18 @@ export async function mountReview(container, db, isCurrent) {
             "p",
             "reader-muted",
             (stale(card)
-              ? "来源已变化 · "
+              ? tr("来源已变化 · ")
               : card.status === "paused"
-                ? "已暂停 · "
+                ? tr("已暂停 · ")
                 : "") +
-              "下次复习 " +
-              new Date(card.nextReviewAt).toLocaleDateString("zh-CN"),
+              tr("下次复习 ") +
+              new Date(card.nextReviewAt).toLocaleDateString(getLocale()),
           ),
           sourceLink(card),
         );
         row.append(
           button(
-            card.status === "active" ? "暂停复习" : "恢复复习",
+            card.status === "active" ? tr("暂停复习") : tr("恢复复习"),
             async () => {
               try {
                 await repo.setCardStatus(
@@ -123,10 +125,10 @@ export async function mountReview(container, db, isCurrent) {
     if (!due.length) {
       empty(
         body,
-        cards.length ? "今天的复习已完成" : "从一个好问题开始",
+        cards.length ? tr("今天的复习已完成") : tr("从一个好问题开始"),
         cards.length
-          ? "下次到期后，题目会自动回到这里。也可以到 Reader 添加新的问题。"
-          : "在 Reader 中把有价值的问题加入复习。",
+          ? tr("下次到期后，题目会自动回到这里。也可以到 Reader 添加新的问题。")
+          : tr("在 Reader 中把有价值的问题加入复习。"),
       );
       return;
     }
@@ -135,22 +137,22 @@ export async function mountReview(container, db, isCurrent) {
     if (new URLSearchParams(location.search).get("card") !== card.id)
       revealed = false;
     focus.append(
-      el("p", "page-kicker", "今日剩余 " + due.length + " 题"),
+      el("p", "page-kicker", tr("今日剩余 ") + due.length + tr(" 题")),
       el("h2", "recall-question", card.question),
     );
     if (!revealed) {
       const label = el(
           "label",
           "recall-label",
-          "先用自己的话回答（草稿不保存）",
+          tr("先用自己的话回答（草稿不保存）"),
         ),
         draft = el("textarea", "recall-draft");
-      draft.placeholder = "我记得的是…";
+      draft.placeholder = tr("我记得的是…");
       label.append(draft);
       focus.append(
         label,
         button(
-          "揭示答案",
+          tr("揭示答案"),
           () => {
             revealed = true;
             history.replaceState(
@@ -166,20 +168,20 @@ export async function mountReview(container, db, isCurrent) {
     } else {
       const answer = el("div", "recall-answer");
       answer.append(
-        el("p", "page-kicker", "参考答案 · 请结合原文核对"),
+        el("p", "page-kicker", tr("参考答案 · 请结合原文核对")),
         el("p", "", card.answer),
         sourceLink(card),
       );
       if (!card.evidenceIds.length)
         answer.append(
-          el("small", "reader-muted", "此题暂无直接引用，可打开来源研读核对。"),
+          el("small", "reader-muted", tr("此题暂无直接引用，可打开来源研读核对。")),
         );
       const ratings = el("div", "rating-actions");
       for (const [rating, label] of Object.entries(RATINGS)) {
         const days = schedule(card, rating).intervalDays;
         ratings.append(
           button(
-            label + " · " + days + "天",
+            label + " · " + days + tr("天"),
             async () => {
               if (busy) return;
               busy = true;
@@ -189,7 +191,7 @@ export async function mountReview(container, db, isCurrent) {
               try {
                 await repo.rate(card.id, rating, card.version);
                 revealed = false;
-                message(feedback, "已保存，下次复习 " + days + " 天后");
+                message(feedback, tr("已保存，下次复习 ") + days + tr(" 天后"));
                 await refresh();
               } catch (e) {
                 message(feedback, e.message, true);
@@ -204,7 +206,7 @@ export async function mountReview(container, db, isCurrent) {
       }
       focus.append(
         answer,
-        el("p", "reader-muted", "刚才回忆得如何？"),
+        el("p", "reader-muted", tr("刚才回忆得如何？")),
         ratings,
       );
     }

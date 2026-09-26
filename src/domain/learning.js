@@ -1,11 +1,12 @@
+import { t as tr, th } from "../workspace/i18n.js";
 export const RATINGS = {
-  again: "Again · 重来",
-  hard: "Hard · 困难",
-  good: "Good · 记得",
-  easy: "Easy · 轻松",
+  again: tr("Again · 重来"),
+  hard: tr("Hard · 困难"),
+  good: tr("Good · 记得"),
+  easy: tr("Easy · 轻松"),
 };
 export function schedule(card, rating, now = new Date()) {
-  if (!Object.hasOwn(RATINGS, rating)) throw new Error("无效的复习评分");
+  if (!Object.hasOwn(RATINGS, rating)) throw new Error(tr("无效的复习评分"));
   const previous = card.intervalDays || 0;
   const days =
     rating === "again"
@@ -64,18 +65,18 @@ export function learningStats(cards, activities, now = new Date()) {
   };
 }
 export const RELATION_TYPES = {
-  related_to: "相关",
-  supports: "支持",
-  contradicts: "矛盾",
-  example_of: "例证",
-  prerequisite_of: "前提",
-  causes: "导致",
+  related_to: tr("相关"),
+  supports: tr("支持"),
+  contradicts: tr("矛盾"),
+  example_of: tr("例证"),
+  prerequisite_of: tr("前提"),
+  causes: tr("导致"),
 };
 export const normalizeQuestion = (text) =>
   text.trim().replace(/\s+/g, " ").toLocaleLowerCase();
 export function validateRelations(input, units) {
   if (!input || !Array.isArray(input.relations) || input.relations.length > 30)
-    throw new Error("关系响应格式无效");
+    throw new Error(tr("关系响应格式无效"));
   const ids = new Set(units.map((u) => u.id));
   const seen = new Set();
   return input.relations.map((r) => {
@@ -89,11 +90,11 @@ export function validateRelations(input, units) {
       !r.reason.trim() ||
       r.reason.length > 4000
     )
-      throw new Error("关系的知识点、类型或理由无效");
+      throw new Error(tr("关系的知识点、类型或理由无效"));
     const key = [r.sourceKnowledgeUnitId, r.targetKnowledgeUnitId, r.type].join(
       ":",
     );
-    if (seen.has(key)) throw new Error("关系建议重复");
+    if (seen.has(key)) throw new Error(tr("关系建议重复"));
     seen.add(key);
     const allowed = new Set(
       units

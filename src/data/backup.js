@@ -1,3 +1,4 @@
+import { t as tr, th } from "../workspace/i18n.js";
 import { atomic } from "./learning-repository.js";
 import { documentSnapshot, restoreAnchor } from "../domain/evidence.js";
 import { MODE_SECTIONS, CLAIM_KINDS } from "../ai/schema.js";
@@ -26,7 +27,7 @@ export function exportBackup(db) {
 }
 export async function restoreBackup(db, backup) {
   const fail = () => {
-    throw new Error("备份格式或记录无效，未写入任何数据。");
+    throw new Error(tr("备份格式或记录无效，未写入任何数据。"));
   };
   const text = (v) => typeof v === "string",
     list = (v) => Array.isArray(v),
@@ -156,7 +157,7 @@ export async function restoreBackup(db, backup) {
     // Restore into an empty study space: no silent merge, overwrite or clearing.
     if (BACKUP_STORES.some((name) => current[name].length))
       throw new Error(
-        "为避免覆盖学习记录，请在空的浏览器资料库中恢复。当前数据未修改。",
+        tr("为避免覆盖学习记录，请在空的浏览器资料库中恢复。当前数据未修改。"),
       );
     for (const name of BACKUP_STORES)
       for (const r of data[name]) tx.objectStore(name).put(r);

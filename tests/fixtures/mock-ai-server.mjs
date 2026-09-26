@@ -69,7 +69,8 @@ const server = http.createServer(async (request, response) => {
     );
     const snapshot = { ...prompt.document, readingMode: prompt.readingMode };
     let output;
-    if (prompt.task === 'course_feedback') {
+    if (prompt.claims) { output={summary:'QA synthesis: compare the sections against their sources.',points:[{text:'A bounded synthesis for the UI test.',claimIds:prompt.claims.slice(0,2).map(c=>c.id)}]};
+    } else if (prompt.task === 'course_feedback') {
       output = feedbackOutput(prompt);
       if (request.url.startsWith('/partial')) output.gaps[0].evidenceCandidates[0].quote = '不存在的引文';
       if (request.url.startsWith('/missing')) delete output.gaps;

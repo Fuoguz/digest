@@ -1,3 +1,4 @@
+import { t as tr, th } from "../workspace/i18n.js";
 import { el, button } from "./dom.js";
 import {
   readDeveloperConfig,
@@ -11,24 +12,24 @@ export function openAIConfiguration(onSave) {
   const head = el("div", "dialog-head");
   head.append(
     el("h2", "", "Developer AI Service"),
-    button("关闭", () => dialog.close()),
+    button(tr("关闭"), () => dialog.close()),
   );
   form.append(
     head,
     el(
       "p",
       "developer-note",
-      "仅供开发者自带服务使用。浏览器直接调用你填写的 endpoint；分析时会向该服务发送当前资料正文。Key 保存在当前浏览器的 localStorage 中。",
+      tr("仅供开发者自带服务使用。浏览器直接调用你填写的 endpoint；分析时会向该服务发送当前资料正文。Key 保存在当前浏览器的 localStorage 中。"),
     ),
   );
   const fields = {};
   for (const [name, label, placeholder] of [
-    ["endpoint", "Chat Completions 地址", "https://your-provider.example/v1"],
-    ["model", "模型名称", "服务提供商的模型 ID"],
+    ["endpoint", tr("Chat Completions 地址"), "https://your-provider.example/v1"],
+    ["model", tr("模型名称"), tr("服务提供商的模型 ID")],
     [
       "key",
       "API Key",
-      config.key ? "已保存；留空保留现有 Key" : "填写你的 Key",
+      config.key ? tr("已保存；留空保留现有 Key") : tr("填写你的 Key"),
     ],
   ]) {
     const field = el("label", "field", label);
@@ -46,10 +47,10 @@ export function openAIConfiguration(onSave) {
   const error = el("p", "reader-error-text");
   error.setAttribute("role", "alert");
   const actions = el("div", "dialog-actions");
-  const save = el("button", "primary-action", "保存配置");
+  const save = el("button", "primary-action", tr("保存配置"));
   save.type = "submit";
   actions.append(
-    button("取消", () => dialog.close(), "secondary-action"),
+    button(tr("取消"), () => dialog.close(), "secondary-action"),
     save,
   );
   form.append(error, actions);

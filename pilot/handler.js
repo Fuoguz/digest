@@ -250,7 +250,8 @@ export function createHandler(
               : null,
           }),
         );
-        return send(502, "upstream", "模型服务没有返回可用内容，请稍后重试。");
+        return send(502, finishReason === "length" ? "output_limit" : "empty_response",
+          finishReason === "length" ? "模型达到输出上限，未能完成结果。请选择较小研读范围后重试，已完成分段和原文保留。" : "模型未返回正文。请重试当前分段；已完成分段和原文保留。");
       }
       // Never return upstream envelopes, headers or diagnostics.
       if (text.includes(env.MODEL_API_KEY) || text.includes(secret))

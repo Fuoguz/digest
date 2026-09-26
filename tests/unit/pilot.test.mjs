@@ -148,6 +148,19 @@ test("Pilot errors redact upstream diagnostics and timeout returns 504", async (
   assert.match(timeout.output.message, /限定时间/);
 });
 
+test("Pilot distinguishes empty output from exhausted completion budget without leaking reasoning", async () => {
+  const cookie = (await call("access", { code: env.PILOT_ACCESS_CODE })).headers["Set-Cookie"];
+  for (const finish_reason of ['stop','length']) {
+    const result = await call('digest',{messages:[{role:'user',content:'test'}]}, {
+      cookie,
+      fetchImpl:async()=>({ok:true,json:async()=>({choices:[{finish_reason,message:{content:'',reasoning_content:'private model reasoning'}}]})})
+    });
+    assert.equal(result.status,502);
+    assert.equal(result.output.code,finish_reason==='length'?'output_limit':'empty_response');
+    assert.ok(!JSON.stringify(result).includes('private model reasoning'));
+  }
+});
+
 test("Pilot retries once without response_format when compatible upstream rejects it", async () => {
   const cookie = (await call("access", { code: env.PILOT_ACCESS_CODE }))
     .headers["Set-Cookie"];

@@ -1,7 +1,10 @@
+import { t as tr, th } from "../workspace/i18n.js";
 import { createTransport, useProxy } from "../ai/proxy-transport.js";
 import { el, button, highlightQuote } from "./dom.js";
 import { documentSnapshot, restoreAnchor } from "../domain/evidence.js";
-import { getRecord } from "../data/db.js";
+import { getLocale, installLanguageControl } from "../workspace/i18n.js";
+import { readingChunks } from "../domain/context.js";
+import { getSetting, putSetting, getRecord } from "../data/db.js";
 import { TrainingRepository } from "../data/training-repository.js";
 import { READING_MODES, SOURCE_TYPES } from "../domain/documents.js";
 import { MODE_SECTIONS, CLAIM_KINDS } from "../ai/schema.js";
@@ -27,6 +30,19 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     saved.anchors.push(restoreAnchor(externalAnchor, snapshot));
   if (!isCurrent()) return () => {};
   const session = new AnalysisSession(repository);
+  let progressText = "";
+  const checkpointKey = "reading-progress:" + item.id;
+  let partial = await getSetting(checkpointKey, db);
+  try {
+    if (
+      partial &&
+      (JSON.parse(partial.key)[0] !== snapshot.sourceRevision ||
+        !Array.isArray(partial.parts))
+    )
+      partial = null;
+  } catch {
+    partial = null;
+  }
   let disposed = false,
     status = saved.result
       ? saved.stale
@@ -41,7 +57,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   const root = el("section", "reader");
   root.dataset.tab = "source";
   const header = el("header", "reader-header");
-  const back = el("a", "reader-back", "← 资料库");
+  const back = el("a", "reader-back", tr("← 资料库"));
   back.href = "/app/library";
   back.dataset.route = "";
   const heading = el("div", "reader-heading");
@@ -53,19 +69,23 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     ...item.tags.map((tag) => el("span", "reader-tag", tag)),
   );
   heading.append(title, metadata);
-  const analyzeButton = button("开始研读", analyze, "primary-action");
+  const analyzeButton = button(tr("开始研读"), analyze, "primary-action");
   const more = el("details", "reader-more");
-  more.append(el("summary", "", "更多 ···"));
+  more.append(el("summary", "", tr("更多 ···")));
   const menu = el("div", "reader-more-menu");
   menu.append(
-    button("Developer AI Service", () => {
-      more.open = false;
-      openAIConfiguration(() => {
-        errorMessage = "";
-        renderAI();
-      });
-    }),
-    button("导出原文 TXT", () => {
+    ...(!useProxy()
+      ? [
+          button("Developer AI Service", () => {
+            more.open = false;
+            openAIConfiguration(() => {
+              errorMessage = "";
+              renderAI();
+            });
+          }),
+        ]
+      : []),
+    button(tr("导出原文 TXT"), () => {
       more.open = false;
       const link = el("a");
       link.href = URL.createObjectURL(
@@ -79,6 +99,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   more.append(menu);
   const headerActions = el("div", "reader-header-actions");
   headerActions.append(analyzeButton, more);
+  installLanguageControl(headerActions);
   header.append(back, heading, headerActions);
   const returnPath = routeParams.get("return");
   if (
@@ -87,16 +108,16 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       returnPath,
     )
   ) {
-    const returnLink = el("a", "reader-back", "← 返回学习任务");
+    const returnLink = el("a", "reader-back", tr("← 返回学习任务"));
     returnLink.href = returnPath;
     returnLink.dataset.route = "";
     headerActions.append(returnLink);
   }
   const tabs = el("div", "reader-tabs");
   tabs.setAttribute("role", "tablist");
-  tabs.setAttribute("aria-label", "阅读区域");
-  const sourceTab = button("原文", () => setTab("source"), "reader-tab");
-  const aiTab = button("AI 研读", () => setTab("ai"), "reader-tab");
+  tabs.setAttribute("aria-label", tr("阅读区域"));
+  const sourceTab = button(tr("原文"), () => setTab("source"), "reader-tab");
+  const aiTab = button(tr("AI 研读"), () => setTab("ai"), "reader-tab");
   [sourceTab, aiTab].forEach((tab, index) => {
     tab.setAttribute("role", "tab");
     tab.id = index ? "ai-tab" : "source-tab";
@@ -113,25 +134,25 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   const split = el("div", "reader-split");
   const sourcePanel = el("section", "source-panel");
   sourcePanel.id = "reader-source";
-  sourcePanel.setAttribute("aria-label", "原文");
+  sourcePanel.setAttribute("aria-label", tr("原文"));
   const sourceTop = el("div", "reader-panel-label");
   sourceTop.append(
-    el("span", "", "SOURCE / 原始资料"),
+    el("span", "", tr("SOURCE / 原始资料")),
     el(
       "span",
       "",
       snapshot.paragraphs.length +
-        " 段 · " +
-        snapshot.source.length.toLocaleString("zh-CN") +
-        " 字符",
+        tr(" 段 · ") +
+        snapshot.source.length.toLocaleString(getLocale()) +
+        tr(" 字符"),
     ),
   );
   const sourceScroll = el("div", "source-scroll");
   sourceScroll.tabIndex = 0;
-  sourceScroll.setAttribute("aria-label", "原文滚动区域");
+  sourceScroll.setAttribute("aria-label", tr("原文滚动区域"));
   const article = el("article", "source-article");
   article.append(
-    el("p", "source-eyebrow", "READ CLOSELY"),
+    el("p", "source-eyebrow", tr("READ CLOSELY")),
     el("h2", "source-title", item.title),
   );
   if (item.metadata?.originalFileName)
@@ -156,12 +177,12 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       el(
         "p",
         "reader-muted",
-        "这份旧版条目没有保存原文。请重新导入资料后再分析。",
+        tr("这份旧版条目没有保存原文。请重新导入资料后再分析。"),
       ),
     );
   sourceScroll.append(article);
   const returnButton = button(
-    "← 返回 AI 判断",
+    tr("← 返回 AI 判断"),
     () => {
       if (!activeClaim && returnPath) {
         const target = headerActions.querySelector("a[data-route]");
@@ -183,10 +204,10 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   sourcePanel.append(sourceTop, sourceScroll, returnButton);
   const aiPanel = el("section", "ai-panel");
   aiPanel.id = "reader-ai";
-  aiPanel.setAttribute("aria-label", "AI 研读");
+  aiPanel.setAttribute("aria-label", tr("AI 研读"));
   const aiTop = el("div", "reader-panel-label");
   aiTop.append(
-    el("span", "", "READING / AI 研读"),
+    el("span", "", tr("READING / AI 研读")),
     el("span", "", READING_MODES[item.readingMode]),
   );
   const aiScroll = el("div", "ai-scroll");
@@ -194,7 +215,106 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   const claimNodes = new Map();
   aiPanel.append(aiTop, aiScroll);
   split.append(sourcePanel, aiPanel);
-  root.append(header, tabs, split);
+  const controls = el("div", "reading-controls");
+  const rangeLabel = el("label", "", tr("研读范围"));
+  const range = el("select", "core-input");
+  for (const [value, text] of [
+    ["all", tr("全文分段研读")],
+    ["range", tr("选择段落范围")],
+  ]) {
+    const option = el("option", "", text);
+    option.value = value;
+    range.append(option);
+  }
+  rangeLabel.append(range);
+  const fromLabel = el("label", "", tr("起始段落")),
+    toLabel = el("label", "", tr("结束段落"));
+  const from = el("input", "core-input"),
+    to = el("input", "core-input");
+  for (const input of [from, to]) {
+    input.type = "number";
+    input.min = 1;
+    input.max = snapshot.paragraphs.length;
+  }
+  from.value = 1;
+  to.value = snapshot.paragraphs.length;
+  fromLabel.append(from);
+  toLabel.append(to);
+  fromLabel.hidden = toLabel.hidden = true;
+  range.addEventListener("change", () => {
+    fromLabel.hidden = toLabel.hidden = range.value === "all";
+    updateScope();
+  });
+  const languageLabel = el("label", "", tr("反馈语言")),
+    language = el("select", "core-input");
+  for (const [value, text] of [
+    ["zh-CN", tr("简体中文")],
+    ["en", "English"],
+  ]) {
+    const o = el("option", "", text);
+    o.value = value;
+    language.append(o);
+  }
+  language.value = getLocale();
+  languageLabel.append(language);
+  const scopeHint = el("p", "reader-muted");
+  function updateScope() {
+    const selected = snapshot.paragraphs.filter(
+      (p) =>
+        range.value === "all" ||
+        (p.paragraphIndex >= Number(from.value) - 1 &&
+          p.paragraphIndex < Number(to.value)),
+    );
+    const count = readingChunks(selected).length;
+    scopeHint.textContent =
+      tr("预计分段：") +
+      count +
+      tr(" · 每段单独核查，已完成部分可续跑。单次最多 12 段。");
+  }
+  from.addEventListener("input", updateScope);
+  to.addEventListener("input", updateScope);
+  updateScope();
+  if (partial?.parts?.length) {
+    const [, start, end, lang] = JSON.parse(partial.key);
+    language.value = lang || getLocale();
+    if (start !== 0 || end !== snapshot.paragraphs.length - 1) {
+      range.value = "range";
+      from.value = start + 1;
+      to.value = end + 1;
+      fromLabel.hidden = toLabel.hidden = false;
+    }
+    updateScope();
+  }
+  const outlineLabel = el("label", "", tr("段落导航")),
+    outline = el("select", "core-input");
+  for (const p of snapshot.paragraphs) {
+    const o = el(
+      "option",
+      "",
+      p.paragraphIndex + 1 + " · " + p.text.slice(0, 52),
+    );
+    o.value = p.paragraphIndex;
+    outline.append(o);
+  }
+  outline.addEventListener("change", () => {
+    setTab("source");
+    const nodes = paragraphNodes.get(Number(outline.value));
+    if (nodes) {
+      nodes.wrapper.tabIndex = -1;
+      nodes.wrapper.focus({ preventScroll: true });
+      centerWithin(sourceScroll, nodes.wrapper);
+    }
+  });
+  outlineLabel.append(outline);
+  controls.append(
+    rangeLabel,
+    fromLabel,
+    toLabel,
+    languageLabel,
+    outlineLabel,
+    scopeHint,
+  );
+  root.append(header, controls, tabs, split);
   container.replaceChildren(root);
   setTab("source");
   renderAI();
@@ -213,7 +333,8 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       );
   if (initialAnchor) {
     locate(initialAnchor, initialClaim?.id || null);
-    if (!initialClaim && returnPath) returnButton.textContent = "← 返回反馈";
+    if (!initialClaim && returnPath)
+      returnButton.textContent = tr("← 返回反馈");
   }
 
   function setTab(tab) {
@@ -274,11 +395,13 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     root.dataset.analysisState = status;
     analyzeButton.textContent =
       status === "analyzing"
-        ? "分析中…"
+        ? tr("分析中…")
         : saved.result
-          ? "重新研读"
-          : "开始研读";
+          ? tr("重新研读")
+          : tr("开始研读");
     analyzeButton.disabled = status === "analyzing" || !snapshot.source;
+    for (const input of controls.querySelectorAll("input,select"))
+      input.disabled = status === "analyzing";
     aiScroll.replaceChildren();
     aiScroll.scrollTop = 0;
     claimNodes.clear();
@@ -287,13 +410,13 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     if (status === "analyzing") {
       stateBox.append(
         el("span", "analysis-progress"),
-        el("h3", "", "正在研读这份资料"),
-        el("p", "", "提炼判断，并逐条核对原文引用。"),
-        button("取消分析", () => {
+        el("h3", "", tr("正在研读这份资料")),
+        el("p", "", progressText || tr("提炼判断，并逐条核对原文引用。")),
+        button(tr("取消分析"), () => {
           runNumber++;
           session.cancel();
           status = saved.result ? saved.result.status : "idle";
-          errorMessage = "已取消分析。";
+          errorMessage = tr("已取消分析。");
           renderAI();
         }),
       );
@@ -304,14 +427,14 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
           "h3",
           "",
           errorCode === "no_configuration"
-            ? "连接你的 Developer AI Service"
-            : "本次分析未完成",
+            ? tr("连接你的 Developer AI Service")
+            : tr("本次分析未完成"),
         ),
         el("p", "", errorMessage),
       );
       if (errorCode === "no_configuration")
         stateBox.append(
-          button("配置 Developer AI Service", () =>
+          button(tr("配置 Developer AI Service"), () =>
             openAIConfiguration(() => {
               errorMessage = "";
               errorCode = "";
@@ -321,28 +444,95 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
         );
       else
         stateBox.append(
-          button("重试", analyze),
-          button("检查服务配置", () => openAIConfiguration()),
+          button(tr("重试"), analyze),
+          ...(!useProxy()
+            ? [button(tr("检查服务配置"), () => openAIConfiguration())]
+            : []),
         );
       if (saved.result)
-        stateBox.append(el("small", "", "以下保留上一次成功结果。"));
+        stateBox.append(el("small", "", tr("以下保留上一次成功结果。")));
     } else if (!saved.result) {
       stateBox.classList.add("analysis-empty");
       stateBox.append(
         el("span", "analysis-monogram", "D"),
-        el("p", "page-kicker", "FROM SOURCE TO UNDERSTANDING"),
-        el("h2", "", "让每个判断，有据可查。"),
+        el("p", "page-kicker", tr("FROM SOURCE TO UNDERSTANDING")),
+        el("h2", "", tr("让每个判断，有据可查。")),
         el(
           "p",
           "",
-          "研读会围绕这份资料提炼结构，区分资料陈述与 AI 推论。每条可靠引用都能带你回到原文。",
+          tr(
+            "研读会围绕这份资料提炼结构，区分资料陈述与 AI 推论。每条可靠引用都能带你回到原文。",
+          ),
         ),
-        button("开始 AI 研读", analyze, "primary-action"),
-        el("small", "", "先读原文也很好。你的资料已保存在本地。"),
+        button(tr("开始 AI 研读"), analyze, "primary-action"),
+        el("small", "", tr("先读原文也很好。你的资料已保存在本地。")),
       );
     }
     if (stateBox.childNodes.length) aiScroll.append(stateBox);
+    if (partial?.parts?.length) {
+      const preview = el("aside", "partial-preview");
+      preview.append(
+        el("strong", "", tr("已保存分段：") + partial.parts.length),
+        el(
+          "p",
+          "reader-muted",
+          tr(
+            "这是已完成部分的预览，不是全文结论。保持相同范围与语言重试，可继续未完成部分。",
+          ),
+        ),
+      );
+      const last = partial.parts.at(-1).result;
+      const first = Object.values(last.sections).flatMap((s) => s.items)[0];
+      if (first) preview.append(el("p", "", first.text));
+      aiScroll.append(preview);
+    }
     if (!saved.result) return;
+    const scope = saved.result.scope;
+    if (scope)
+      aiScroll.append(
+        el(
+          "p",
+          "scope-notice",
+          (scope.partial ? tr("范围研读") : tr("全文分段研读")) +
+            " · " +
+            (scope.start + 1) +
+            "–" +
+            (scope.end + 1) +
+            " / " +
+            scope.totalParagraphs +
+            " · " +
+            scope.chunks +
+            tr(" 个分段。概览基于分段判断整合，跨章节结论仍需核查。"),
+        ),
+      );
+    if (saved.result.overview) {
+      const overview = el("section", "reading-overview");
+      overview.append(
+        el("p", "page-kicker", tr("整体概览 · 请结合原文核查")),
+        el("h2", "", tr("先抓住这份材料的重点")),
+        el("p", "", saved.result.overview.summary),
+      );
+      for (const point of saved.result.overview.points) {
+        const row = el("div", "overview-point");
+        row.append(el("p", "", point.text));
+        for (const cid of point.claimIds)
+          row.append(
+            button(
+              tr("查看对应判断"),
+              () => {
+                const n = claimNodes.get(cid);
+                if (n) {
+                  n.focus();
+                  centerWithin(aiScroll, n);
+                }
+              },
+              "reader-link",
+            ),
+          );
+        overview.append(row);
+      }
+      aiScroll.append(overview);
+    }
     const coverage = el("div", "evidence-coverage");
     const claims = Object.values(saved.result.sections).flatMap(
       (section) => section.items,
@@ -356,15 +546,15 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       claim.evidenceIds.some((id) => matched.has(id)),
     ).length;
     coverage.append(
-      el("strong", "", covered + " / " + claims.length + " 有原文依据"),
-      el("p", "", "原文依据可定位不代表 AI 推论必然成立，请结合原文核对。"),
+      el("strong", "", covered + " / " + claims.length + tr(" 有原文依据")),
+      el("p", "", tr("原文依据可定位不代表 AI 推论必然成立，请结合原文核对。")),
     );
     if (saved.stale)
       coverage.append(
         el(
           "p",
           "reader-error-text",
-          "原文已变化，旧引用已标记为 stale，请重新研读。",
+          tr("原文已变化，旧引用已标记为 stale，请重新研读。"),
         ),
       );
     aiScroll.append(coverage);
@@ -375,7 +565,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       );
       if (section.status === "missing")
         block.append(
-          el("p", "section-missing", "材料不足 · " + section.missingReason),
+          el("p", "section-missing", tr("材料不足 · ") + section.missingReason),
         );
       for (const claim of section.items) {
         const node = el("article", "reading-claim");
@@ -395,7 +585,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
         );
         reliable.forEach((anchor, index) => {
           const action = button(
-            (reliable.length === 1 ? "查看依据 " : "依据 ") +
+            (reliable.length === 1 ? tr("查看依据 ") : tr("依据 ")) +
               String.fromCodePoint(0x2460 + index),
             () => locate(anchor, claim.id),
             "evidence-action",
@@ -406,23 +596,27 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
             String(anchor.id === selectedAnchor),
           );
           action.title =
-            (anchor.pageNumber ? "第 " + anchor.pageNumber + " 页 · " : "") +
-            "第 " +
+            (anchor.pageNumber
+              ? tr("第 ") + anchor.pageNumber + tr(" 页 · ")
+              : "") +
+            tr("第 ") +
             (anchor.paragraphIndex + 1) +
-            " 段";
+            tr(" 段");
           actions.append(action);
           actions.append(el("small", "evidence-location", action.title));
         });
         if (!reliable.length)
           actions.append(
-            el("span", "evidence-unavailable", "暂无可靠原文依据"),
+            el("span", "evidence-unavailable", tr("暂无可靠原文依据")),
           );
         if (anchors.some((a) => a.validationStatus === "ambiguous"))
           actions.append(
-            el("small", "evidence-note", "引文重复，无法唯一定位"),
+            el("small", "evidence-note", tr("引文重复，无法唯一定位")),
           );
         else if (anchors.some((a) => a.validationStatus === "invalid"))
-          actions.append(el("small", "evidence-note", "引用未通过原文核对"));
+          actions.append(
+            el("small", "evidence-note", tr("引用未通过原文核对")),
+          );
         node.append(actions);
         block.append(node);
         claimNodes.set(claim.id, node);
@@ -432,8 +626,8 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     const foot = el(
       "p",
       "reading-footnote",
-      "研读结果保存在本地 · " +
-        new Date(saved.result.createdAt).toLocaleString("zh-CN"),
+      tr("研读结果保存在本地 · ") +
+        new Date(saved.result.createdAt).toLocaleString(getLocale()),
     );
     aiScroll.append(foot);
     appendLearningTools(aiScroll, db, snapshot, saved);
@@ -444,8 +638,9 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     const config = readDeveloperConfig();
     if (!useProxy() && (!config.endpoint || !config.model || !config.key)) {
       errorCode = "no_configuration";
-      errorMessage =
-        "阅读不需要配置 AI。若要分析，请先连接兼容 Chat Completions 的开发者服务。";
+      errorMessage = tr(
+        "阅读不需要配置 AI。若要分析，请先连接兼容 Chat Completions 的开发者服务。",
+      );
       status = "needs_attention";
       renderAI();
       return;
@@ -459,10 +654,49 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       .catch(() => {});
     renderAI();
     try {
-      const payload = await session.run(
-        snapshot,
-        new DigestAIService(createTransport("digest")),
-      );
+      if (
+        range.value === "range" &&
+        (!Number.isInteger(Number(from.value)) ||
+          !Number.isInteger(Number(to.value)) ||
+          Number(from.value) < 1 ||
+          Number(to.value) > snapshot.paragraphs.length ||
+          Number(from.value) > Number(to.value))
+      )
+        throw new Error(tr("请选择有效的段落范围。"));
+      const service = new DigestAIService(createTransport("digest"));
+      service.options = {
+        start: range.value === "all" ? 0 : Number(from.value) - 1,
+        end:
+          range.value === "all"
+            ? snapshot.paragraphs.length - 1
+            : Number(to.value) - 1,
+        language: language.value,
+        load: () => getSetting(checkpointKey, db),
+        save: async (value, requestId, signal) => {
+          await repository.saveCheckpoint(
+            snapshot,
+            checkpointKey,
+            value,
+            requestId,
+            signal,
+          );
+          partial = value;
+          renderAI();
+        },
+        progress: (done, total, synthesizing) => {
+          progressText = synthesizing
+            ? tr("分段已保存，正在整合整体概览…")
+            : tr("正在核查分段：") +
+              Math.min(done + 1, total) +
+              " / " +
+              total +
+              tr(" · 已完成：") +
+              done;
+          renderAI();
+        },
+      };
+      const payload = await session.run(snapshot, service);
+      partial = null;
       if (disposed || run !== runNumber) return;
       saved = { ...payload, stale: false };
       status = payload.result.status;
@@ -480,7 +714,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
         status = saved.result?.status || "idle";
       } else {
         status = "failed";
-        errorMessage = error.message || "分析失败，请稍后重试。";
+        errorMessage = tr(error.message) || tr("分析失败，请稍后重试。");
         errorCode = error.code;
       }
     }

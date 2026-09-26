@@ -1,3 +1,4 @@
+import { t as tr, th } from "../workspace/i18n.js";
 import { getDocument, getRecord, STORES } from "./db.js";
 import { sourceSignature, restoreAnchor } from "../domain/evidence.js";
 import { AnalysisError } from "../ai/schema.js";
@@ -17,6 +18,7 @@ function guardedTransaction(
         STORES.readingResults,
         STORES.evidenceAnchors,
         STORES.activities,
+        STORES.settings,
       ],
       "readwrite",
     );
@@ -35,7 +37,7 @@ function guardedTransaction(
     };
     transaction.onabort = transaction.onerror = () => {
       signal?.removeEventListener("abort", cancel);
-      reject(failure || transaction.error || new Error("保存失败"));
+      reject(failure || transaction.error || new Error(tr("保存失败")));
     };
     const request = documents.get(snapshot.documentId);
     request.onsuccess = () => {
@@ -51,7 +53,7 @@ function guardedTransaction(
       ) {
         failure = new AnalysisError(
           "document_changed",
-          "资料或分析请求已变化。本次响应没有保存，请重新分析。",
+          tr("资料或分析请求已变化。本次响应没有保存，请重新分析。"),
         );
         transaction.abort();
         return;
@@ -79,6 +81,18 @@ export class ReadingRepository {
       false,
     );
   }
+  async saveCheckpoint(snapshot, key, value, requestId, signal) {
+    return guardedTransaction(
+      this.db,
+      snapshot,
+      requestId,
+      (tx) =>
+        tx
+          .objectStore(STORES.settings)
+          .put({ id: key, value: { ...value, requestId } }),
+      signal,
+    );
+  }
   async commit(snapshot, payload, signal) {
     const { result, anchors } = payload;
     if (
@@ -91,7 +105,10 @@ export class ReadingRepository {
           anchor.sourceRevision !== snapshot.sourceRevision,
       )
     ) {
-      throw new AnalysisError("document_changed", "结果与当前资料快照不一致。");
+      throw new AnalysisError(
+        "document_changed",
+        tr("结果与当前资料快照不一致。"),
+      );
     }
     return guardedTransaction(
       this.db,
@@ -100,13 +117,15 @@ export class ReadingRepository {
       (transaction, current) => {
         transaction.objectStore(STORES.readingResults).put(result);
         transaction
-          .objectStore(STORES.activities)
-          .put({
-            id: "reading-" + result.id,
-            type: "reading_completed",
-            documentId: result.documentId,
-            createdAt: result.createdAt,
-          });
+          .objectStore(STORES.settings)
+          .delete("reading-progress:" + snapshot.documentId);
+        transaction.objectStore(STORES.activities).put({
+          id: "reading-" + result.id,
+          type: "reading_completed",
+          documentId: result.documentId,
+          createdAt: result.createdAt,
+          partial: !!result.scope?.partial,
+        });
         for (const anchor of anchors)
           transaction.objectStore(STORES.evidenceAnchors).put(anchor);
         transaction.objectStore(STORES.documents).put({

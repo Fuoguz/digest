@@ -20,6 +20,7 @@ await new Promise((resolve, reject) => {
 });
 const browser = await chromium.launch({ channel: process.env.DIGEST_BROWSER_CHANNEL || "chrome", headless: true });
 const context = await browser.newContext({
+    locale: "zh-CN",
   viewport: { width: 1440, height: 1000 },
   reducedMotion: "reduce",
   acceptDownloads: true,
@@ -40,6 +41,7 @@ const answer =
 let courseURL, taskURL, attemptURL, readerURL;
 async function config(endpoint = "success") {
   await page.goto(base + "/app/settings");
+  await page.getByText("开发者选项",{exact:true}).click();
   await page.getByRole("button", { name: "管理开发者服务" }).click();
   await page
     .getByLabel("Chat Completions 地址")
@@ -130,9 +132,10 @@ try {
   await page.getByRole("heading", { name: "本次修订已完成" }).waitFor();
   await page.reload();
   await page.getByRole("heading", { name: "本次修订已完成" }).waitFor();
+  await page.locator(".original-answer > summary").click();
   assert.equal(
     await page
-      .locator(".training-feedback > .training-prose")
+      .locator(".training-feedback .original-answer .training-prose")
       .first()
       .innerText(),
     answer,
@@ -264,6 +267,7 @@ try {
   // Fresh browser context = empty test environment, never clear a real user's origin.
   await context.close();
   const restored = await browser.newContext({
+    locale: "zh-CN",
     viewport: { width: 390, height: 844 },
     acceptDownloads: true,
   });

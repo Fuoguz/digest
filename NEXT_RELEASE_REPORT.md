@@ -1,3 +1,150 @@
+# NEXT_RELEASE_REPORT — 2026-09-24
+
+Digest 0.2.1 UI & Long-reading Pilot Update。以下第1–12节为本轮交付事实；文末历史报告仅作历史记录，旧上限、部署地址和测试结论不代表当前版本。
+
+- Branch: codex/digest-v02
+- HEAD: ced3a6664eafcbbd0c5968dd416761e5d2b78a2f
+- 本轮修改在工作树，未创建 commit、未 push / merge。Production 来自本轮隔离上传源码，不是声称上述 HEAD 已包含改动。
+- Production: https://digest-sigma.vercel.app
+- READY deployment: dpl_7Egiaj3nUNqcz2rgXESkpsrGyn5a
+- Preview: dpl_DPVsQG8P5WCdGuJyM4rtCfCTjfLW（先构建验收，保护保留）
+- 可回滚的前 Production: dpl_217zmjLSWkqthbq2cZZ78BWHh2AU。保持稳定域名及 IndexedDB v2 兼容，不清库。
+
+## 1. What changed
+
+完成全站暖白编辑式 UI、任务优先的导航和工作台、课程直接导入材料、重点概览与按需展开、移动阅读/修订布局、中英文界面和独立 AI 输出语言。Reader 新增原文分段、范围选择、进度持久化和断点续跑；反馈改为有范围说明的词语检索。保留旧课程、答案、修订、Review、Graph 和备份数据。
+
+用户提供的 Guardian PDF 实际提取为14页、32,285字符、54段，并非超过代理100k字符上限。原截图的“模型没有返回可用内容”本轮未稳定复现，不能断言唯一根因。已针对单次输出压力、PDF引用抄录错误及失败后从头重来实施改进。代理区分 output_limit 与 empty_response，不把推理字段当最终答案。
+
+## 2. Product decisions
+
+优先回答“下一步做什么”和“主要缺口在哪里”。新用户有三步引导；反馈先缺口后优点，保留首次答案但默认折叠，修订有独立写作区。重点概览链接到具体判断，再核查原文。课程、任务、原答和用户材料始终优先。
+
+使用可访问的 HTML/CSS 学习流程示例作为首页视觉素材；本轮没有调用 image 模型，也没有加入装饰性背景图。语言切换不重写用户文本或历史AI内容。反馈评价仅记录是否有帮助、不准确、依据不相关。
+
+## 3. Architecture decisions
+
+继续 Vanilla JS / ES Modules、IndexedDB v2、同源 Serverless Proxy。新增 context.js 和轻量字符串目录，无框架/数据库迁移。生产 endpoint/model/key/试用码值不变；普通学生无需 API Key，生产界面不突出开发配置。构建和上传仅包含运行文件，用户 PDF、QA产物、凭据不上传。
+
+## 4. Data model
+
+ReadingResult 增加 scope / outputLanguage / overview；Feedback 增加 retrievalScope / outputLanguage，工作流版本 course-feedback-v2；旧记录兼容。settings 新增 reading-progress:documentId checkpoint，含版本/范围/语言 key 和分段结果。checkpoint 写入与 requestId/source signature 检查在同一事务；正式结果提交时原子清除进度。
+
+首次 Attempt 不可覆盖，Revision 追加。备份 schema 不变，已提交全部资产正常导出；settings 内未提交草稿和未完成研读不包含在备份中。feedback_rated 活动不存答案/正文。
+
+## 5. AI workflow
+
+Reader：选定范围 → <=10k字符分段（最多12段）→ 每段结构校验（最多一次修复）→ 引用核对 → 保存进度 → 多段整体概览 → 校验引用已有claim IDs → 原子提交。单段省去概览调用。失败/刷新可复用已成功分段，旧正式结果保留。
+
+Feedback：限定任务资料 → 词语检索最多24k字符 → 任务/rubric/原答核查句/片段 → JSON反馈 → 严格结构和答案引文验证 → 原文Evidence验证。UI明确部分材料范围，不把未检索到等同于材料不存在。
+
+引用优先选择程序从原文切出的 quoteId；程序取回原始子串，再执行原有 exact match、唯一性、段落、offset、source version 检查。错误编号/错段落/重复引用不会伪造链接。matched 只代表可定位，不证明语义。
+
+本轮有界真实模型验收共8次调用，经既有已配置 Preview Proxy 发送本轮消息：全文基线1次、4个分段、末段改用片段编号复测1次、综合1次、英文Feedback1次。全部HTTP200，但不据此宣称稳定性。基线8条引用中6条匹配；旧直接quote分段分别8/8、8/8、8/8、2/8。末段 quoteId 复测8/8；英文反馈14/14可定位，4个缺口（其中1个明确无证据、不生成链接），用户答案引用正确。人工检查发现过度概括、混淆赞助与欺骗和缺少机制解释均被具体指出；不是盲评或学习效果实验。
+
+分段调用约45–88秒，末段复测约50秒，综合25秒、英文反馈64秒。完整长文仍可能数分钟。最终综合提示增加了自然学生文案要求；该措辞微调通过mock流程，未额外付费重跑。最终部署的Production本轮只验证公网/资源/认证门控，没有声称重新以Production试用码完成付费全流程。
+
+## 6. UX changes
+
+覆盖 Landing、Dashboard、Course、Task、Library、Reader、Review、Search、Settings，Graph保留兼容。中文采用阅读舒适的系统字体，英文阅读/标题使用衬线层级；钴蓝行动、琥珀依据、柔和状态色。桌面左右阅读，手机标签切换；标题和长段落换行，键盘跳转、reduced motion保留。Reader范围和段落导航、反馈返回滚动上下文、草稿保存提示、空态/失败/取消状态均明确。
+
+界面语言记住选择，切换前等待草稿写入，并恢复当前表单与展开状态。AI输出语言独立设置；原文和历史结果保持其原有语言。
+
+## 7. Tests
+
+- npm test：73 passed，0 failed；保留现有测试，新增长文、断点续跑、取消、旧请求、quoteId伪造/错段、跨窗口ID、备份恢复、输出语言和empty/output-limit区分测试。
+- npm run qa:browser：16 checks passed；覆盖原学习闭环、移动Review、故障/取消、旧资产、真实备份文件下载并上传恢复，十类核心资产一致。
+- DIGEST_TEST_PDF=<用户PDF路径> node tests/browser/upgrade.mjs：10 checks passed；实际PDF导入、第二段失败后刷新续跑、全文综合、Evidence、双语草稿、作答修订、双语9页×4宽度、无pageerror。AI为明确mock。
+- npm run build：通过；Preview/Production远端build通过。
+- git diff --check：通过（仅平台行尾提示）；node scripts/audit-pilot.mjs：无规则命中。该扫描不是完整安全认证。
+
+旧测试为适配首次答案折叠新增展开动作，实际断言仍验证完整原答不可变；不是删掉失败断言。原60k材料拒绝用例改为验证检索范围明确与完整源保留，符合本轮需求。
+
+## 8. Browser QA
+
+真实Chrome测试1440/1024/768/390，中文/英文，包含本地完整链路与实际文件上传下载。截图位于qa-artifacts/upgrade/browser和qa-artifacts/next-release。fixture反馈不作为真实模型语义证据。
+
+Production在全新未登录Chrome context验证首页、English切换、工作台和390布局，无JS错误/横向溢出。匿名HTTP检查 /、/app/、/app/library、样式、翻译目录、PDF.js均200，无Vercel登录页。同源 /api/digest 无试用会话返回应用401（预期门控），不是CORS或平台认证错误。Preview部署CSS的SHA256与本地相同。生产URL保持原origin。
+
+Computer Use 已用于本地界面检查；最终再次打开公网标签时连接超时，未冒称该工具完成最终公网验证。上述公网交互由独立Chrome自动测试完成。Chrome视口不等于物理手机或Safari认证。
+
+## 9. Known limitations
+
+原偶发空输出未稳定复现，不能承诺上游永不失败。长文多次模型调用增加总等待与费用，后台关闭会中止当前调用；已完成段仍在本地。每次最多12段，过大材料需要选范围。没有OCR，PDF文本层/断行质量仍影响阅读。
+
+词语检索不等于跨语言语义检索，可能遗漏不同语言或隐含相关材料；模型也可能给出语义不充分的证据。引用可定位不是正确率。答案16k限制保留，极大rubric/答案组合仍可能触发95k序列化上下文限制。供应商费用硬上限未在本轮核实。
+
+单浏览器本地数据，无云同步。语言切换只翻译界面，新AI输出遵循单独选择，历史结果保持原语言。扫描式PDF、复杂数学论文、多学科长材料质量和真实学生学习提升尚未得到本轮验证。
+
+## 10. Pilot readiness
+
+可以开始5名受邀学生的有观察记录的小规模Pilot，保留现有试用码门控。当前自动化与本轮材料未发现数据完整性或UI闭环阻塞，但不宣称已达到无人值守的稳定服务水平。下一步应重点记录长文等待、模型空输出复发、检索漏证据和跨语言体验；若频繁发生，暂停扩大邀请。
+
+## 11. What was intentionally NOT built
+
+没有React/Next迁移、账号云同步、教师后台、OCR、Graph RAG、向量库、自动题库、复杂Agent、积分支付、假掌握率；没有删除Graph或旧数据。没有改变生产密钥、试用码或模型配置，没有使用临时分享URL作为学生入口。
+
+## 12. Recommended next experiment
+
+先让用户用同一Guardian PDF完整研读一次：观察每段进度、整体重点、引用跳转，再用一个真实课程问题作答并修订。五位学生记录首次完成时间、哪条反馈实际促成修改、依据是否支持判断、失败后能否继续。几天后用不同案例再答，由人比较论证质量，不用完成按钮或引用匹配比例冒充学习效果。
+
+## Commands and changed files
+
+实际运行：npm test；npm run qa:browser；DIGEST_TEST_PDF配置后node tests/browser/upgrade.mjs；npm run build；git diff --check；node scripts/audit-pilot.mjs；node scripts/prepare-pilot.mjs；Vercel CLI deploy --yes --cwd .pilot-deploy --scope fuoguzs-projects；vercel curl检查Preview资源；deploy --prod --yes --cwd .pilot-deploy --scope fuoguzs-projects；匿名HTTP/独立Chrome公网检查。CLI缓存59.12.0用于发布，避免npx启动等待。真实模型请求与回放校验脚本/响应在被忽略qa-artifacts，包含用户原文，不提交。
+
+本轮文件（运行代码、测试、文档；已有未跟踪synthetic pilot报告和assets保留未修改）：
+
+```text
+NEXT_RELEASE_REPORT.md
+docs/V0.2_PILOT_DEPLOYMENT.md
+PRODUCT_EXPLANATION.md
+README.md
+app/index.html
+docs/V0.2_ARCHITECTURE.md
+index.html
+pilot/handler.js
+src/ai/developer-transport.js
+src/ai/proxy-transport.js
+src/ai/schema.js
+src/ai/service.js
+src/data/backup.js
+src/data/db.js
+src/data/learning-repository.js
+src/data/legacy-migration.js
+src/data/reading-repository.js
+src/data/training-repository.js
+src/domain/documents.js
+src/domain/learning.js
+src/domain/training.js
+src/importers/pdf.js
+src/importers/text.js
+src/landing.js
+src/reader/config-dialog.js
+src/reader/learning-tools.js
+src/reader/reader.js
+src/workspace/components.js
+src/workspace/graph.js
+src/workspace/main.js
+src/workspace/review.js
+src/workspace/tools.js
+src/workspace/training.js
+src/workspace/views.js
+tests/browser/next-release.mjs
+tests/fixtures/mock-ai-server.mjs
+tests/unit/pilot.test.mjs
+tests/unit/training.test.mjs
+src/domain/context.js
+src/styles/upgrade.css
+src/workspace/i18n.js
+src/workspace/messages-en.js
+tests/browser/upgrade.mjs
+tests/unit/upgrade.test.mjs
+```
+
+---
+
+# 历史交付记录（以下非当前状态）
+
 # NEXT_RELEASE_REPORT
 
 最新复验日期：2026-09-22。Digest 0.2.1 Preview Pilot 验收报告。第1–12节保留2026-09-19交付背景；本轮新证据与结论见末尾2026-09-22章节及[详细逐案例审阅](docs/PILOT_ACCEPTANCE_2026-09-22.md)。

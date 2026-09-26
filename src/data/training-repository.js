@@ -1,3 +1,4 @@
+import { t as tr, th } from "../workspace/i18n.js";
 import { atomic } from "./learning-repository.js";
 import { getAllRecords, getRecord } from "./db.js";
 import { makeId } from "../domain/documents.js";
@@ -5,7 +6,7 @@ import { sourceSignature } from "../domain/evidence.js";
 const now = () => new Date().toISOString();
 const required = (v, limit = 8000) => {
   if (typeof v !== "string" || !v.trim() || v.length > limit)
-    throw new Error("请填写有效内容，或缩短过长输入。");
+    throw new Error(tr("请填写有效内容，或缩短过长输入。"));
   return v.trim();
 };
 export function event(tx, type, metadata = {}) {
@@ -39,7 +40,7 @@ export class TrainingRepository {
         const old = data.courses.find((c) => c.id === input.id);
         const ids = [...new Set(input.documentIds || [])];
         if (ids.some((id) => !data.documents.some((d) => d.id === id)))
-          throw new Error("所选资料已不存在。");
+          throw new Error(tr("所选资料已不存在。"));
         if (
           old &&
           data.tasks.some(
@@ -49,7 +50,7 @@ export class TrainingRepository {
           )
         )
           throw new Error(
-            "被任务使用的资料不能直接移出课程，请先调整对应任务材料。",
+            tr("被任务使用的资料不能直接移出课程，请先调整对应任务材料。"),
           );
         const record = {
           id: old?.id || makeId("course"),
@@ -71,10 +72,10 @@ export class TrainingRepository {
       const course = data.courses.find((c) => c.id === input.courseId),
         old = data.tasks.find((t) => t.id === input.id);
       if (!course || (old && old.courseId !== course.id))
-        throw new Error("课程不存在或已变化。");
+        throw new Error(tr("课程不存在或已变化。"));
       const ids = [...new Set(input.documentIds || [])];
       if (!ids.length || ids.some((id) => !course.documentIds.includes(id)))
-        throw new Error("请至少选择一份课程材料。");
+        throw new Error(tr("请至少选择一份课程材料。"));
       const task = {
         id: old?.id || makeId("task"),
         courseId: course.id,
@@ -140,8 +141,8 @@ export class TrainingRepository {
   saveDraft(taskId, answer) {
     return atomic(this.db, ["tasks", "activities"], (data, tx) => {
       const task = data.tasks.find((t) => t.id === taskId);
-      if (!task) throw new Error("任务已不存在。");
-      if (answer.length > 16000) throw new Error("答案最多 16,000 字符。");
+      if (!task) throw new Error(tr("任务已不存在。"));
+      if (answer.length > 16000) throw new Error(tr("答案最多 16,000 字符。"));
       if (!task.draftAnswer && answer) event(tx, "attempt_started", { taskId });
       tx.objectStore("tasks").put({ ...task, draftAnswer: answer });
     });
@@ -149,7 +150,7 @@ export class TrainingRepository {
   submit(taskId, answer) {
     return atomic(this.db, ["tasks", "attempts", "activities"], (data, tx) => {
       const task = data.tasks.find((t) => t.id === taskId);
-      if (!task) throw new Error("任务已不存在。");
+      if (!task) throw new Error(tr("任务已不存在。"));
       const attempt = {
         id: makeId("attempt"),
         taskId,
@@ -176,7 +177,7 @@ export class TrainingRepository {
   begin(attemptId, requestId) {
     return atomic(this.db, ["attempts"], (data, tx) => {
       const a = data.attempts.find((a) => a.id === attemptId);
-      if (!a) throw new Error("作答记录不存在。");
+      if (!a) throw new Error(tr("作答记录不存在。"));
       tx.objectStore("attempts").put({ ...a, activeRequestId: requestId });
     });
   }
@@ -208,11 +209,11 @@ export class TrainingRepository {
           !task ||
           task.version !== context.task.version
         )
-          throw new Error("任务或请求已变化，本次反馈未覆盖已有结果。");
+          throw new Error(tr("任务或请求已变化，本次反馈未覆盖已有结果。"));
         for (const s of context.snapshots) {
           const d = data.documents.find((d) => d.id === s.documentId);
           if (!d || sourceSignature(d) !== s.signature)
-            throw new Error("课程材料版本已变化，请重新获取反馈。");
+            throw new Error(tr("课程材料版本已变化，请重新获取反馈。"));
         }
         tx.objectStore("feedback").put({ ...payload.feedback, attemptId });
         for (const anchor of payload.anchors)
@@ -235,11 +236,11 @@ export class TrainingRepository {
       (data, tx) => {
         const a = data.attempts.find((a) => a.id === id);
         if (!a?.feedbackId || !data.feedback.some((f) => f.id === a.feedbackId))
-          throw new Error("请先获取反馈。");
+          throw new Error(tr("请先获取反馈。"));
         const revised = required(answer, 16000),
           previous = a.revision.at(-1)?.userAnswer || a.userAnswer;
         if (revised === previous)
-          throw new Error("答案尚未修改，请先根据反馈修订。");
+          throw new Error(tr("答案尚未修改，请先根据反馈修订。"));
         const revision = {
           id: makeId("revision"),
           userAnswer: revised,

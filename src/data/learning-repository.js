@@ -1,3 +1,4 @@
+import { t as tr, th } from "../workspace/i18n.js";
 import { sourceSignature, restoreAnchor } from "../domain/evidence.js";
 import { makeId } from "../domain/documents.js";
 import {
@@ -28,7 +29,7 @@ export function atomic(db, names, mutate, signal) {
     };
     tx.onabort = tx.onerror = () => {
       signal?.removeEventListener("abort", cancel);
-      reject(failure || tx.error || new Error("本地保存失败，请重试"));
+      reject(failure || tx.error || new Error(tr("本地保存失败，请重试")));
     };
     if (signal?.aborted) {
       cancel();
@@ -57,7 +58,7 @@ function guard(data, snapshot, result) {
     doc.digestResultId !== result.id ||
     result.sourceRevision !== snapshot.sourceRevision
   )
-    throw new Error("资料或研读版本已变化，请重新打开 Reader");
+    throw new Error(tr("资料或研读版本已变化，请重新打开 Reader"));
   return doc;
 }
 export class LearningRepository {
@@ -130,9 +131,9 @@ export class LearningRepository {
           card.version !== version ||
           new Date(card.nextReviewAt) > now
         )
-          throw new Error("这道题已处理或尚未到期，请刷新队列");
+          throw new Error(tr("这道题已处理或尚未到期，请刷新队列"));
         if (!doc || sourceSignature(doc) !== card.sourceSignature)
-          throw new Error("原文已变化，请暂停此题并重新研读");
+          throw new Error(tr("原文已变化，请暂停此题并重新研读"));
         const next = {
           ...card,
           ...schedule(card, rating, now),
@@ -160,10 +161,10 @@ export class LearningRepository {
     );
   }
   setCardStatus(id, status) {
-    if (!["active", "paused"].includes(status)) throw new Error("无效状态");
+    if (!["active", "paused"].includes(status)) throw new Error(tr("无效状态"));
     return atomic(this.db, ["reviewCards"], (data, tx) => {
       const c = data.reviewCards.find((c) => c.id === id);
-      if (!c) throw new Error("题目不存在");
+      if (!c) throw new Error(tr("题目不存在"));
       tx.objectStore("reviewCards").put({
         ...c,
         status,
@@ -177,13 +178,13 @@ export class LearningRepository {
       ["documents", "knowledgeUnits", "activities", "evidenceAnchors"],
       (data, tx) => {
         const doc = guard(data, snapshot, result);
-        if (!label.trim()) throw new Error("请输入知识点名称");
+        if (!label.trim()) throw new Error(tr("请输入知识点名称"));
         if (
           !Object.values(result.sections).some((s) =>
             s.items.some((c) => c.id === claim.id && c.text === claim.text),
           )
         )
-          throw new Error("判断已变化");
+          throw new Error(tr("判断已变化"));
         const existing = data.knowledgeUnits.find(
           (u) =>
             u.documentId === doc.id &&
@@ -225,7 +226,7 @@ export class LearningRepository {
   editUnit(id, label) {
     return atomic(this.db, ["knowledgeUnits"], (data, tx) => {
       const u = data.knowledgeUnits.find((u) => u.id === id);
-      if (!u || !label.trim()) throw new Error("知识点名称不能为空");
+      if (!u || !label.trim()) throw new Error(tr("知识点名称不能为空"));
       tx.objectStore("knowledgeUnits").put({
         ...u,
         label: label.trim().slice(0, 100),
@@ -256,7 +257,7 @@ export class LearningRepository {
             !d ||
             sourceSignature(d) !== u.sourceSignature
           )
-            throw new Error("知识点或来源已变化，请重新建议关系");
+            throw new Error(tr("知识点或来源已变化，请重新建议关系"));
         }
         let count = 0;
         for (const r of clean) {
@@ -282,18 +283,18 @@ export class LearningRepository {
   }
   decideRelation(id, status) {
     if (!["confirmed", "rejected"].includes(status))
-      throw new Error("无效关系状态");
+      throw new Error(tr("无效关系状态"));
     return atomic(
       this.db,
       ["relations", "knowledgeUnits", "documents"],
       (data, tx) => {
         const r = data.relations.find((r) => r.id === id);
-        if (!r) throw new Error("关系不存在");
+        if (!r) throw new Error(tr("关系不存在"));
         for (const uid of [r.sourceKnowledgeUnitId, r.targetKnowledgeUnitId]) {
           const u = data.knowledgeUnits.find((u) => u.id === uid),
             d = data.documents.find((d) => d.id === u?.documentId);
           if (!u || !d || sourceSignature(d) !== u.sourceSignature)
-            throw new Error("关系来源已失效");
+            throw new Error(tr("关系来源已失效"));
         }
         tx.objectStore("relations").put({ ...r, status });
       },
