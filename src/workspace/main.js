@@ -1,3 +1,4 @@
+import { mountGapHistory } from "./learning-loop.js";
 import { t as tr, th } from "./i18n.js";
 import {
   installLanguageControl,
@@ -113,7 +114,15 @@ async function renderCurrent() {
       )
       .map((c) => c.documentId),
   );
-  if (
+  if (path.startsWith("/app/gaps/")) {
+    const dispose = await mountGapHistory(
+      page,
+      db,
+      () => version === routeVersion,
+    );
+    if (version === routeVersion) disposeReader = dispose;
+    else dispose?.();
+  } else if (
     path === "/app/" ||
     path === "/app/courses" ||
     path.startsWith("/app/courses/") ||

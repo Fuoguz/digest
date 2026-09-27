@@ -1,3 +1,13 @@
+import {
+  mountGapPanel,
+  mountChallenge,
+  diffView,
+  previewButton,
+  l,
+} from "./learning-loop.js";
+import { LoopRepository } from "../data/loop-repository.js";
+import { rescueRetrieval } from "../ai/retrieval-rescue.js";
+import { suggestTasks } from "../ai/task-suggestions.js";
 import { t as tr, th } from "./i18n.js";
 import { getLocale, beforeLanguageChange } from "./i18n.js";
 import {
@@ -84,14 +94,17 @@ function row(parent, title, href, detail) {
   parent.append(r);
 }
 const statusLabel = (a) =>
-  a.status === "completed"
-    ? tr("已修订 · 尚未再次验证")
-    : a.feedbackId
-      ? tr("待修订")
-      : tr("答案已保存 · 待反馈");
+  a.retestId
+    ? l("再测结果已记录", "Recheck recorded")
+    : a.status === "completed"
+      ? tr("已修订 · 尚未再次验证")
+      : a.feedbackId
+        ? tr("待修订")
+        : tr("答案已保存 · 待反馈");
 
 export async function mountTraining(container, db, isCurrent = () => true) {
-  const repo = new TrainingRepository(db);
+  const repo = new LoopRepository(db);
+  const loopCleanups = [];
   const [courses, tasks, attempts, docs] = await Promise.all(
     ["courses", "tasks", "attempts", "documents"].map((n) => repo.list(n)),
   );
@@ -166,7 +179,9 @@ export async function mountTraining(container, db, isCurrent = () => true) {
     const unfinished = tasks.filter(
       (t) =>
         t.draftAnswer ||
-        recentAttempts.find((a) => a.taskId === t.id)?.status !== "completed",
+        (recentAttempts.find((a) => a.taskId === t.id)?.status !==
+          "completed" &&
+          !recentAttempts.find((a) => a.taskId === t.id)?.retestId),
     );
     for (const t of unfinished.slice(0, 6))
       row(
@@ -277,6 +292,109 @@ export async function mountTraining(container, db, isCurrent = () => true) {
       prompt = field(taskForm, tr("需要回答的问题"), "", true),
       rubric = field(taskForm, tr("评价标准（可选）"), "", true, false);
     const taskDocs = documentChoices(taskForm, courseDocs, course.documentIds);
+    const suggestions = el("section", "task-suggestions"),
+      suggestStatus = el("p");
+    const suggest = button(
+      l("帮我生成几个练习任务", "Suggest a few practice tasks"),
+      async () => {
+        if (controller) return;
+        const ids = taskDocs();
+        if (!ids.length) {
+          message(
+            suggestStatus,
+            l("先选择课程材料。", "Select course material first."),
+            true,
+          );
+          return;
+        }
+        controller = new AbortController();
+        const local = controller;
+        suggest.disabled = true;
+        const cancel = button(
+          l("取消准备", "Cancel preparation"),
+          () => local.abort(),
+          "secondary-action",
+        );
+        suggestions.append(cancel);
+        message(
+          suggestStatus,
+          l(
+            "正在根据所选材料准备练习建议…",
+            "Preparing suggestions from selected materials…",
+          ),
+        );
+        try {
+          const context = await prepareFeedbackContext(
+            { documentIds: ids, prompt: "Explain compare apply critique" },
+            course,
+            courseDocs,
+            "Practice task suggestions",
+          );
+          context.outputLanguage = getLocale();
+          const candidates = await suggestTasks(
+            context,
+            createTransport("digest"),
+            local.signal,
+          );
+          if (!current()) return;
+          suggestions
+            .querySelectorAll(".suggested-task")
+            .forEach((e) => e.remove());
+          message(
+            suggestStatus,
+            candidates.length
+              ? l(
+                  "选择一题后可继续编辑；尚未创建任务。",
+                  "Choose one to edit. Nothing has been created yet.",
+                )
+              : l(
+                  "材料不足以生成可靠任务，请直接输入自己的问题。",
+                  "Insufficient material. Enter your own question.",
+                ),
+          );
+          for (const candidate of candidates) {
+            const card = el("article", "suggested-task");
+            card.append(
+              el("h3", "", candidate.title),
+              el("p", "", candidate.prompt),
+              button(
+                l("使用这道题", "Use this question"),
+                () => {
+                  taskTitle.value = candidate.title;
+                  prompt.value = candidate.prompt;
+                  for (const input of taskForm.querySelectorAll(
+                    'input[type="checkbox"]',
+                  ))
+                    input.checked = candidate.documentIds.includes(input.value);
+                  prompt.focus();
+                },
+                "secondary-action",
+              ),
+            );
+            suggestions.append(card);
+          }
+        } catch (e) {
+          if (current())
+            message(
+              suggestStatus,
+              e.name === "AbortError"
+                ? l(
+                    "已取消，输入内容保留。",
+                    "Cancelled. Your input is retained.",
+                  )
+                : e.message,
+              e.name !== "AbortError",
+            );
+        } finally {
+          controller = null;
+          suggest.disabled = false;
+          cancel.remove();
+        }
+      },
+      "secondary-action",
+    );
+    suggestions.append(suggest, suggestStatus);
+    taskForm.append(suggestions);
     formAction(taskForm, tr("创建任务"), async () => {
       const task = await repo.saveTask({
         courseId: id,
@@ -322,6 +440,10 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         link(tr("返回课程"), "/app/courses"),
       );
       return () => {};
+    }
+    if (task.targetGapId) {
+      unbindLanguage();
+      return mountChallenge(root, db, task, course, isCurrent);
     }
     await repo.track("task_opened", { taskId: id, courseId: course.id });
     if (!current()) return () => {};
@@ -476,11 +598,14 @@ export async function mountTraining(container, db, isCurrent = () => true) {
       status.after(cancel);
       message(
         status,
-        tr("答案已保存。正在核查材料与答案，最多约 3 分钟；可以取消。"),
+        l(
+          "答案已保存。正在核对相关材料，可以取消。",
+          "Answer saved. Checking relevant material; you can cancel.",
+        ),
       );
       try {
         const freshDocs = await repo.list("documents");
-        const context = await prepareFeedbackContext(
+        let context = await prepareFeedbackContext(
           activeAttempt.taskSnapshot,
           course,
           freshDocs,
@@ -488,6 +613,18 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         );
         context.outputLanguage = outputLanguage.value;
         await repo.begin(attemptId, runId);
+        context = await rescueRetrieval(
+          context,
+          createTransport("digest"),
+          ctrl.signal,
+        );
+        message(
+          status,
+          l(
+            "正在分析你的回答，整理最重要的问题…",
+            "Analyzing your answer and prioritizing the important issues…",
+          ),
+        );
         const payload = await generateFeedback(
           context,
           createTransport("digest"),
@@ -634,7 +771,14 @@ export async function mountTraining(container, db, isCurrent = () => true) {
             );
             if (index >= 3) card.append(el("summary", "", item.type));
             card.id = (label === tr("具体缺口") ? "gap-" : "strength-") + index;
-            card.append(el("strong", "", item.type));
+            card.append(
+              el(
+                "small",
+                "reader-muted",
+                l("AI 对你回答的判断： ", "AI judgment of your answer: "),
+              ),
+              el("strong", "", item.type),
+            );
             if (item.userAnswerQuote)
               card.append(
                 el("blockquote", "answer-quote", item.userAnswerQuote),
@@ -700,7 +844,13 @@ export async function mountTraining(container, db, isCurrent = () => true) {
                   .catch(() => {});
               });
               card.append(
+                el(
+                  "small",
+                  "reader-muted",
+                  l("来自课程材料", "From course material"),
+                ),
                 el("blockquote", "training-evidence", anchor.quote),
+                previewButton(repo, eid),
                 evidence,
               );
             }
@@ -787,9 +937,14 @@ export async function mountTraining(container, db, isCurrent = () => true) {
             );
             completion.append(history);
           }
+          completion.append(diffView(repo, a, a.revision.at(-1)));
           feedbackArea.append(completion);
         }
       }
+      await mountGapPanel(feedbackArea, repo, {
+        attemptId: a.id,
+        register: (fn) => loopCleanups.push(fn),
+      });
       const returned = sessionStorage.getItem("digest:feedback-return:" + a.id);
       if (returned) {
         sessionStorage.removeItem("digest:feedback-return:" + a.id);
@@ -894,7 +1049,18 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         if (section.dataset.section !== "1") section.remove();
     if (courses.length) root.append(root.querySelector(".course-create"));
   }
+  if (path === "/app" || path.startsWith("/app/courses/")) {
+    const panel = await mountGapPanel(root, repo, {
+      courseId: path.startsWith("/app/courses/") ? id : undefined,
+      onlyNeeds: true,
+      register: (fn) => loopCleanups.push(fn),
+    });
+    if (panel && path === "/app")
+      root.querySelector(".desk-section")?.after(panel);
+    else if (panel) root.querySelector(".page-subtitle")?.after(panel);
+  }
   return () => {
+    loopCleanups.forEach((fn) => fn());
     unbindLanguage();
     disposed = true;
     controller?.abort();

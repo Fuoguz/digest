@@ -1,9 +1,10 @@
+import { loopOutput } from "./loop-output.mjs";
 // Local QA only; never included in the production build. No real credentials.
 import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { outputFor } from "./reading-output.mjs";
-import { feedbackOutput } from './feedback-output.mjs';
+import { feedbackOutput } from "./feedback-output.mjs";
 const port = Number(process.env.DIGEST_QA_PORT || 5185);
 const server = http.createServer(async (request, response) => {
   console.log(
@@ -43,7 +44,17 @@ const server = http.createServer(async (request, response) => {
           ".css": "text/css",
         }[path.extname(file)] || "application/octet-stream",
       );
-      response.end(pathname.startsWith('/app') && new URL(request.url,'http://localhost').searchParams.has('qaStorage') ? content.toString().replace('</body>','<script type="module" src="/tests/fixtures/storage-failure.mjs"></script></body>') : content);
+      response.end(
+        pathname.startsWith("/app") &&
+          new URL(request.url, "http://localhost").searchParams.has("qaStorage")
+          ? content
+              .toString()
+              .replace(
+                "</body>",
+                '<script type="module" src="/tests/fixtures/storage-failure.mjs"></script></body>',
+              )
+          : content,
+      );
     } catch {
       response.writeHead(404);
       response.end();
@@ -59,7 +70,11 @@ const server = http.createServer(async (request, response) => {
     response.end();
     return;
   }
-  if (request.url.startsWith('/rate-limit')) { response.writeHead(429); response.end(); return; }
+  if (request.url.startsWith("/rate-limit")) {
+    response.writeHead(429);
+    response.end();
+    return;
+  }
   const chunks = [];
   for await (const chunk of request) chunks.push(chunk);
   try {
@@ -69,14 +84,48 @@ const server = http.createServer(async (request, response) => {
     );
     const snapshot = { ...prompt.document, readingMode: prompt.readingMode };
     let output;
-    if (prompt.claims) { output={summary:'QA synthesis: compare the sections against their sources.',points:[{text:'A bounded synthesis for the UI test.',claimIds:prompt.claims.slice(0,2).map(c=>c.id)}]};
-    } else if (prompt.task === 'course_feedback') {
+    if (prompt.workflow) {
+      output = loopOutput(prompt);
+    } else if (prompt.claims) {
+      output = {
+        summary: "QA synthesis: compare the sections against their sources.",
+        points: [
+          {
+            text: "A bounded synthesis for the UI test.",
+            claimIds: prompt.claims.slice(0, 2).map((c) => c.id),
+          },
+        ],
+      };
+    } else if (prompt.task === "course_feedback") {
       output = feedbackOutput(prompt);
-      if (request.url.startsWith('/partial')) output.gaps[0].evidenceCandidates[0].quote = '不存在的引文';
-      if (request.url.startsWith('/missing')) delete output.gaps;
-      if (request.url.startsWith('/long')) {
-        output.gaps[0].explanation = 'QA 长反馈：请核对概念、证据与适用条件。'.repeat(160);
-        output.gaps = Array.from({ length: 8 }, () => structuredClone(output.gaps[0]));
+      if (request.url.startsWith("/loop"))
+        Object.assign(output.gaps[0], {
+          gapKind: "concept_misconception",
+          learningGoal: "议程设置与框架的作用边界",
+          userAnswerQuote: prompt.userAnswer,
+          explanation:
+            "QA：把议题关注与解释方式混为一谈，导致不能区分案例中的两种机制。",
+        });
+      if (request.url.startsWith("/partial"))
+        output.gaps[0].evidenceCandidates[0].quote = "不存在的引文";
+      if (request.url.startsWith("/missing")) delete output.gaps;
+      if (request.url.startsWith("/long")) {
+        output.gaps[0].explanation =
+          "QA 长反馈：请核对概念、证据与适用条件。".repeat(160);
+        output.gaps = Array.from({ length: 8 }, (_, i) => ({
+          ...structuredClone(output.gaps[0]),
+          explanation: [
+            "概念定义",
+            "适用边界",
+            "因果推理",
+            "比较方法",
+            "案例选择",
+            "反例分析",
+            "条件限制",
+            "证据解释",
+          ][i].repeat(220),
+          suggestedAction: "QA separate issue " + i,
+        }));
       }
     } else if (prompt.task === "suggest_relations") {
       // Deliberately bounded QA fixture, not a production relation generator.
@@ -107,7 +156,17 @@ const server = http.createServer(async (request, response) => {
     response.setHeader("Content-Type", "application/json");
     response.end(
       JSON.stringify({
-        choices: [{ message: { content: request.url.startsWith('/empty') ? '' : request.url.startsWith('/malformed') ? '{invalid' : JSON.stringify(output) } }],
+        choices: [
+          {
+            message: {
+              content: request.url.startsWith("/empty")
+                ? ""
+                : request.url.startsWith("/malformed")
+                  ? "{invalid"
+                  : JSON.stringify(output),
+            },
+          },
+        ],
       }),
     );
   } catch {

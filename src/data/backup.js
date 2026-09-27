@@ -1,3 +1,4 @@
+import { validateLoopBackup } from "./loop-backup.js";
 import { t as tr, th } from "../workspace/i18n.js";
 import { atomic } from "./learning-repository.js";
 import { documentSnapshot, restoreAnchor } from "../domain/evidence.js";
@@ -16,11 +17,13 @@ export const BACKUP_STORES = [
   "tasks",
   "attempts",
   "feedback",
+  "learningGaps",
+  "retests",
 ];
 export function exportBackup(db) {
   return atomic(db, BACKUP_STORES, (data) => ({
     format: "digest-v02",
-    version: 2,
+    version: 3,
     createdAt: new Date().toISOString(),
     stores: data,
   }));
@@ -34,7 +37,7 @@ export async function restoreBackup(db, backup) {
     date = (v) => text(v) && Number.isFinite(Date.parse(v));
   if (
     backup?.format !== "digest-v02" ||
-    ![1, 2].includes(backup.version) ||
+    ![1, 2, 3].includes(backup.version) ||
     !backup.stores
   )
     fail();
@@ -42,6 +45,8 @@ export async function restoreBackup(db, backup) {
   if (backup.version === 1)
     for (const name of ["courses", "tasks", "attempts", "feedback"])
       data[name] ??= [];
+  if (backup.version < 3)
+    for (const name of ["learningGaps", "retests"]) data[name] ??= [];
   for (const name of BACKUP_STORES) {
     if (!list(data[name])) fail();
     const ids = new Set();
@@ -153,6 +158,7 @@ export async function restoreBackup(db, backup) {
   for (const a of data.activities)
     if (!text(a.type) || !date(a.createdAt)) fail();
   validateTrainingBackup(data, fail);
+  validateLoopBackup(data, fail);
   return atomic(db, BACKUP_STORES, (current, tx) => {
     // Restore into an empty study space: no silent merge, overwrite or clearing.
     if (BACKUP_STORES.some((name) => current[name].length))

@@ -157,8 +157,8 @@ export const en = {
   "导出完整 JSON 备份": "Export full JSON backup",
   "备份已生成，不包含 API Key。": "Backup downloaded. API keys are excluded.",
   "备份失败：": "Backup failed: ",
-  "备份包含正文、研读、依据、复习历史、知识点、关系、课程、任务、首次答案、反馈和已保存修订。未提交的修订草稿不在备份中。请保存到可信位置。":
-    "Includes sources, readings, evidence, review history, concepts, connections, courses, tasks, original answers, feedback and saved revisions. Unsaved revision drafts are excluded. Store this file somewhere safe.",
+  "备份包含正文、研读、依据、复习历史、知识点、关系、课程、任务、首次答案、反馈、已保存修订、理解缺口、新题和再测记录。未提交的修订草稿不在备份中。请保存到可信位置。":
+    "Includes sources, readings, evidence, review history, concepts, connections, courses, tasks, original answers, feedback, saved revisions, learning gaps, challenges and rechecks. Unsaved revision drafts are excluded. Store this file somewhere safe.",
   "选择 Digest JSON 备份": "Choose a Digest JSON backup",
   "从 JSON 备份恢复（仅限空资料库）":
     "Restore a JSON backup (empty library only)",
@@ -185,7 +185,7 @@ export const en = {
   "试用码已验证，可以使用 AI 研读与反馈。":
     "Access verified. You can now request analysis and feedback.",
   开发者选项: "Developer options",
-  "Digest 0.2.1 Pilot candidate · 不提供云同步、账号或 OCR。":
+  "Digest 0.3 Preview · 不提供云同步、账号或 OCR。":
     "Digest Pilot · Local storage only. No cloud sync, accounts or OCR.",
   "了解 Digest": "About Digest",
   相关材料: "Related sources",

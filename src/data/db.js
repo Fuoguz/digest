@@ -1,6 +1,6 @@
 import { t as tr, th } from "../workspace/i18n.js";
 export const DB_NAME = "digest-v02";
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 export const STORES = Object.freeze({
   documents: "documents",
   readingResults: "readingResults",
@@ -14,6 +14,8 @@ export const STORES = Object.freeze({
   tasks: "tasks",
   attempts: "attempts",
   feedback: "feedback",
+  learningGaps: "learningGaps",
+  retests: "retests",
 });
 
 let databasePromise;
@@ -63,7 +65,9 @@ export function openDatabase(indexedDBImpl = globalThis.indexedDB) {
     let blocked = false;
     request.onblocked = () => {
       blocked = true;
-      reject(new Error(tr("请关闭其他 Digest 标签页后刷新，以安全升级资料库。")));
+      reject(
+        new Error(tr("请关闭其他 Digest 标签页后刷新，以安全升级资料库。")),
+      );
     };
     request.onsuccess = () => {
       if (blocked) {

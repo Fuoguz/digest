@@ -3,6 +3,7 @@ import { atomic } from "./learning-repository.js";
 import { getAllRecords, getRecord } from "./db.js";
 import { makeId } from "../domain/documents.js";
 import { sourceSignature } from "../domain/evidence.js";
+import { deriveGaps } from "../domain/gaps.js";
 const now = () => new Date().toISOString();
 const required = (v, limit = 8000) => {
   if (typeof v !== "string" || !v.trim() || v.length > limit)
@@ -76,6 +77,10 @@ export class TrainingRepository {
       const ids = [...new Set(input.documentIds || [])];
       if (!ids.length || ids.some((id) => !course.documentIds.includes(id)))
         throw new Error(tr("请至少选择一份课程材料。"));
+      if (old?.targetGapId)
+        throw Error(
+          "再测题不能改写，请从理解问题创建新的检验。 / Transfer tasks are immutable.",
+        );
       const task = {
         id: old?.id || makeId("task"),
         courseId: course.id,
@@ -101,8 +106,11 @@ export class TrainingRepository {
   removeCourse(id) {
     return atomic(
       this.db,
-      ["courses", "tasks", "attempts", "feedback"],
+      ["courses", "tasks", "attempts", "feedback", "learningGaps", "retests"],
       (data, tx) => {
+        for (const name of ["learningGaps", "retests"])
+          for (const record of data[name])
+            if (record.courseId === id) tx.objectStore(name).delete(record.id);
         const attempts = data.attempts.filter((a) => a.courseId === id);
         for (const a of attempts) tx.objectStore("attempts").delete(a.id);
         for (const f of data.feedback)
@@ -118,10 +126,38 @@ export class TrainingRepository {
   removeTask(id) {
     return atomic(
       this.db,
-      ["courses", "tasks", "attempts", "feedback"],
+      ["courses", "tasks", "attempts", "feedback", "learningGaps", "retests"],
       (data, tx) => {
         const task = data.tasks.find((t) => t.id === id);
         if (!task) return;
+        const dependentGaps = data.learningGaps.filter((g) => g.taskId === id);
+        if (
+          dependentGaps.some((g) =>
+            data.tasks.some((t) => t.targetGapId === g.id),
+          )
+        )
+          throw Error(
+            "此任务已有再测历史，请保留原题；可删除整个课程。 / Keep this task to preserve retest history.",
+          );
+        for (const g of dependentGaps)
+          tx.objectStore("learningGaps").delete(g.id);
+        const removedRetests = data.retests.filter((r) => r.taskId === id);
+        for (const r of removedRetests) tx.objectStore("retests").delete(r.id);
+        for (const g of data.learningGaps)
+          if (
+            g.retestHistory.some((rid) =>
+              removedRetests.some((r) => r.id === rid),
+            ) ||
+            task.targetGapId === g.id
+          )
+            tx.objectStore("learningGaps").put({
+              ...g,
+              status: "inconclusive",
+              activeRequestId: null,
+              retestHistory: g.retestHistory.filter(
+                (rid) => !removedRetests.some((r) => r.id === rid),
+              ),
+            });
         const course = data.courses.find((c) => c.id === task.courseId);
         if (course)
           tx.objectStore("courses").put({
@@ -198,6 +234,7 @@ export class TrainingRepository {
         "feedback",
         "evidenceAnchors",
         "activities",
+        "learningGaps",
       ],
       (data, tx) => {
         signal?.throwIfAborted();
@@ -218,6 +255,25 @@ export class TrainingRepository {
         tx.objectStore("feedback").put({ ...payload.feedback, attemptId });
         for (const anchor of payload.anchors)
           tx.objectStore("evidenceAnchors").put(anchor);
+        if (!task.targetGapId)
+          for (const gap of deriveGaps(a, payload.feedback, payload.anchors)) {
+            const duplicate = data.learningGaps.some(
+              (g) =>
+                g.attemptId === a.id &&
+                g.kind === gap.kind &&
+                (g.description === gap.description ||
+                  (gap.userAnswerExcerpt &&
+                    g.userAnswerExcerpt === gap.userAnswerExcerpt)),
+            );
+            if (!duplicate) {
+              tx.objectStore("learningGaps").put(gap);
+              event(tx, "learning_gap_observed", {
+                courseId: a.courseId,
+                attemptId: a.id,
+                gapId: gap.id,
+              });
+            }
+          }
         tx.objectStore("attempts").put({
           ...a,
           feedbackId: payload.feedback.id,

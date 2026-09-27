@@ -1175,3 +1175,87 @@ html[lang="zh-CN"] .study-guide h2 {
     border: 0;
   }
 }
+/* v0.3: focused additions to the existing learning workflow. */
+.loop-panel {
+  grid-column: 1/-1;
+  border-top: 1px solid var(--line, #dedcd4);
+  margin-top: 32px;
+  padding-top: 20px;
+  min-width: 0;
+}
+.gap-card {
+  border-left: 3px solid #b99552;
+  padding: 16px 20px;
+  margin: 18px 0;
+  background: #f5f3eb;
+  overflow-wrap: anywhere;
+}
+.gap-card .primary-action,
+.gap-card .secondary-action {
+  margin: 12px 10px 0 0;
+}
+.gap-card > .quiet-link {
+  display: inline-block;
+  margin: 12px 0;
+}
+.gap-state {
+  font-size: 13px;
+  font-weight: 600;
+  color: #566348;
+}
+.revision-diff del {
+  background: #f7e6dd;
+  text-decoration-thickness: 1px;
+}
+.revision-diff ins {
+  background: #e8eedc;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.evidence-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  margin: 0;
+  width: min(600px, 90vw);
+  height: 100dvh;
+  max-height: 100dvh;
+  border: 0;
+  border-left: 1px solid #dedcd4;
+  padding: 28px;
+  background: #faf9f5;
+  color: #202522;
+  overflow: auto;
+}
+.evidence-drawer::backdrop {
+  background: rgb(25 30 25 / 0.25);
+}
+.evidence-drawer mark {
+  background: #ffe6ae;
+  color: inherit;
+}
+.evidence-drawer .training-prose {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.challenge-prompt {
+  border-left: 3px solid #3157bb;
+  padding: 20px;
+  background: #f1f2ed;
+  white-space: pre-wrap;
+}
+@media (max-width: 600px) {
+  .evidence-drawer {
+    inset: 5dvh 0 0;
+    width: 100vw;
+    height: 95dvh;
+    max-width: 100vw;
+    padding: 20px;
+  }
+  .gap-card {
+    padding: 14px;
+  }
+  .gap-card button {
+    max-width: 100%;
+    white-space: normal;
+  }
+}

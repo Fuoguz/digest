@@ -34,4 +34,4 @@ const required = [
   "vendor/pdfjs/pdf.mjs",
 ];
 for (const file of required) await stat(path.join(output, file));
-console.log("Built Digest v0.2 to dist/");
+console.log("Built Digest to dist/");

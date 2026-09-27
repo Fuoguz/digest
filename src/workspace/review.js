@@ -1,3 +1,5 @@
+import { mountGapPanel } from "./learning-loop.js";
+import { LoopRepository } from "../data/loop-repository.js";
 import { getLocale } from "./i18n.js";
 import { t as tr, th } from "./i18n.js";
 import { LearningRepository } from "../data/learning-repository.js";
@@ -16,6 +18,7 @@ import {
 
 export async function mountReview(container, db, isCurrent) {
   const repo = new LearningRepository(db);
+  const loopCleanups = [];
   const analytics = new TrainingRepository(db);
   let cards = await repo.list("reviewCards"),
     documents = await repo.list("documents");
@@ -32,6 +35,10 @@ export async function mountReview(container, db, isCurrent) {
   );
   container.replaceChildren(root);
   root.append(link(tr("用课程中的新问题再次检验理解 →"), "/app/courses"));
+  await mountGapPanel(root, new LoopRepository(db), {
+    onlyNeeds: true,
+    register: (fn) => loopCleanups.push(fn),
+  });
   const toolbar = el("div", "core-toolbar"),
     body = el("div", "review-body"),
     feedback = el("p");
@@ -72,7 +79,8 @@ export async function mountReview(container, db, isCurrent) {
         el(
           "p",
           "inline-feedback",
-          staleCount + tr(" 道题的来源已变化，已从本次队列排除。请在管理中核对。"),
+          staleCount +
+            tr(" 道题的来源已变化，已从本次队列排除。请在管理中核对。"),
         ),
       );
     if (manage) {
@@ -174,7 +182,11 @@ export async function mountReview(container, db, isCurrent) {
       );
       if (!card.evidenceIds.length)
         answer.append(
-          el("small", "reader-muted", tr("此题暂无直接引用，可打开来源研读核对。")),
+          el(
+            "small",
+            "reader-muted",
+            tr("此题暂无直接引用，可打开来源研读核对。"),
+          ),
         );
       const ratings = el("div", "rating-actions");
       for (const [rating, label] of Object.entries(RATINGS)) {
@@ -214,6 +226,7 @@ export async function mountReview(container, db, isCurrent) {
   }
   render();
   return () => {
+    loopCleanups.forEach((fn) => fn());
     disposed = true;
   };
 }
