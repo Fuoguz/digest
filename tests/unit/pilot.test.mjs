@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
+import { ProxyTransport } from "../../src/ai/proxy-transport.js";
 import {
   createHandler,
   sessionValid,
@@ -11,6 +13,110 @@ const env = {
   MODEL_API_BASE_URL: "https://model.example/v1",
   MODEL_NAME: "fixture",
 };
+async function streamed(fetchImpl, { disconnect = false } = {}) {
+  const access = await call("access", { code: env.PILOT_ACCESS_CODE });
+  const res = new EventEmitter();
+  let chunks = "",
+    writes = 0;
+  Object.assign(res, {
+    headersSent: false,
+    writableEnded: false,
+    destroyed: false,
+    setHeader() {},
+    status() {
+      return this;
+    },
+    json(v) {
+      chunks = JSON.stringify(v);
+    },
+    write(v) {
+      this.headersSent = true;
+      chunks += v;
+      writes++;
+    },
+    end(v) {
+      this.writableEnded = true;
+      chunks += v;
+    },
+  });
+  const pending = createHandler("digest", {
+    env,
+    fetchImpl,
+    timeoutMs: 100,
+    heartbeatMs: 3,
+  })(
+    {
+      method: "POST",
+      headers: {
+        origin: "https://pilot.example",
+        host: "pilot.example",
+        "content-type": "application/json",
+        "x-forwarded-for": String(++ip),
+        cookie: access.headers["Set-Cookie"],
+        "x-digest-keepalive": "1",
+      },
+      body: { messages: [{ role: "user", content: "test" }] },
+    },
+    res,
+  );
+  if (disconnect)
+    setTimeout(() => {
+      res.destroyed = true;
+      res.emit("close");
+    }, 8);
+  await pending;
+  return { chunks, writes, res };
+}
+test("Pilot whitespace keepalive remains valid JSON and never implies completion", async () => {
+  const r = await streamed(async () => {
+    await new Promise((r) => setTimeout(r, 18));
+    return {
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: '{"ok":true}' } }],
+      }),
+    };
+  });
+  assert.ok(r.writes >= 2);
+  assert.deepEqual(JSON.parse(r.chunks), {
+    text: '{"ok":true}',
+    httpStatus: 200,
+  });
+  assert.equal(r.res.listenerCount("close"), 0);
+});
+test("Streamed upstream failure retains logical status and ProxyTransport rejects it", async () => {
+  const r = await streamed(async () => ({ ok: false, status: 429 }));
+  const body = JSON.parse(r.chunks);
+  assert.equal(body.httpStatus, 502);
+  assert.equal(body.code, "upstream");
+  const transport = new ProxyTransport("digest", {
+    fetchImpl: async () => ({ ok: true, status: 200, json: async () => body }),
+  });
+  await assert.rejects(
+    transport.request([{ role: "user", content: "test" }]),
+    (e) => e.code === "upstream",
+  );
+});
+test("Client disconnect aborts keepalive upstream and removes listeners", async () => {
+  let aborted = false;
+  const r = await streamed(
+    async (url, { signal }) =>
+      new Promise((resolve, reject) =>
+        signal.addEventListener(
+          "abort",
+          () => {
+            aborted = true;
+            reject(new DOMException("cancel", "AbortError"));
+          },
+          { once: true },
+        ),
+      ),
+    { disconnect: true },
+  );
+  assert.ok(aborted);
+  assert.equal(r.res.listenerCount("close"), 0);
+  assert.equal(r.chunks.trim(), "");
+});
 let ip = 0;
 async function call(
   kind,
@@ -149,15 +255,36 @@ test("Pilot errors redact upstream diagnostics and timeout returns 504", async (
 });
 
 test("Pilot distinguishes empty output from exhausted completion budget without leaking reasoning", async () => {
-  const cookie = (await call("access", { code: env.PILOT_ACCESS_CODE })).headers["Set-Cookie"];
-  for (const finish_reason of ['stop','length']) {
-    const result = await call('digest',{messages:[{role:'user',content:'test'}]}, {
-      cookie,
-      fetchImpl:async()=>({ok:true,json:async()=>({choices:[{finish_reason,message:{content:'',reasoning_content:'private model reasoning'}}]})})
-    });
-    assert.equal(result.status,502);
-    assert.equal(result.output.code,finish_reason==='length'?'output_limit':'empty_response');
-    assert.ok(!JSON.stringify(result).includes('private model reasoning'));
+  const cookie = (await call("access", { code: env.PILOT_ACCESS_CODE }))
+    .headers["Set-Cookie"];
+  for (const finish_reason of ["stop", "length"]) {
+    const result = await call(
+      "digest",
+      { messages: [{ role: "user", content: "test" }] },
+      {
+        cookie,
+        fetchImpl: async () => ({
+          ok: true,
+          json: async () => ({
+            choices: [
+              {
+                finish_reason,
+                message: {
+                  content: "",
+                  reasoning_content: "private model reasoning",
+                },
+              },
+            ],
+          }),
+        }),
+      },
+    );
+    assert.equal(result.status, 502);
+    assert.equal(
+      result.output.code,
+      finish_reason === "length" ? "output_limit" : "empty_response",
+    );
+    assert.ok(!JSON.stringify(result).includes("private model reasoning"));
   }
 });
 

@@ -1259,3 +1259,14 @@ html[lang="zh-CN"] .study-guide h2 {
     white-space: normal;
   }
 }
+
+.feedback-item > small {
+  display: block;
+  margin: 10px 0 6px;
+}
+.gap-provenance {
+  margin: 12px 0;
+}
+.gap-provenance summary {
+  cursor: pointer;
+}

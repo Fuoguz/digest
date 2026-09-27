@@ -51,13 +51,23 @@ export function validateMessages(body) {
 }
 export function createHandler(
   kind,
-  { env = process.env, fetchImpl = globalThis.fetch, timeoutMs = 165000 } = {},
+  {
+    env = process.env,
+    fetchImpl = globalThis.fetch,
+    timeoutMs = 165000,
+    heartbeatMs = 10000,
+  } = {},
 ) {
   return async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("X-Content-Type-Options", "nosniff");
-    const send = (status, code, message) =>
-      res.status(status).json({ code, message });
+    const finish = (status, body) => {
+      if (res.destroyed) return;
+      return res.headersSent
+        ? res.end(JSON.stringify({ ...body, httpStatus: status }))
+        : res.status(status).json(body);
+    };
+    const send = (status, code, message) => finish(status, { code, message });
     if (req.method !== "POST") return send(405, "method", "仅支持 POST");
     const origin = req.headers.origin;
     if (!origin || origin !== "https://" + req.headers.host)
@@ -138,6 +148,24 @@ export function createHandler(
       return send(429, "rate_limit", "试用服务繁忙，请稍后重试");
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    // Opt-in JSON whitespace keeps an idle proxy connection alive. It is not progress.
+    // After headers flush, logical errors travel in httpStatus and remain errors in the client.
+    let heartbeat;
+    const disconnected = () => {
+      if (!res.writableEnded) controller.abort();
+    };
+    if (
+      req.headers["x-digest-keepalive"] === "1" &&
+      typeof res.write === "function"
+    ) {
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store, no-transform");
+      res.write(" \n");
+      heartbeat = setInterval(() => {
+        if (!res.destroyed && !res.writableEnded) res.write(" \n");
+      }, heartbeatMs);
+      res.on?.("close", disconnected);
+    }
     try {
       const request = (includeResponseFormat) =>
         fetchImpl(upstream, {
@@ -250,13 +278,18 @@ export function createHandler(
               : null,
           }),
         );
-        return send(502, finishReason === "length" ? "output_limit" : "empty_response",
-          finishReason === "length" ? "模型达到输出上限，未能完成结果。请选择较小研读范围后重试，已完成分段和原文保留。" : "模型未返回正文。请重试当前分段；已完成分段和原文保留。");
+        return send(
+          502,
+          finishReason === "length" ? "output_limit" : "empty_response",
+          finishReason === "length"
+            ? "模型达到输出上限，未能完成结果。请选择较小研读范围后重试，已完成分段和原文保留。"
+            : "模型未返回正文。请重试当前分段；已完成分段和原文保留。",
+        );
       }
       // Never return upstream envelopes, headers or diagnostics.
       if (text.includes(env.MODEL_API_KEY) || text.includes(secret))
         return send(502, "upstream", "AI 返回结果不可用，请重试");
-      return res.status(200).json({ text });
+      return finish(200, { text });
     } catch (error) {
       if (!controller.signal.aborted) {
         const code = [
@@ -282,6 +315,8 @@ export function createHandler(
       );
     } finally {
       clearTimeout(timer);
+      clearInterval(heartbeat);
+      res.off?.("close", disconnected);
     }
   };
 }

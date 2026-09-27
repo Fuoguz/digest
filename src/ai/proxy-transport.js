@@ -98,7 +98,10 @@ export class ProxyTransport {
         method: "POST",
         credentials: "same-origin",
         signal: combined,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Digest-Keepalive": "1",
+        },
         body: JSON.stringify({ messages }),
       });
     try {
@@ -120,7 +123,10 @@ export class ProxyTransport {
         );
       }
       combined.throwIfAborted();
-      if (!response.ok)
+      if (
+        !response.ok ||
+        (Number.isInteger(data?.httpStatus) && data.httpStatus >= 400)
+      )
         throw new AnalysisError(
           data?.code || "proxy_error",
           tr(data?.message) || tr("试用 AI 暂时不可用，请重试"),

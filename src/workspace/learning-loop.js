@@ -195,10 +195,15 @@ export async function mountGapPanel(
     card.append(
       link(g.title, "/app/gaps/" + encodeURIComponent(g.id)),
       el("p", "gap-state", gapLabel(g.status)),
+    );
+    const why = el("details", "gap-provenance");
+    why.append(
+      el("summary", "", l("为什么记录这个问题", "Why this was observed")),
       el("p", "", g.description),
     );
     if (g.userAnswerExcerpt)
-      card.append(el("blockquote", "answer-quote", g.userAnswerExcerpt));
+      why.append(el("blockquote", "answer-quote", g.userAnswerExcerpt));
+    card.append(why);
     card.append(
       el(
         "small",

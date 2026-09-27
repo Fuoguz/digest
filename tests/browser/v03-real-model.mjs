@@ -55,7 +55,10 @@ async function request(name, messages) {
       const response = await apiPage.evaluate(async (messages) => {
         const r = await fetch("/api/digest", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Digest-Keepalive": "1",
+          },
           body: JSON.stringify({ messages }),
           signal: AbortSignal.timeout(175000),
         });
@@ -66,6 +69,8 @@ async function request(name, messages) {
       if (!response.ok) throw Error("HTTP " + response.status);
       result = JSON.parse(body);
     }
+    if (result.httpStatus >= 400)
+      throw Error("HTTP " + result.httpStatus + ": " + result.code);
     if (!result.text) throw Error("No model text");
     results.push({
       name,
@@ -123,10 +128,12 @@ try {
   ];
   let originalContext, firstPayload, attempt, gap;
   for (const [name, answer] of answers) {
+    if (process.env.DIGEST_REAL_FOCUS === "loop" && name !== "01-misconception")
+      continue;
     const context = await prepareFeedbackContext(task, course, [doc], answer);
     context.outputLanguage = "zh-CN";
-    const raw = await request(name, feedbackMessages(context));
     try {
+      const raw = await request(name, feedbackMessages(context));
       const payload = await generateFeedback(
         context,
         { request: async () => raw },
@@ -149,7 +156,7 @@ try {
         gap = deriveGaps(attempt, payload.feedback, payload.anchors)[0];
       }
     } catch (e) {
-      console.log("SCHEMA_FAILURE", name, e.message);
+      console.log("CASE_FAILURE", name, e.message);
     }
   }
   await request("06-generic-baseline", [
