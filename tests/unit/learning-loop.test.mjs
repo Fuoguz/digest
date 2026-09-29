@@ -131,6 +131,14 @@ test("Unsupported material produces inconclusive observation, not proven misconc
   assert.deepEqual(gaps[0].evidenceRefs, []);
   s.db.close();
 });
+test("A fragment praised as correct is not permanently recorded as an omission", async () => {
+  const s = await setup(),
+    f = structuredClone(s.payload.feedback);
+  f.gaps[0].gapKind = "important_omission";
+  f.strengths = [{ ...f.gaps[0], explanation: "Correct distinction" }];
+  assert.equal(deriveGaps(s.a, f, s.payload.anchors).length, 0);
+  s.db.close();
+});
 test("Feedback deterministic duplicate merge keeps evidence and prioritizes substantive gaps", async () => {
   const s = await setup(),
     item = s.payload.feedback.gaps[0];
@@ -490,8 +498,14 @@ async function largeContext() {
 test("Cross-language rescue retrieves source-language terms from a late relevant section", async () => {
   const c = await largeContext();
   const r = await rescueRetrieval(c, {
-    request: async () =>
-      JSON.stringify({ terms: ["agenda setting", "framing"] }),
+    request: async (messages) => {
+      assert.equal(JSON.parse(messages[1].content).targetLanguage, "English");
+      assert.match(
+        messages[0].content,
+        /Translate the query concepts into English/,
+      );
+      return JSON.stringify({ terms: ["agenda setting", "framing"] });
+    },
   });
   assert.equal(r.retrieval.scope.method, "lexical-rescue-v1");
   assert.ok(
@@ -502,7 +516,12 @@ test("Cross-language rescue retrieves source-language terms from a late relevant
 });
 test("Rescue errors, malformed terms and unhelpful expansion fall back to original retrieval", async () => {
   const c = await largeContext();
-  for (const raw of ["not-json", '{"terms":["unicorn"]}', '{"terms":[]}'])
+  for (const raw of [
+    "not-json",
+    '{"terms":["unicorn"]}',
+    '{"terms":[]}',
+    '{"terms":["议程设置","框架理论"]}',
+  ])
     assert.equal(await rescueRetrieval(c, { request: async () => raw }), c);
   assert.equal(
     await rescueRetrieval(c, {
@@ -583,4 +602,51 @@ test("Retrieval cancellation propagates, never falls back to commit a cancelled 
       ctrl.signal,
     ),
   );
+});
+
+test("Zero-gap feedback can finish without manufacturing a revision or activation", async () => {
+  const s = await setup(),
+    answer = "议程设置影响议题关注，框架影响解释角度；报道量不能直接推出支持。",
+    a = await s.repo.submit(s.task.id, answer),
+    context = await prepareFeedbackContext(s.task, s.course, [s.doc], answer),
+    raw = feedbackOutput(JSON.parse(feedbackMessages(context)[1].content));
+  raw.gaps = [];
+  const payload = await generateFeedback(
+    context,
+    { request: async () => JSON.stringify(raw) },
+    "sound",
+  );
+  await s.repo.begin(a.id, "sound");
+  await s.repo.commit(a.id, "sound", context, payload);
+  const completed = await s.repo.completeUnchanged(a.id);
+  assert.equal(completed.userAnswer, answer);
+  assert.deepEqual(completed.revision, []);
+  assert.equal(completed.status, "completed");
+  assert.equal(completed.completedWithoutRevision, true);
+  assert.equal(
+    (await s.repo.list("activities")).find(
+      (e) => e.type === "task_completed" && e.attemptId === a.id,
+    ).activationCandidate,
+    false,
+  );
+  const backup = await exportBackup(s.db),
+    target = await openDatabase(new IDBFactory());
+  await restoreBackup(target, backup);
+  assert.equal(
+    (await new LoopRepository(target).get("attempts", a.id))
+      .completedWithoutRevision,
+    true,
+  );
+  await assert.rejects(s.repo.completeUnchanged(s.a.id));
+  await s.repo.revise(
+    a.id,
+    answer + "两个机制也可以同时出现。",
+    "补充并存条件。",
+  );
+  assert.equal(
+    (await s.repo.get("attempts", a.id)).completedWithoutRevision,
+    false,
+  );
+  target.close();
+  s.db.close();
 });

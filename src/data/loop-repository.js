@@ -11,6 +11,40 @@ function sources(data, context) {
   }
 }
 export class LoopRepository extends TrainingRepository {
+  completeUnchanged(id) {
+    return atomic(
+      this.db,
+      ["attempts", "feedback", "activities"],
+      (data, tx) => {
+        const a = data.attempts.find((a) => a.id === id),
+          f = data.feedback.find((f) => f.id === a?.feedbackId);
+        if (
+          !a ||
+          a.activeRequestId ||
+          !f ||
+          f.gaps.length ||
+          a.revision.length ||
+          a.taskSnapshot.targetGapId
+        )
+          throw Error(
+            "当前反馈仍需核查或修订。 / Review the current feedback first.",
+          );
+        const record = {
+          ...a,
+          status: "completed",
+          completedWithoutRevision: true,
+        };
+        tx.objectStore("attempts").put(record);
+        if (!a.completedWithoutRevision)
+          event(tx, "task_completed", {
+            attemptId: id,
+            taskId: a.taskId,
+            activationCandidate: false,
+          });
+        return record;
+      },
+    );
+  }
   dismissGap(id) {
     return atomic(this.db, ["learningGaps", "activities"], (data, tx) => {
       const g = data.learningGaps.find((g) => g.id === id);

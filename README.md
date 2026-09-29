@@ -61,3 +61,7 @@ PDF 只支持文本层提取，无 OCR、复杂版面重建，不保存 PDF 二�
 发布前运行测试和构建，然后执行 `node scripts/prepare-pilot.mjs`，仅从 `.pilot-deploy` 上传至已关联的 digest 项目。对外始终使用稳定域名，避免随机部署地址导致学生看不到原来的本地数据。不要改变生产环境变量来解决界面问题。
 
 升级浏览器后不能直接回滚到只打开 DB v2 的应用：回滚构建必须保留 v3 的兼容打开逻辑和 stores。Preview 与 Production 是不同 origin，本地数据不自动共享；通过备份迁移。
+
+### v0.3 验收结论（2026-09-29）
+
+真实 Preview 已走通独立作答、依据、修订、换情境新题、再次作答与结果持久化。104 单元测试及39项本地真实 Chrome 检查通过。模型仍有慢响应/502/超时，暂不建议替换 Production；完整结果、同模型对照及最终 Preview 见 [V0.3_RELEASE_REPORT.md](V0.3_RELEASE_REPORT.md)。合理答案可以没有缺口，完成检查无需制造修订。

@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { assertRestoredStores } from "./restore-check.mjs";
+import { feedbackOutput } from "../fixtures/feedback-output.mjs";
 const out = "qa-artifacts/v03-browser";
 await mkdir(out, { recursive: true });
 const base = "http://127.0.0.1:5195";
@@ -52,15 +53,13 @@ try {
   await page.waitForURL("**/app/courses/*");
   const course = page.url();
   await page.getByRole("button", { name: "添加课程材料", exact: true }).click();
-  await page
-    .locator("#file-input")
-    .setInputFiles({
-      name: "course.txt",
-      mimeType: "text/plain",
-      buffer: Buffer.from(
-        "议程设置影响公众关注什么问题，但不能据此推断公众态度。框架影响对同一问题的解释角度。\n\n报道频率与解释角度是不同维度，不能混为一谈。",
-      ),
-    });
+  await page.locator("#file-input").setInputFiles({
+    name: "course.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from(
+      "议程设置影响公众关注什么问题，但不能据此推断公众态度。框架影响对同一问题的解释角度。\n\n报道频率与解释角度是不同维度，不能混为一谈。",
+    ),
+  });
   await page.locator("#file-status.ready").waitFor();
   await page.locator("#import-title").fill("传播学材料");
   await page.getByRole("button", { name: "保存到资料库", exact: true }).click();
@@ -107,6 +106,15 @@ try {
   );
   pass(
     "evidence drawer retains task, highlights exact quote, Escape restores focus",
+  );
+  await preview.click();
+  const previousScroll = await page.evaluate(() => scrollY);
+  await page.getByRole("link", { name: "查看完整原文", exact: true }).click();
+  await page.getByRole("link", { name: "← 返回学习任务", exact: true }).click();
+  await page.locator(".gap-card").waitFor();
+  await page.waitForFunction((y) => Math.abs(scrollY - y) < 4, previousScroll);
+  pass(
+    "evidence drawer → full Reader → task restores scroll and saved attempt",
   );
   await page
     .getByLabel("根据反馈修订答案", { exact: true })
@@ -283,6 +291,39 @@ try {
   await restored.close();
   pass(
     "actual backup download → empty browser upload restores gap/challenge/retest with old assets",
+  );
+  await page.goto(course);
+  await page.getByText("创建学习任务", { exact: true }).click();
+  await page.getByLabel("任务名称", { exact: true }).fill("无需强制修订");
+  await page
+    .getByLabel("需要回答的问题", { exact: true })
+    .fill("请解释两个机制的区别。");
+  await page.getByRole("button", { name: "创建任务", exact: true }).click();
+  await page.waitForURL("**/app/tasks/*");
+  await page.route("**/loop/v1/chat/completions", async (route) => {
+    const p = JSON.parse(route.request().postDataJSON().messages[1].content),
+      output = feedbackOutput(p);
+    output.gaps = [];
+    await route.fulfill({
+      json: { choices: [{ message: { content: JSON.stringify(output) } }] },
+    });
+  });
+  await page
+    .getByLabel("先写下你自己的答案", { exact: true })
+    .fill("议程设置影响议题关注，框架影响解释角度，不能仅凭报道量推断支持。");
+  await page
+    .getByRole("button", { name: "保存答案并获取反馈", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "保留原答案，完成本次检查", exact: true })
+    .click();
+  await page.reload();
+  await page
+    .getByText("本次检查已完成，原答案保留。", { exact: true })
+    .waitFor();
+  await page.unroute("**/loop/v1/chat/completions");
+  pass(
+    "sound answer finishes without a fabricated revision; completion survives reload",
   );
   assert.deepEqual(errors, []);
   assert.ok(

@@ -279,6 +279,7 @@ export class TrainingRepository {
           feedbackId: payload.feedback.id,
           activeRequestId: null,
           status: a.revision.length ? "completed" : "reviewed",
+          completedWithoutRevision: false,
         });
         event(tx, "feedback_generated", { attemptId, taskId: a.taskId });
       },
@@ -308,6 +309,7 @@ export class TrainingRepository {
         tx.objectStore("attempts").put({
           ...a,
           status: "completed",
+          completedWithoutRevision: false,
           revision: [...a.revision, revision],
         });
         event(tx, "revision_saved", { attemptId: id, taskId: a.taskId });

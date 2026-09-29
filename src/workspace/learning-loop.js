@@ -24,6 +24,17 @@ const taskUrl = (id, attempt) =>
   "/app/tasks/" +
   encodeURIComponent(id) +
   (attempt ? "?attempt=" + encodeURIComponent(attempt) : "");
+function restoreLoopScroll() {
+  try {
+    const saved = JSON.parse(
+      sessionStorage.getItem("digest:feedback-scroll") || "null",
+    );
+    if (saved?.url === location.pathname + location.search) {
+      sessionStorage.removeItem("digest:feedback-scroll");
+      requestAnimationFrame(() => window.scrollTo(0, saved.y));
+    }
+  } catch {}
+}
 export async function evidencePreview(repo, eid, trigger) {
   const stored = await repo.get("evidenceAnchors", eid),
     doc = stored && (await repo.get("documents", stored.documentId));
@@ -100,7 +111,16 @@ export async function evidencePreview(repo, eid, trigger) {
           return: location.pathname + location.search,
         }),
     );
-    full.addEventListener("click", close);
+    full.addEventListener("click", () => {
+      sessionStorage.setItem(
+        "digest:feedback-scroll",
+        JSON.stringify({
+          url: location.pathname + location.search,
+          y: scrollY,
+        }),
+      );
+      close();
+    });
     dialog.append(full);
   }
   document.body.append(dialog);
@@ -431,6 +451,7 @@ export async function mountGapHistory(container, db, isCurrent = () => true) {
     attemptId: a.id,
     register: (f) => cleanups.push(f),
   });
+  restoreLoopScroll();
   return () => cleanups.forEach((f) => f());
 }
 export async function mountChallenge(
@@ -672,6 +693,7 @@ export async function mountChallenge(
     }
   }
   await render();
+  restoreLoopScroll();
   return () => {
     disposed = true;
     ctrl?.abort();

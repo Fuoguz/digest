@@ -66,8 +66,16 @@ export function validateTrainingBackup(data, fail) {
     )
       fail();
     if (
-      (a.status === "completed") !== a.revision.length > 0 ||
+      (a.status === "completed") !==
+        (a.revision.length > 0 || a.completedWithoutRevision === true) ||
       (a.status !== "submitted" && !a.feedbackId)
+    )
+      fail();
+    if (
+      a.completedWithoutRevision === true &&
+      (a.revision.length ||
+        a.taskSnapshot.targetGapId ||
+        data.feedback.find((f) => f.id === a.feedbackId)?.gaps?.length !== 0)
     )
       fail();
     for (const r of a.revision)

@@ -102,6 +102,17 @@ export function deriveGaps(attempt, feedback, anchors) {
       )
         return [];
       if (!item.userAnswerQuote && kind !== "important_omission") return [];
+      // Ambiguous advice about a fragment also praised as correct is not a durable deficit.
+      if (
+        kind === "important_omission" &&
+        item.userAnswerQuote &&
+        feedback.strengths.some(
+          (s) =>
+            s.userAnswerQuote &&
+            norm(s.userAnswerQuote) === norm(item.userAnswerQuote),
+        )
+      )
+        return [];
       const evidenceRefs = item.evidenceIds.filter((id) =>
         anchors.some((a) => a.id === id && a.validationStatus === "matched"),
       );

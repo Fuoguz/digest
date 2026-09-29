@@ -94,13 +94,15 @@ function row(parent, title, href, detail) {
   parent.append(r);
 }
 const statusLabel = (a) =>
-  a.retestId
-    ? l("再测结果已记录", "Recheck recorded")
-    : a.status === "completed"
-      ? tr("已修订 · 尚未再次验证")
-      : a.feedbackId
-        ? tr("待修订")
-        : tr("答案已保存 · 待反馈");
+  a.completedWithoutRevision
+    ? l("已检查 · 本次未发现缺口", "Reviewed · No gap observed")
+    : a.retestId
+      ? l("再测结果已记录", "Recheck recorded")
+      : a.status === "completed"
+        ? tr("已修订 · 尚未再次验证")
+        : a.feedbackId
+          ? tr("待修订")
+          : tr("答案已保存 · 待反馈");
 
 export async function mountTraining(container, db, isCurrent = () => true) {
   const repo = new LoopRepository(db);
@@ -868,6 +870,47 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         feedbackArea.append(
           el("p", "training-prose", tr("下一步：") + f.suggestedNextStep),
         );
+        if (!f.gaps.length && !a.revision.length && !stale) {
+          const checked = el("section", "training-completion");
+          checked.append(
+            el(
+              "p",
+              "",
+              l(
+                "本次未发现需要修订的实质问题。不必为了完成而改写答案；这也不代表长期掌握。",
+                "No substantive issue was identified. You need not rewrite a sound answer to finish; this does not establish mastery.",
+              ),
+            ),
+          );
+          if (a.completedWithoutRevision)
+            checked.append(
+              el(
+                "p",
+                "",
+                l(
+                  "本次检查已完成，原答案保留。",
+                  "Review complete. Your original answer is retained.",
+                ),
+              ),
+              link(l("返回课程", "Back to course"), courseURL(course.id)),
+            );
+          else
+            checked.append(
+              button(
+                l("保留原答案，完成本次检查", "Keep my answer & finish review"),
+                async () => {
+                  try {
+                    activeAttempt = await repo.completeUnchanged(a.id);
+                    await displayAttempt();
+                  } catch (e) {
+                    message(status, e.message, true);
+                  }
+                },
+                "primary-action",
+              ),
+            );
+          feedbackArea.append(checked);
+        }
         const revision = el("form", "training-form revision-editor"),
           draftKey = "revision-draft:" + a.id;
         revision.id = "revision-editor";
@@ -909,7 +952,13 @@ export async function mountTraining(container, db, isCurrent = () => true) {
           await displayAttempt();
           message(status, tr("修订已保存，首次答案保持不变。"));
         });
-        feedbackArea.append(revision);
+        if (!f.gaps.length && !a.revision.length) {
+          const optional = fold(
+            l("可选：补充或修订答案", "Optional: extend or revise your answer"),
+          );
+          optional.append(revision);
+          feedbackArea.append(optional);
+        } else feedbackArea.append(revision);
         if (a.revision.length) {
           const completion = el("section", "training-completion");
           completion.append(
