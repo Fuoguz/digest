@@ -107,10 +107,18 @@ export function validateChallenge(raw, context, gap) {
   );
 }
 function requireChallengeBasis(gap) {
-  if (gap.status === "inconclusive" && !gap.evidenceRefs?.length)
+  if (unverifiedMaterialBasis(gap))
     throw Error(
       "当前材料不足以准备可靠的新题。 / Not enough material for a reliable challenge.",
     );
+}
+function unverifiedMaterialBasis(gap) {
+  return (
+    !!gap &&
+    (Array.isArray(gap.evidenceRefs)
+      ? !gap.evidenceRefs.length
+      : gap.status === "inconclusive")
+  );
 }
 function normIncludes(a, b) {
   return a.replace(/\s/g, "").includes(b.replace(/\s/g, ""));
@@ -146,8 +154,7 @@ export function retestMessages(context, gap, challenge) {
         targetGap: {
           id: gap.id,
           description: gap.description,
-          materialBasisUnverified:
-            gap.status === "inconclusive" && !gap.evidenceRefs?.length,
+          materialBasisUnverified: unverifiedMaterialBasis(gap),
         },
         challenge: {
           prompt: context.task.prompt,
@@ -212,7 +219,7 @@ export function validateRetest(raw, context, id, gap) {
   const quoteVerified =
     !!r.userAnswerQuote && context.answer.includes(r.userAnswerQuote);
   const forcedInconclusive =
-    (gap?.status === "inconclusive" && !gap.evidenceRefs?.length) ||
+    unverifiedMaterialBasis(gap) ||
     !quoteVerified ||
     !r.challengeAdequate ||
     !r.materialSufficient ||

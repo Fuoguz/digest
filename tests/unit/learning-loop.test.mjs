@@ -190,6 +190,11 @@ test("Retest cannot claim resolution of a gap whose original material basis is u
   const result = validateRetest(raw, s.context, "unverified", gap);
   assert.equal(result.outcome, "inconclusive");
   assert.equal(result.verificationLimited, true);
+  assert.equal(
+    validateRetest(raw, s.context, "resumed", { ...gap, status: "retesting" })
+      .outcome,
+    "inconclusive",
+  );
   s.db.close();
 });
 test("Feedback deterministic duplicate merge keeps evidence and prioritizes substantive gaps", async () => {
