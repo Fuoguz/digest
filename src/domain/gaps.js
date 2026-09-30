@@ -109,7 +109,7 @@ export function deriveGaps(attempt, feedback, anchors) {
         feedback.strengths.some(
           (s) =>
             s.userAnswerQuote &&
-            norm(s.userAnswerQuote) === norm(item.userAnswerQuote),
+            norm(s.userAnswerQuote).includes(norm(item.userAnswerQuote)),
         )
       )
         return [];

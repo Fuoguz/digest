@@ -139,6 +139,44 @@ test("A fragment praised as correct is not permanently recorded as an omission",
   assert.equal(deriveGaps(s.a, f, s.payload.anchors).length, 0);
   s.db.close();
 });
+test("A nested excerpt in a praised distinction cannot become a durable omission", async () => {
+  const s = await setup(),
+    f = structuredClone(s.payload.feedback);
+  f.gaps[0].gapKind = "important_omission";
+  f.gaps[0].userAnswerQuote = original.slice(0, 8);
+  f.strengths = [
+    {
+      ...f.gaps[0],
+      userAnswerQuote: original,
+      explanation: "Correct distinction",
+    },
+  ];
+  assert.equal(deriveGaps(s.a, f, s.payload.anchors).length, 0);
+  f.strengths[0].userAnswerQuote = original.slice(10);
+  assert.equal(deriveGaps(s.a, f, s.payload.anchors).length, 1);
+  s.db.close();
+});
+test("Material-unsupported inconclusive gap cannot trigger or accept a new challenge", async () => {
+  const s = await setup(),
+    gap = { ...s.gap, status: "inconclusive", evidenceRefs: [] };
+  let calls = 0;
+  await assert.rejects(
+    generateChallenge(s.context, gap, s.a, s.payload.feedback, {
+      request: async () => {
+        calls++;
+        return "{}";
+      },
+    }),
+    /Not enough material/,
+  );
+  assert.equal(calls, 0);
+  assert.throws(
+    () => validateChallenge("{}", s.context, gap),
+    /Not enough material/,
+  );
+  assert.equal((await s.repo.list("tasks")).length, 1);
+  s.db.close();
+});
 test("Feedback deterministic duplicate merge keeps evidence and prioritizes substantive gaps", async () => {
   const s = await setup(),
     item = s.payload.feedback.gaps[0];

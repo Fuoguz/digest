@@ -62,6 +62,7 @@ export function challengeMessages(context, gap, attempt, feedback) {
   ];
 }
 export function validateChallenge(raw, context, gap) {
+  requireChallengeBasis(gap);
   const c = parse(raw);
   if (c.unavailable)
     throw Error(
@@ -105,6 +106,12 @@ export function validateChallenge(raw, context, gap) {
     ].map((k) => [k, c[k]]),
   );
 }
+function requireChallengeBasis(gap) {
+  if (gap.status === "inconclusive" && !gap.evidenceRefs?.length)
+    throw Error(
+      "当前材料不足以准备可靠的新题。 / Not enough material for a reliable challenge.",
+    );
+}
 function normIncludes(a, b) {
   return a.replace(/\s/g, "").includes(b.replace(/\s/g, ""));
 }
@@ -116,6 +123,7 @@ export async function generateChallenge(
   transport,
   signal,
 ) {
+  requireChallengeBasis(gap);
   const raw = await transport.request(
     challengeMessages(context, gap, attempt, feedback),
     { signal },
