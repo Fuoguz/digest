@@ -177,6 +177,21 @@ test("Material-unsupported inconclusive gap cannot trigger or accept a new chall
   assert.equal((await s.repo.list("tasks")).length, 1);
   s.db.close();
 });
+test("Retest cannot claim resolution of a gap whose original material basis is unknown", async () => {
+  const s = await setup(),
+    gap = { ...s.gap, status: "inconclusive", evidenceRefs: [] };
+  const raw = loopOutput(
+    JSON.parse(
+      retestMessages(s.context, gap, { rationale: "boundary control" })[1]
+        .content,
+    ),
+  );
+  raw.outcome = "resolved_once";
+  const result = validateRetest(raw, s.context, "unverified", gap);
+  assert.equal(result.outcome, "inconclusive");
+  assert.equal(result.verificationLimited, true);
+  s.db.close();
+});
 test("Feedback deterministic duplicate merge keeps evidence and prioritizes substantive gaps", async () => {
   const s = await setup(),
     item = s.payload.feedback.gaps[0];

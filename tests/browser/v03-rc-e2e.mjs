@@ -81,6 +81,25 @@ async function waitStage(locator, stage, retry) {
     if (await locator.isVisible().catch(() => false)) return;
     if (Date.now() - start >= boundary * 1000) {
       await observe(stage + "-" + boundary + "s");
+      if (stage === "feedback" && boundary === 90 && !retried) {
+        retried = true;
+        await page
+          .getByRole("button", { name: "取消反馈", exact: true })
+          .click();
+        await page
+          .getByText("已取消，首次答案与已有反馈保留。", { exact: true })
+          .waitFor();
+        snapshots.push({
+          stage: "real cancel at 90s",
+          at: Date.now(),
+          body: await page.locator("#page-root").innerText(),
+        });
+        await fs.writeFile(
+          out + "/loading.json",
+          JSON.stringify(snapshots, null, 2),
+        );
+        await retry();
+      }
       boundary += 30;
     }
     const alert = page.locator("[role=alert]");

@@ -132,11 +132,11 @@ const records = fs.existsSync(out + "/reliability.json")
   : [];
 async function request(name, type, messages) {
   const f = out + "/" + name;
-  fs.writeFileSync(f + "-request.json", JSON.stringify({ messages }, null, 2));
   if (fs.existsSync(f + "-response.json")) {
     const cached = JSON.parse(fs.readFileSync(f + "-response.json"));
     if (cached.text) return cached.text;
   }
+  fs.writeFileSync(f + "-request.json", JSON.stringify({ messages }, null, 2));
   if (Date.now() - lastStart < 8500)
     await new Promise((r) => setTimeout(r, 8500 - (Date.now() - lastStart)));
   lastStart = Date.now();
@@ -304,7 +304,7 @@ try {
               "Boundary test: this material cannot establish the targeted outside claim.",
           }),
         );
-        const result = validateRetest(raw, context, c.id + "-retest");
+        const result = validateRetest(raw, context, c.id + "-retest", gap);
         fs.writeFileSync(
           out + "/" + c.id + "-retest-validated.json",
           JSON.stringify(result, null, 2),
@@ -313,45 +313,23 @@ try {
       } catch {}
     }
   if (phase === "transfer") {
-    const doc = createDocument({
-        id: "rc-transfer-doc",
-        title: "Agenda-setting and framing",
-        rawContent: supported,
-      }),
-      task = {
-        id: "rc-original",
-        courseId: "rc-course",
-        title: "区分机制",
-        prompt:
-          "解释议程设置与框架的区别，并说明为什么不能仅凭报道数量推断公众支持。",
-        documentIds: [doc.id],
-        version: 1,
-      },
-      answer =
-        "议程设置就是媒体告诉大家必须持有什么观点。框架与议程设置完全相同，只要报道增多，公众必然支持。";
-    const context = await prepareFeedbackContext(
-      task,
-      { id: "rc-course", title: "传播学" },
-      [doc],
-      answer,
-    );
+    const data = JSON.parse(
+      fs.readFileSync("qa-artifacts/v03-preview/backup.json"),
+    ).stores;
+    const gap = data.learningGaps.find(
+        (g) => g.kind === "unsupported_inference",
+      ),
+      attempt = data.attempts.find((a) => a.id === gap.attemptId),
+      feedback = data.feedback.find((f) => f.id === gap.feedbackId),
+      task = data.tasks.find((t) => t.id === gap.taskId),
+      doc = data.documents.find((d) => task.documentIds.includes(d.id)),
+      context = await prepareFeedbackContext(
+        task,
+        data.courses.find((c) => c.id === gap.courseId),
+        [doc],
+        attempt.userAnswer,
+      );
     context.outputLanguage = "zh-CN";
-    const attempt = {
-        userAnswer: answer,
-        revision: [
-          {
-            userAnswer:
-              "报道频率影响议题关注，解释角度涉及框架；二者不能等同，报道量不能直接证明态度支持。",
-          },
-        ],
-      },
-      feedback = { overall: "概念边界与态度推断需要检验。" },
-      gap = {
-        id: "rc-transfer-gap",
-        description:
-          "把媒体对议题关注的影响等同于直接决定公众的态度；混淆报道频率与解释角度。",
-        kind: "boundary_confusion",
-      };
     for (let i = 1; i <= 5; i++)
       try {
         const name = "transfer-" + i,
