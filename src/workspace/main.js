@@ -65,6 +65,7 @@ function currentTitle(path) {
   if (path.startsWith("/app/review")) return tr("复习");
   if (path.startsWith("/app/graph")) return tr("知识图谱");
   if (path.startsWith("/app/search")) return tr("搜索");
+  if (path.startsWith("/app/gaps")) return tr("学习轨迹");
   return tr("设置");
 }
 
@@ -198,12 +199,15 @@ async function renderCurrent() {
     const mobile = el("nav", "mobile-tools");
     mobile.setAttribute("aria-label", tr("更多工具"));
     mobile.append(
-      link(tr("搜索"), "/app/search"),
-      link(tr("设置与备份"), "/app/settings"),
-      link(tr("知识图谱"), "/app/graph"),
+      link(tr("搜索"), "/app/search", "mobile-tool", "search"),
+      link(tr("知识图谱"), "/app/graph", "mobile-tool", "graph"),
+      link(tr("设置与备份"), "/app/settings", "mobile-tool", "settings"),
     );
     page.append(mobile);
   }
+  page.classList.remove("page-enter");
+  void page.offsetWidth;
+  page.classList.add("page-enter");
 }
 
 function navigate(path) {

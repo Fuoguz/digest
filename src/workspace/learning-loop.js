@@ -1,4 +1,14 @@
-import { el, button, link, page, message } from "./components.js";
+import {
+  el,
+  button,
+  link,
+  backLink,
+  page,
+  message,
+  badge,
+  voiceLabel,
+  icon,
+} from "./components.js";
 import { getLocale, beforeLanguageChange } from "./i18n.js";
 import { LoopRepository } from "../data/loop-repository.js";
 import { documentSnapshot, restoreAnchor } from "../domain/evidence.js";
@@ -20,6 +30,17 @@ export const gapLabel = (status) =>
     still_present: l("同一问题仍出现", "Still present"),
     inconclusive: l("尚无法判断 · 待再检验", "Inconclusive · Needs recheck"),
   })[status] || status;
+const GAP_TONES = {
+  observed: ["warning", "flag"],
+  retesting: ["accent", "repeat"],
+  resolved_once: ["success", "check"],
+  still_present: ["danger", "alert"],
+  inconclusive: ["", "circle"],
+};
+export function gapBadge(status) {
+  const [tone, glyph] = GAP_TONES[status] || ["", "circle"];
+  return badge(gapLabel(status), tone, glyph);
+}
 const taskUrl = (id, attempt) =>
   "/app/tasks/" +
   encodeURIComponent(id) +
@@ -56,12 +77,22 @@ export async function evidencePreview(repo, eid, trigger) {
     e.preventDefault();
     close();
   });
-  dialog.append(
-    button(l("关闭依据", "Close evidence"), close, "secondary-action"),
+  const head = el("header", "drawer-head"),
+    titleBox = el("div"),
+    body = el("div", "drawer-body");
+  titleBox.append(
+    voiceLabel("source", l("课程原文依据", "Course evidence")),
     el("h2", "", doc.title),
   );
+  const closeButton = button(
+    l("关闭依据", "Close evidence"),
+    close,
+    "secondary-action btn-sm",
+  );
+  head.append(titleBox, closeButton);
+  dialog.append(head, body);
   if (a.validationStatus !== "matched")
-    dialog.append(
+    body.append(
       el(
         "p",
         "evidence-unavailable",
@@ -72,35 +103,39 @@ export async function evidencePreview(repo, eid, trigger) {
       ),
     );
   else {
-    dialog.append(
+    body.append(
       el(
         "p",
-        "reader-muted",
+        "drawer-location",
         l("来自课程材料 · 第 ", "From course material · Paragraph ") +
           (a.paragraphIndex + 1),
       ),
       el(
         "p",
-        "reader-muted",
+        "scope-notice",
         l(
           "引用存在不代表它支持 AI 判断，请检查上下文。",
           "A located quote does not prove the AI judgment. Check its context.",
         ),
       ),
     );
+    const excerpt = el("div", "drawer-source");
     for (const p of snapshot.paragraphs.filter(
       (p) => Math.abs(p.paragraphIndex - a.paragraphIndex) <= 1,
     )) {
       const node = el("p", "training-prose");
-      if (p.paragraphIndex === a.paragraphIndex)
+      node.dataset.paragraph = p.paragraphIndex + 1;
+      if (p.paragraphIndex === a.paragraphIndex) {
+        node.classList.add("is-target");
         node.append(
           document.createTextNode(p.text.slice(0, a.paragraphStartOffset)),
           el("mark", "", a.quote),
           document.createTextNode(p.text.slice(a.paragraphEndOffset)),
         );
-      else node.textContent = p.text;
-      dialog.append(node);
+      } else node.textContent = p.text;
+      excerpt.append(node);
     }
+    body.append(excerpt);
     const full = link(
       l("查看完整原文", "Open full source"),
       "/app/reader/" +
@@ -121,10 +156,14 @@ export async function evidencePreview(repo, eid, trigger) {
       );
       close();
     });
-    dialog.append(full);
+    full.append(icon("external"));
+    const foot = el("div", "drawer-foot");
+    foot.append(full);
+    body.append(foot);
   }
   document.body.append(dialog);
   dialog.showModal();
+  closeButton.focus();
   window.addEventListener("popstate", cleanup, { once: true });
   const feedback = (await repo.list("feedback")).find((f) =>
     f.evidenceRefs.includes(eid),
@@ -200,7 +239,8 @@ export async function mountGapPanel(
     );
   if (!gaps.length) return;
   const section = el("section", "loop-panel");
-  section.append(
+  const head = el("div", "section-head");
+  head.append(
     el(
       "h2",
       "",
@@ -208,13 +248,33 @@ export async function mountGapPanel(
         ? l("待再次检验", "Needs recheck")
         : l("这次值得再检验的问题", "Understanding to recheck"),
     ),
+    badge(String(gaps.length), "warning"),
+  );
+  section.append(
+    head,
+    el(
+      "p",
+      "reader-muted loop-intro",
+      onlyNeeds
+        ? l(
+            "修订之后，换一个情境独立作答，检验同一个问题是否还会出现。",
+            "After revising, answer a different scenario on your own to see whether the same issue recurs.",
+          )
+        : l(
+            "AI 从这次作答中记录的理解问题。修订后可以换题检验，也可以忽略不准确的观察。",
+            "Understanding issues the AI observed in this answer. Recheck them after revising, or dismiss inaccurate ones.",
+          ),
+    ),
   );
   for (const g of gaps.slice(0, 8)) {
     const a = await repo.get("attempts", g.attemptId),
       card = el("article", "gap-card");
+    card.dataset.status = g.status;
+    const state = el("p", "gap-state");
+    state.append(gapBadge(g.status));
     card.append(
-      link(g.title, "/app/gaps/" + encodeURIComponent(g.id)),
-      el("p", "gap-state", gapLabel(g.status)),
+      state,
+      link(g.title, "/app/gaps/" + encodeURIComponent(g.id), "gap-title"),
     );
     const why = el("details", "gap-provenance");
     why.append(
@@ -222,12 +282,15 @@ export async function mountGapPanel(
       el("p", "", g.description),
     );
     if (g.userAnswerExcerpt)
-      why.append(el("blockquote", "answer-quote", g.userAnswerExcerpt));
+      why.append(
+        voiceLabel("you", l("你的答案", "Your answer")),
+        el("blockquote", "answer-quote", g.userAnswerExcerpt),
+      );
     card.append(why);
     card.append(
       el(
         "small",
-        "reader-muted",
+        "reader-muted gap-note",
         l(
           "这是 AI 基于本次作答的观察，你可以核查或忽略。",
           "An AI observation from this answer. You can check or dismiss it.",
@@ -235,7 +298,8 @@ export async function mountGapPanel(
       ),
     );
     const status = el("p");
-    card.append(status);
+    const actions = el("div", "gap-actions");
+    card.append(status, actions);
     if (a?.revision.length) {
       let ctrl;
       register(() => ctrl?.abort());
@@ -252,7 +316,7 @@ export async function mountGapPanel(
             () => ctrl?.abort(),
             "secondary-action",
           );
-          card.append(cancel);
+          actions.append(cancel);
           try {
             const tasks = await repo.list("tasks"),
               attempts = await repo.list("attempts");
@@ -269,6 +333,8 @@ export async function mountGapPanel(
             message(
               status,
               l("正在准备新的检验任务…", "Preparing a new challenge…"),
+              false,
+              true,
             );
             const course = await repo.get("courses", g.courseId),
               feedback = await repo.get("feedback", g.feedbackId);
@@ -318,7 +384,7 @@ export async function mountGapPanel(
         },
         "primary-action",
       );
-      card.append(
+      actions.append(
         next,
         button(
           l("稍后再测", "Recheck later"),
@@ -335,11 +401,17 @@ export async function mountGapPanel(
           "secondary-action",
         ),
       );
-    } else if (!a?.revision.length)
-      card.append(
-        link(l("先完成修订", "Revise first"), taskUrl(g.taskId, g.attemptId)),
+    } else if (!a?.revision.length) {
+      const revise = link(
+        l("先完成修订", "Revise first"),
+        attemptId ? "#revision-editor" : taskUrl(g.taskId, g.attemptId),
+        "secondary-action",
+        "pen",
       );
-    card.append(
+      if (attemptId) revise.removeAttribute("data-route");
+      actions.append(revise);
+    }
+    actions.append(
       button(
         l("忽略这个问题", "Dismiss this observation"),
         async () => {
@@ -354,6 +426,27 @@ export async function mountGapPanel(
   parent.append(section);
   return section;
 }
+function timelineStep(list, kind, title, headingTag = "h2") {
+  const item = el("li", "timeline-step is-" + kind);
+  const marker = el("span", "timeline-marker");
+  marker.setAttribute("aria-hidden", "true");
+  marker.append(
+    icon(
+      {
+        answer: "user",
+        observed: "flag",
+        revision: "pen",
+        challenge: "repeat",
+        outcome: "check",
+      }[kind] || "circle",
+    ),
+  );
+  const body = el("div", "timeline-body");
+  body.append(el(headingTag, "", title));
+  item.append(marker, body);
+  list.append(item);
+  return body;
+}
 export async function mountGapHistory(container, db, isCurrent = () => true) {
   const repo = new LoopRepository(db),
     id = decodeURIComponent(location.pathname.split("/").at(-1)),
@@ -365,6 +458,7 @@ export async function mountGapHistory(container, db, isCurrent = () => true) {
     l("从一次回答到再次检验", "From an answer to a recheck"),
     "",
   );
+  root.dataset.view = "history";
   container.replaceChildren(root);
   if (!g) {
     root.append(
@@ -372,28 +466,50 @@ export async function mountGapHistory(container, db, isCurrent = () => true) {
     );
     return () => {};
   }
+  const header = root.querySelector(".page-header");
   root.querySelector("h1").textContent = g.title;
-  root.querySelector(".page-subtitle").textContent = g.dismissedAt
-    ? l("已忽略 · 历史保留", "Dismissed · History retained")
-    : gapLabel(g.status);
-  const a = await repo.get("attempts", g.attemptId),
-    f = await repo.get("feedback", g.feedbackId);
-  root.append(
-    link(l("返回课程", "Back to course"), "/app/courses/" + g.courseId),
-    el("h2", "", l("第一次回答", "First answer")),
+  const subtitle = root.querySelector(".page-subtitle");
+  subtitle.textContent = "";
+  subtitle.append(
+    g.dismissedAt
+      ? badge(l("已忽略 · 历史保留", "Dismissed · History retained"), "outline")
+      : gapBadge(g.status),
+  );
+  header.prepend(
+    backLink(l("返回课程", "Back to course"), "/app/courses/" + g.courseId),
+  );
+  const a = await repo.get("attempts", g.attemptId);
+  const timeline = el("ol", "timeline");
+  root.append(timeline);
+  const first = timelineStep(timeline, "answer", l("第一次回答", "First answer"));
+  first.append(
+    voiceLabel("you", l("你的答案", "Your answer")),
     el("p", "training-prose", a.userAnswer),
     link(
       l("打开原任务与反馈", "Open original task and feedback"),
       taskUrl(g.taskId, a.id),
+      "quiet-link",
+      "arrowRight",
     ),
-    el("h2", "", l("为什么记录这个问题", "Why this was observed")),
-    el("p", "", g.description),
   );
+  const why = timelineStep(
+    timeline,
+    "observed",
+    l("为什么记录这个问题", "Why this was observed"),
+  );
+  const description = el("div", "ai-block");
+  description.append(el("p", "", g.description));
+  why.append(voiceLabel("ai", l("AI 的观察", "AI observation")), description);
   if (g.userAnswerExcerpt)
-    root.append(el("blockquote", "answer-quote", g.userAnswerExcerpt));
-  for (const eid of g.evidenceRefs) root.append(previewButton(repo, eid));
-  if (!g.evidenceRefs.length)
-    root.append(
+    why.append(
+      voiceLabel("you", l("你的答案", "Your answer")),
+      el("blockquote", "answer-quote", g.userAnswerExcerpt),
+    );
+  const evidence = el("div", "evidence-actions");
+  for (const eid of g.evidenceRefs) evidence.append(previewButton(repo, eid));
+  if (g.evidenceRefs.length) why.append(evidence);
+  else
+    why.append(
       el(
         "p",
         "evidence-unavailable",
@@ -404,7 +520,7 @@ export async function mountGapHistory(container, db, isCurrent = () => true) {
       ),
     );
   const activity = await repo.list("activities");
-  root.append(
+  why.append(
     el(
       "p",
       "reader-muted",
@@ -420,31 +536,44 @@ export async function mountGapHistory(container, db, isCurrent = () => true) {
     ),
   );
   for (const r of a.revision) {
-    root.append(
-      el("h2", "", l("我的修订", "My revision")),
+    const step = timelineStep(timeline, "revision", l("我的修订", "My revision"));
+    step.append(
+      el("p", "timeline-date", new Date(r.createdAt).toLocaleString(getLocale())),
       el("p", "training-prose", r.userAnswer),
-      el("p", "", r.reflection),
+      el("p", "reader-muted", r.reflection),
       diffView(repo, a, r),
     );
   }
   for (const t of (await repo.list("tasks")).filter(
     (t) => t.targetGapId === g.id,
   )) {
-    root.append(
-      el("h2", "", l("换情境检验", "Transfer challenge")),
-      link(t.title, taskUrl(t.id)),
-      el("p", "training-prose", t.prompt),
+    const step = timelineStep(
+      timeline,
+      "challenge",
+      l("换情境检验", "Transfer challenge"),
+    );
+    step.append(
+      link(t.title, taskUrl(t.id), "quiet-link", "arrowRight"),
+      el("p", "training-prose challenge-prompt", t.prompt),
     );
     for (const r of (await repo.list("retests")).filter(
       (r) => r.taskId === t.id,
     )) {
       const second = await repo.get("attempts", r.attemptId);
-      root.append(
-        el("h3", "", gapLabel(r.outcome)),
+      const outcome = el("div", "outcome-record");
+      const heading = el("h3", "outcome-heading", gapLabel(r.outcome));
+      heading.dataset.outcome = r.outcome;
+      outcome.append(
+        heading,
+        voiceLabel("you", l("这次的独立回答", "Your new answer")),
         el("p", "training-prose", second.userAnswer),
+        voiceLabel("ai", l("AI 对本次回答的判断", "AI judgment of this answer")),
         el("p", "", r.reason),
       );
-      for (const eid of r.evidenceRefs) root.append(previewButton(repo, eid));
+      const refs = el("div", "evidence-actions");
+      for (const eid of r.evidenceRefs) refs.append(previewButton(repo, eid));
+      if (r.evidenceRefs.length) outcome.append(refs);
+      step.append(outcome);
     }
   }
   await mountGapPanel(root, repo, {
@@ -476,13 +605,58 @@ export async function mountChallenge(
     selected === "new"
       ? null
       : attempts.find((a) => a.id === selected) || attempts[0];
-  root.replaceChildren(
+  root.dataset.view = "challenge";
+  const header = el("header", "page-header");
+  header.append(
+    backLink(l("返回课程", "Back to course"), "/app/courses/" + course.id),
     el(
       "p",
       "page-kicker",
       l("换一个情境，检验同一种能力", "A new context, the same capability"),
     ),
     el("h1", "", task.title),
+  );
+  if (g) {
+    const origin = el("p", "challenge-origin");
+    origin.append(
+      icon("repeat"),
+      document.createTextNode(l("检验的问题：", "Checks: ")),
+      link(g.title, "/app/gaps/" + encodeURIComponent(g.id)),
+    );
+    header.append(origin);
+  }
+  const stages = el("ol", "task-stages");
+  stages.setAttribute("aria-label", l("学习进度", "Progress"));
+  const stageItems = [
+    l("阅读新情境", "Read the scenario"),
+    l("独立作答", "Answer on your own"),
+    l("再测结果", "Recheck result"),
+  ].map((text, index) => {
+    const li = el("li");
+    const mark = el("span", "step-mark tabular", String(index + 1));
+    mark.setAttribute("aria-hidden", "true");
+    li.append(mark, el("span", "step-label", text));
+    stages.append(li);
+    return li;
+  });
+  const setStage = (current, complete = false) => {
+    stages.classList.toggle("is-complete", complete);
+    stageItems.forEach((li, index) => {
+      const done = complete ? true : index < current - 1;
+      li.classList.toggle("is-done", done);
+      li.classList.toggle("is-current", !complete && index === current - 1);
+      if (!complete && index === current - 1)
+        li.setAttribute("aria-current", "step");
+      else li.removeAttribute("aria-current");
+      li.querySelector(".step-mark").replaceChildren(
+        done ? icon("check") : String(index + 1),
+      );
+    });
+  };
+  header.append(stages);
+  const scenario = el("section", "scenario");
+  scenario.append(
+    el("p", "question-label", l("新情境 · 练习用假设", "New scenario · Hypothetical")),
     el(
       "p",
       "reader-muted",
@@ -493,14 +667,12 @@ export async function mountChallenge(
     ),
     el("p", "training-prose challenge-prompt", task.prompt),
   );
-  root.append(
-    link(l("返回课程", "Back to course"), "/app/courses/" + course.id),
-  );
+  root.replaceChildren(header, scenario);
   if (!g || g.dismissedAt) {
     root.append(
       el(
         "p",
-        "",
+        "notice",
         l(
           "这个观察已被忽略，历史答案仍保留。",
           "This observation was dismissed. Historical answers are retained.",
@@ -528,21 +700,30 @@ export async function mountChallenge(
   }
   language.value = getLocale();
   languageLabel.append(language);
-  root.append(languageLabel);
-  const area = el("section"),
-    status = el("p");
-  root.append(status, area);
+  const area = el("section", "challenge-area"),
+    status = el("p"),
+    statusRow = el("div", "status-row");
+  statusRow.append(status);
+  root.append(languageLabel, statusRow, area);
   async function render() {
     area.replaceChildren();
     if (attempt) {
-      area.append(
+      const record = el("section", "answer-record");
+      record.append(
+        voiceLabel("you", l("你的答案", "Your answer")),
         el("h2", "", l("这次的独立回答", "Your new answer")),
         el("p", "training-prose", attempt.userAnswer),
       );
+      area.append(record);
       if (attempt.retestId) {
+        setStage(3, true);
         const r = await repo.get("retests", attempt.retestId);
-        area.append(
-          el("h2", "retest-outcome", gapLabel(r.outcome)),
+        const outcome = el("section", "outcome-card");
+        outcome.dataset.outcome = r.outcome;
+        const heading = el("h2", "retest-outcome", gapLabel(r.outcome));
+        heading.prepend(icon(GAP_TONES[r.outcome]?.[1] || "circle"));
+        const judgment = el("div", "ai-block");
+        judgment.append(
           el(
             "p",
             "",
@@ -550,8 +731,13 @@ export async function mountChallenge(
               r.reason,
           ),
         );
+        outcome.append(
+          el("p", "question-label", l("再测结果 · 只记录这一次", "Recheck · This attempt only")),
+          heading,
+          judgment,
+        );
         if (r.verificationLimited)
-          area.append(
+          outcome.append(
             el(
               "p",
               "evidence-unavailable",
@@ -561,14 +747,20 @@ export async function mountChallenge(
               ),
             ),
           );
-        for (const eid of r.evidenceRefs) area.append(previewButton(repo, eid));
-        area.append(
-          el("p", "", r.nextStep),
+        const refs = el("div", "evidence-actions");
+        for (const eid of r.evidenceRefs) refs.append(previewButton(repo, eid));
+        if (r.evidenceRefs.length) outcome.append(refs);
+        const nextStep = el("p", "item-advice", r.nextStep);
+        nextStep.prepend(icon("arrowRight"));
+        outcome.append(
+          nextStep,
           link(
             l("回看完整学习轨迹", "View the learning history"),
             "/app/gaps/" + g.id,
+            "secondary-action",
           ),
         );
+        area.append(outcome);
         await mountGapPanel(area, repo, {
           attemptId: g.attemptId,
           onlyNeeds: true,
@@ -576,16 +768,28 @@ export async function mountChallenge(
         });
         return;
       }
-      area.append(
+      setStage(3);
+      const pending = el("div", "pending-feedback");
+      pending.append(
+        el(
+          "p",
+          "reader-muted",
+          l(
+            "你的回答已保存。再测失败或取消时可以随时重试。",
+            "Your answer is saved. Retry the recheck any time if it fails or is cancelled.",
+          ),
+        ),
         button(
           l("获取再测结果 / 重试", "Evaluate recheck / Retry"),
           run,
           "primary-action",
         ),
       );
+      area.append(pending);
       return;
     }
-    const form = el("form", "training-form"),
+    setStage(2);
+    const form = el("form", "training-form answer-sheet"),
       label = el(
         "label",
         "training-field",
@@ -597,11 +801,25 @@ export async function mountChallenge(
     input.required = true;
     input.value = task.draftAnswer || "";
     label.append(input);
-    form.append(label);
+    const saved = el("span", "save-indicator");
+    saved.setAttribute("role", "status");
+    const meta = el("div", "field-meta");
+    meta.append(saved);
+    form.append(label, meta);
     input.addEventListener("input", () => {
       const value = input.value;
+      saved.textContent = l("正在保存…", "Saving…");
+      saved.className = "save-indicator";
       queue = queue.catch(() => {}).then(() => repo.saveDraft(task.id, value));
-      queue.catch((e) => message(status, e.message, true));
+      queue.then(
+        () => {
+          if (!disposed) {
+            saved.textContent = l("草稿已保存", "Draft saved");
+            saved.className = "save-indicator is-saved";
+          }
+        },
+        (e) => message(status, e.message, true),
+      );
     });
     const submit = el(
       "button",
@@ -609,7 +827,9 @@ export async function mountChallenge(
       l("保存回答并检验", "Save answer & recheck"),
     );
     submit.type = "submit";
-    form.append(submit);
+    const footer = el("div", "form-footer");
+    footer.append(submit);
+    form.append(footer);
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (submit.disabled) return;
@@ -632,19 +852,23 @@ export async function mountChallenge(
     ctrl = new AbortController();
     const local = ctrl,
       rid = makeId("retest");
+    const retry = area.querySelector(".pending-feedback .primary-action");
+    if (retry) retry.hidden = true;
     message(
       status,
       l(
         "正在核对新答案是否仍有同一个问题…",
         "Checking whether the same issue recurs…",
       ),
+      false,
+      true,
     );
     const cancel = button(
       l("取消再测", "Cancel recheck"),
       () => local.abort(),
-      "secondary-action",
+      "secondary-action btn-sm",
     );
-    status.after(cancel);
+    statusRow.append(cancel);
     try {
       await repo.beginRetest(attempt.id, rid);
       let context = await prepareFeedbackContext(
@@ -689,6 +913,7 @@ export async function mountChallenge(
       await repo.cancel(attempt.id, rid).catch(() => {});
       await repo.cancelGap(g.id, rid).catch(() => {});
       cancel.remove();
+      if (retry?.isConnected) retry.hidden = false;
       ctrl = null;
     }
   }

@@ -774,3 +774,42 @@ Object.assign(en, {
   "服务器连接模型服务失败，或模型返回了无法读取的响应。已有研读结果保留，请联系试用邀请人检查服务。":
     "The server could not reach the model or read its response. Existing results are kept. Contact your host.",
 });
+
+// 2026-10 visual and interaction upgrade: shell, landing and status copy.
+Object.assign(en, {
+  学习: "Study",
+  资料与工具: "Sources & tools",
+  "本地保存 · 无云同步": "Saved locally · No cloud sync",
+  筛选: "Filters",
+  学习轨迹: "Learning history",
+  三种声音: "Three voices",
+  "题目 · 报道数量能否证明公众支持？":
+    "Question · Can coverage volume prove public support?",
+  "AI 判断": "AI judgment",
+  "把“关注度”直接当作“态度”，缺少能说明态度的证据。":
+    "Treats attention as attitude, without evidence about attitudes.",
+  换个情境再测: "Recheck in a new scenario",
+  "修订后用新的情境独立作答。结果只记录这一次，不给掌握率。":
+    "After revising, answer a new scenario on your own. Only that attempt is recorded; there is no mastery score.",
+  "02 / 三种声音": "02 / Three voices",
+  "你的答案、课程原文、AI 判断，": "Your answer, the course source, the AI judgment —",
+  "一眼分得清。": "always distinguishable.",
+  "Digest 用不同的版式标记三种内容：你写下的、课程材料里真实存在的、以及 AI 的推断。引用能定位，不等于它支持 AI 的判断。":
+    "Digest gives each kind of content its own form: what you wrote, what the course material actually says, and what the AI infers. A quote that can be located does not prove the AI’s judgment.",
+  你的答案: "Your answer",
+  白纸与墨线: "Ink on a clean sheet",
+  "首次答案先于 AI 保存，修订追加，不会覆盖第一次。":
+    "Your first answer is saved before any AI call. Revisions are added, never overwriting it.",
+  课程原文: "Course source",
+  纸面与荧光笔: "Paper and highlighter",
+  "依据由程序在原文中精确定位，可以随时打开上下文核对。":
+    "Evidence is located exactly in the source by the program. Open its context any time.",
+  标注过的推断: "Labelled inference",
+  "反馈可能有误。没有可靠依据时会直接说明，而不是编造。":
+    "Feedback can be wrong. Without reliable evidence it says so instead of inventing support.",
+  "03 / 阅读体验": "03 / The reading experience",
+  "合理的答案可以没有缺口，不为完成流程制造问题。":
+    "A sound answer can have no gaps. Nothing is invented just to complete a flow.",
+  "资料与答案只保存在你的浏览器中。": "Sources and answers stay in your browser.",
+  "没有虚假的掌握率或自动评分。": "No fake mastery scores or automatic grades.",
+});

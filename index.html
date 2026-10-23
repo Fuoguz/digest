@@ -3,51 +3,76 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f3ed">
   <meta name="description" content="Digest 是面向论述型、案例型课程的学习训练工作台。先独立作答，再核对课程依据、发现缺口并修订。">
   <title>Digest — 课程学习训练工作台</title>
   <link rel="stylesheet" href="/src/styles/tokens.css">
   <link rel="stylesheet" href="/src/styles/landing.css">
-  <link rel="stylesheet" href="/src/styles/upgrade.css">
 </head>
 <body class="landing-body">
+  <a class="skip-link" href="#main">跳到主要内容</a>
   <header class="landing-nav">
     <a class="brand" href="/" aria-label="Digest 首页"><span class="brand-mark">D</span><span>Digest</span></a>
     <nav aria-label="主导航">
-      <a href="#method">工作方式</a><a href="#principles">产品原则</a><a class="button button-light" href="/app/">进入工作台</a>
+      <a class="nav-link" href="#method">工作方式</a><a class="nav-link" href="#voices">三种声音</a><a class="nav-link" href="#principles">产品原则</a><a class="button button-light" href="/app/">进入工作台</a>
     </nav>
   </header>
 
-  <main>
+  <main id="main">
     <section class="hero">
       <div class="hero-copy">
         <p class="eyebrow">COURSE LEARNING WORKSPACE</p>
         <h1>读过之后，<br><em>试着回答。</em></h1>
         <p class="hero-lead">面向论述型、案例型课程。用自己的材料和答案，发现理解的缺口，回到原文核查，再认真改一次。</p>
-        <div class="hero-actions"><a class="button button-primary" href="/app/">开始一次学习任务 <span>→</span></a><a class="text-link" href="#method">了解 Digest 如何工作</a></div>
+        <div class="hero-actions"><a class="button button-primary" href="/app/">开始一次学习任务 <span aria-hidden="true">→</span></a><a class="text-link" href="#method">了解 Digest 如何工作</a></div>
       </div>
       <div class="study-preview" aria-label="学习流程示意">
-        <div class="preview-caption">一次练习，留下理解的变化</div>
-        <article class="sample-answer"><span class="page-kicker">01 / 我的回答</span><h3>“报道越多，就说明公众越支持。”</h3><p>一段自己的答案，是学习的起点。</p></article>
-        <article class="sample-evidence"><span class="page-kicker">02 / 回到依据</span><h3>显著性，不等于赞同。</h3><p><mark>议题获得更多关注，并不能单独证明公众态度发生了变化。</mark></p><small>教学示例 · 非真实材料引用</small></article>
-        <div class="sample-revision"><span>03</span><p>补上推理中缺失的一步，<br><strong>用自己的话，再解释一次。</strong></p></div>
+        <p class="preview-caption">一次练习，留下理解的变化</p>
+        <div class="sheet">
+          <p class="sheet-question">题目 · 报道数量能否证明公众支持？</p>
+          <article class="voice voice-you"><span class="voice-tag">01 / 我的回答</span><p class="voice-text">“报道越多，就说明公众越支持。”</p></article>
+          <article class="voice voice-ai"><span class="voice-tag">AI 判断</span><p class="voice-text">把“关注度”直接当作“态度”，缺少能说明态度的证据。</p></article>
+          <article class="voice voice-source"><span class="voice-tag">02 / 回到依据</span><p class="voice-text"><mark>议题获得更多关注，并不能单独证明公众态度发生了变化。</mark></p><small>教学示例 · 非真实材料引用</small></article>
+          <div class="sample-revision"><span aria-hidden="true">03</span><p>补上推理中缺失的一步，<br><strong>用自己的话，再解释一次。</strong></p></div>
+        </div>
       </div>
     </section>
 
     <section class="statement" id="method">
       <p class="section-index">01 / 方法</p>
       <h2>答案差在哪里，<br>回到材料里看清楚。</h2>
-      <div class="method-list">
-        <article><span>01</span><h3>先自己回答</h3><p>把材料放入课程，写下真实问题与评价标准。第一次答案完整保留。</p></article>
-        <article><span>02</span><h3>核查具体缺口</h3><p>AI 对照材料分析答案。引用经程序核对；是否支持判断，仍需阅读原文确认。</p></article>
-        <article><span>03</span><h3>修订，再检验</h3><p>保存修订和这次改动的理由。以后回到同一课程，用新的问题继续练习。</p></article>
+      <ol class="method-list">
+        <li><span>01</span><h3>先自己回答</h3><p>把材料放入课程，写下真实问题与评价标准。第一次答案完整保留。</p></li>
+        <li><span>02</span><h3>核查具体缺口</h3><p>AI 对照材料分析答案。引用经程序核对；是否支持判断，仍需阅读原文确认。</p></li>
+        <li><span>03</span><h3>修订，再检验</h3><p>保存修订和这次改动的理由。以后回到同一课程，用新的问题继续练习。</p></li>
+        <li><span>04</span><h3>换个情境再测</h3><p>修订后用新的情境独立作答。结果只记录这一次，不给掌握率。</p></li>
+      </ol>
+    </section>
+
+    <section class="voices" id="voices">
+      <div class="voices-head">
+        <p class="section-index">02 / 三种声音</p>
+        <h2>你的答案、课程原文、AI 判断，<br>一眼分得清。</h2>
+        <p>Digest 用不同的版式标记三种内容：你写下的、课程材料里真实存在的、以及 AI 的推断。引用能定位，不等于它支持 AI 的判断。</p>
+      </div>
+      <div class="voice-grid">
+        <article class="voice-card voice-you"><span class="voice-tag">你的答案</span><h3>白纸与墨线</h3><p>首次答案先于 AI 保存，修订追加，不会覆盖第一次。</p></article>
+        <article class="voice-card voice-source"><span class="voice-tag">课程原文</span><h3>纸面与荧光笔</h3><p>依据由程序在原文中精确定位，可以随时打开上下文核对。</p></article>
+        <article class="voice-card voice-ai"><span class="voice-tag">AI 判断</span><h3>标注过的推断</h3><p>反馈可能有误。没有可靠依据时会直接说明，而不是编造。</p></article>
       </div>
     </section>
 
     <section class="reading-preview" id="principles">
-      <div class="preview-copy"><p class="section-index">02 / 阅读体验</p><h2>原文与思考，<br>始终在同一张桌面上。</h2><p>Digest 为不同材料保留适合的研读结构。论文关注方法与局限，案例关注规则与推理，政策关注措施与影响。</p><a class="text-link dark" href="/app/">打开工作台 →</a></div>
+      <div class="preview-copy"><p class="section-index">03 / 阅读体验</p><h2>原文与思考，<br>始终在同一张桌面上。</h2><p>Digest 为不同材料保留适合的研读结构。论文关注方法与局限，案例关注规则与推理，政策关注措施与影响。</p>
+        <ul class="principles">
+          <li>合理的答案可以没有缺口，不为完成流程制造问题。</li>
+          <li>资料与答案只保存在你的浏览器中。</li>
+          <li>没有虚假的掌握率或自动评分。</li>
+        </ul>
+        <a class="text-link dark" href="/app/">打开工作台 →</a></div>
       <div class="preview-window">
-        <div class="preview-top"><span></span><small>阅读界面示意 · 非真实研究结论</small><b>•••</b></div>
-        <div class="preview-content"><div class="paper"><i>03</i><h4>研究发现</h4><p>在控制先验成绩后，间隔学习组仍表现出更高的延迟测试成绩。</p><mark>间隔复习对长期保持率的提升，在第 14 天测试中最为显著。</mark><p>这一结果表明，学习效果不能只用即时测试来判断。</p></div><aside><small>关键判断</small><h4>即时熟练不等于长期掌握</h4><p>研究将延迟测试作为主要指标，说明评估应关注知识保持，而非当场表现。</p><a href="/app/">进入工作台 <span>↗</span></a></aside></div>
+        <div class="preview-top"><span></span><small>阅读界面示意 · 非真实研究结论</small><b aria-hidden="true">•••</b></div>
+        <div class="preview-content"><div class="paper"><i>03</i><h4>研究发现</h4><p>在控制先验成绩后，间隔学习组仍表现出更高的延迟测试成绩。</p><p><mark>间隔复习对长期保持率的提升，在第 14 天测试中最为显著。</mark></p><p>这一结果表明，学习效果不能只用即时测试来判断。</p></div><aside><small>关键判断</small><h4>即时熟练不等于长期掌握</h4><p>研究将延迟测试作为主要指标，说明评估应关注知识保持，而非当场表现。</p><a href="/app/">进入工作台 <span aria-hidden="true">↗</span></a></aside></div>
       </div>
     </section>
   </main>

@@ -99,6 +99,7 @@ export async function mountSettings(container, db, isCurrent) {
       tr("数据保存在当前浏览器。定期备份，避免清理浏览器时丢失。"),
     ),
     feedback = el("p");
+  root.dataset.view = "settings";
   container.replaceChildren(root);
   const data = el("section", "settings-section");
   data.append(

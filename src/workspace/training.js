@@ -8,19 +8,24 @@ import {
 import { LoopRepository } from "../data/loop-repository.js";
 import { rescueRetrieval } from "../ai/retrieval-rescue.js";
 import { suggestTasks } from "../ai/task-suggestions.js";
-import { t as tr, th } from "./i18n.js";
+import { t as tr } from "./i18n.js";
 import { getLocale, beforeLanguageChange } from "./i18n.js";
 import {
   el,
   button,
   link,
+  backLink,
   page,
   message,
+  badge,
+  voiceLabel,
+  sectionHead,
+  icon,
   confirmAction,
 } from "./components.js";
-import { TrainingRepository } from "../data/training-repository.js";
 import { makeId } from "../domain/documents.js";
 import { documentSnapshot, restoreAnchor } from "../domain/evidence.js";
+import { needsRecheck } from "../domain/gaps.js";
 import {
   prepareFeedbackContext,
   generateFeedback,
@@ -60,18 +65,44 @@ function formAction(form, label, action) {
   const status = el("p"),
     submit = el("button", "primary-action", label);
   submit.type = "submit";
-  form.append(status, submit);
+  const footer = el("div", "form-footer");
+  footer.append(submit);
+  form.append(status, footer);
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     submit.disabled = true;
+    submit.setAttribute("aria-busy", "true");
     try {
       await action();
     } catch (error) {
       message(status, error.message, true);
     } finally {
       submit.disabled = false;
+      submit.removeAttribute("aria-busy");
     }
   });
+  return footer;
+}
+// Autosave indicator next to a field; never covers the request status line.
+function saveIndicator() {
+  const node = el("span", "save-indicator");
+  node.setAttribute("role", "status");
+  return node;
+}
+function showSaved(node, text, error = false) {
+  node.textContent = text;
+  node.className = "save-indicator " + (error ? "is-error" : "is-saved");
+}
+function charCount(input, max) {
+  const node = el("span", "char-count tabular");
+  const update = () =>
+    (node.textContent =
+      input.value.length.toLocaleString(getLocale()) +
+      " / " +
+      max.toLocaleString(getLocale()));
+  input.addEventListener("input", update);
+  update();
+  return node;
 }
 function fold(title) {
   const d = el("details", "training-fold");
@@ -88,10 +119,16 @@ function taskURL(id, attempt) {
     (attempt ? "?attempt=" + encodeURIComponent(attempt) : "")
   );
 }
-function row(parent, title, href, detail) {
+function row(parent, title, href, detail, status) {
   const r = el("article", "learning-row");
-  r.append(link(title, href), el("p", "reader-muted", detail));
+  const body = el("div", "row-body");
+  body.append(link(title, href, "row-title"));
+  if (detail) body.append(el("p", "reader-muted", detail));
+  r.append(body);
+  if (status) r.append(status);
+  r.append(icon("chevronRight", "icon row-chevron"));
   parent.append(r);
+  return r;
 }
 const statusLabel = (a) =>
   a.completedWithoutRevision
@@ -103,6 +140,54 @@ const statusLabel = (a) =>
         : a.feedbackId
           ? tr("待修订")
           : tr("答案已保存 · 待反馈");
+function statusBadge(a) {
+  if (!a) return null;
+  const tone = a.completedWithoutRevision
+    ? "success"
+    : a.retestId
+      ? "accent"
+      : a.status === "completed"
+        ? "success"
+        : a.feedbackId
+          ? "warning"
+          : "";
+  const glyph =
+    tone === "success" ? "check" : tone === "warning" ? "pen" : "clock";
+  return badge(statusLabel(a), tone, glyph);
+}
+function stepper(labels) {
+  const list = el("ol", "task-stages");
+  list.setAttribute("aria-label", l("学习进度", "Progress"));
+  const items = labels.map((text, index) => {
+    const li = el("li");
+    const mark = el("span", "step-mark tabular", String(index + 1));
+    mark.setAttribute("aria-hidden", "true");
+    li.append(mark, el("span", "step-label", text));
+    list.append(li);
+    return li;
+  });
+  list.set = (current, complete = false) => {
+    list.dataset.stage = String(current);
+    list.classList.toggle("is-complete", complete);
+    items.forEach((li, index) => {
+      const done = complete ? index <= current - 1 : index < current - 1;
+      li.classList.toggle("is-done", done);
+      li.classList.toggle("is-current", !complete && index === current - 1);
+      if (!complete && index === current - 1)
+        li.setAttribute("aria-current", "step");
+      else li.removeAttribute("aria-current");
+      const mark = li.querySelector(".step-mark");
+      mark.replaceChildren(done ? icon("check") : String(index + 1));
+    });
+  };
+  return list;
+}
+const SUPPORT = {
+  supported: ["有支持", "success"],
+  partially_supported: ["部分支持", "warning"],
+  uncertain: ["不确定", ""],
+  no_evidence: ["缺少依据", "danger"],
+};
 
 export async function mountTraining(container, db, isCurrent = () => true) {
   const repo = new LoopRepository(db);
@@ -137,28 +222,12 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         : path.includes("/tasks/")
           ? "task"
           : "course";
+  const header = root.querySelector(".page-header");
+  const recentAttempts = [...attempts].sort((a, b) =>
+    b.submittedAt.localeCompare(a.submittedAt),
+  );
+  const latestFor = (taskId) => recentAttempts.find((a) => a.taskId === taskId);
   if (path === "/app" || path === "/app/courses") {
-    root.append(
-      link(tr("资料库"), "/app/library"),
-      document.createTextNode(" · "),
-      link(tr("主动回忆复习"), "/app/review"),
-    );
-    if (path === "/app/courses") {
-      root.querySelector("h1").textContent = tr("我的课程");
-      root.querySelector(".page-subtitle").textContent =
-        tr("把材料与练习放在同一个学习上下文中。");
-    }
-    const welcome = el("section", "study-guide");
-    welcome.append(
-      el("span", "page-kicker", tr("从一个真实问题开始")),
-      el("h2", "", tr("读过了，试着解释清楚。")),
-      el("p", "", tr("添加课程材料，写下自己的答案，再用原文检查理解。")),
-    );
-    const steps = el("ol", "study-steps");
-    for (const text of [tr("添加材料"), tr("独立作答"), tr("核查与修订")])
-      steps.append(el("li", "", text));
-    welcome.append(steps);
-    if (!courses.length) root.append(welcome);
     const form = el("form", "training-form"),
       title = field(form, tr("课程名称")),
       description = field(form, tr("课程说明（可选）"), "", true, false);
@@ -170,64 +239,238 @@ export async function mountTraining(container, db, isCurrent = () => true) {
       location.assign(courseURL(c.id));
     });
     const create = fold(tr("创建一个课程"));
+    create.classList.add("course-create");
     create.open = !courses.length;
     create.append(form);
-    root.append(create);
-    create.classList.add("course-create");
-    root.append(el("h2", "", tr("继续你的任务")));
-    const recentAttempts = [...attempts].sort((a, b) =>
-      b.submittedAt.localeCompare(a.submittedAt),
-    );
-    const unfinished = tasks.filter(
-      (t) =>
-        t.draftAnswer ||
-        (recentAttempts.find((a) => a.taskId === t.id)?.status !==
-          "completed" &&
-          !recentAttempts.find((a) => a.taskId === t.id)?.retestId),
-    );
-    for (const t of unfinished.slice(0, 6))
-      row(
-        root,
-        t.title,
-        taskURL(t.id),
-        courses.find((c) => c.id === t.courseId)?.title || tr("课程任务"),
-      );
-    if (!unfinished.length)
-      root.append(
-        el(
-          "p",
-          "reader-muted",
-          tr(
-            "没有未完成任务。创建课程并关联自己的材料，写下一个真正需要回答的问题。",
+    if (path === "/app/courses") {
+      root.querySelector("h1").textContent = tr("我的课程");
+      root.querySelector(".page-subtitle").textContent =
+        tr("把材料与练习放在同一个学习上下文中。");
+      const list = el("div", "course-grid");
+      for (const c of [...courses].sort((a, b) =>
+        b.updatedAt.localeCompare(a.updatedAt),
+      )) {
+        const card = el("article", "course-card");
+        const taskCount = tasks.filter((t) => t.courseId === c.id).length;
+        card.append(
+          link(c.title, courseURL(c.id), "row-title"),
+          el("p", "reader-muted", c.description || tr("打开课程，继续学习")),
+          el(
+            "p",
+            "course-meta tabular",
+            l(
+              c.documentIds.length + " 份材料 · " + taskCount + " 个任务",
+              c.documentIds.length +
+                " sources · " +
+                taskCount +
+                (taskCount === 1 ? " task" : " tasks"),
+            ),
           ),
+        );
+        list.append(card);
+      }
+      const section = el("section", "desk-section");
+      section.append(sectionHead(tr("最近课程")));
+      if (courses.length) section.append(list);
+      else
+        section.append(
+          el(
+            "p",
+            "reader-muted",
+            l(
+              "还没有课程。创建一个课程，把材料和问题放在一起。",
+              "No courses yet. Create one to keep sources and questions together.",
+            ),
+          ),
+        );
+      root.append(section, create);
+    } else {
+      const unfinished = tasks.filter(
+        (t) =>
+          t.draftAnswer ||
+          (latestFor(t.id)?.status !== "completed" &&
+            !latestFor(t.id)?.retestId),
+      );
+      const gaps = (await repo.list("learningGaps")).filter(
+        (g) => !g.dismissedAt && needsRecheck(g),
+      );
+      if (!current()) return () => {};
+      // One clear next action: unfinished work first, then rechecks, then setup.
+      const next = el("section", "next-step");
+      next.setAttribute("aria-labelledby", "next-step-title");
+      const nextTitle = (text) => {
+        const h = el("h2", "", text);
+        h.id = "next-step-title";
+        return h;
+      };
+      const focusTask = [...unfinished].sort((a, b) =>
+        (latestFor(b.id)?.submittedAt || b.updatedAt).localeCompare(
+          latestFor(a.id)?.submittedAt || a.updatedAt,
+        ),
+      )[0];
+      if (focusTask) {
+        const a = latestFor(focusTask.id);
+        next.append(
+          el("p", "next-step-label", l("下一步", "Next step")),
+          nextTitle(focusTask.title),
+          el(
+            "p",
+            "next-step-detail",
+            (courses.find((c) => c.id === focusTask.courseId)?.title ||
+              tr("课程任务")) +
+              " · " +
+              (a
+                ? statusLabel(a)
+                : l("草稿未提交", "Draft not submitted yet")),
+          ),
+          link(
+            a?.feedbackId
+              ? l("继续修订", "Continue revising")
+              : l("继续作答", "Continue answering"),
+            taskURL(focusTask.id),
+            "primary-action",
+          ),
+        );
+      } else if (gaps.length) {
+        next.append(
+          el("p", "next-step-label", l("下一步", "Next step")),
+          nextTitle(
+            l(
+              gaps.length + " 个理解问题待再次检验",
+              gaps.length +
+                (gaps.length === 1
+                  ? " observation needs a recheck"
+                  : " observations need a recheck"),
+            ),
+          ),
+          el(
+            "p",
+            "next-step-detail",
+            l(
+              "换一个情境独立作答，看看同样的问题是否还会出现。",
+              "Answer a new scenario on your own to see whether the issue recurs.",
+            ),
+          ),
+          link(l("查看待检验问题", "See what needs a recheck"), "#needs-recheck", "primary-action"),
+        );
+        next.querySelector("a").removeAttribute("data-route");
+      } else if (!courses.length) {
+        next.classList.add("is-onboarding");
+        next.append(
+          el("p", "next-step-label", tr("从一个真实问题开始")),
+          nextTitle(tr("读过了，试着解释清楚。")),
+          el("p", "next-step-detail", tr("添加课程材料，写下自己的答案，再用原文检查理解。")),
+        );
+        const steps = el("ol", "study-steps");
+        for (const text of [tr("添加材料"), tr("独立作答"), tr("核查与修订")])
+          steps.append(el("li", "", text));
+        next.append(steps);
+      } else {
+        next.classList.add("is-calm");
+        next.append(
+          el("p", "next-step-label", l("当前没有待办", "Nothing pending")),
+          nextTitle(
+            l(
+              "可以在课程里提出一个新问题。",
+              "Ask a new question in one of your courses.",
+            ),
+          ),
+          link(l("打开课程", "Open courses"), "/app/courses", "secondary-action"),
+        );
+      }
+      header.after(next);
+      const main = el("div", "desk-main"),
+        side = el("div", "desk-side"),
+        layout = el("div", "desk-layout");
+      layout.append(main, side);
+      root.append(layout);
+      const tasksSection = el("section", "desk-section");
+      tasksSection.append(sectionHead(tr("继续你的任务")));
+      for (const t of unfinished.slice(0, 6))
+        row(
+          tasksSection,
+          t.title,
+          taskURL(t.id),
+          courses.find((c) => c.id === t.courseId)?.title || tr("课程任务"),
+          latestFor(t.id)
+            ? statusBadge(latestFor(t.id))
+            : badge(l("草稿", "Draft"), "", "pen"),
+        );
+      if (!unfinished.length)
+        tasksSection.append(
+          el(
+            "p",
+            "reader-muted",
+            tr(
+              "没有未完成任务。创建课程并关联自己的材料，写下一个真正需要回答的问题。",
+            ),
+          ),
+        );
+      main.append(tasksSection);
+      const gapSlot = el("div", "gap-slot");
+      gapSlot.id = "needs-recheck";
+      main.append(gapSlot);
+      const attemptsSection = el("section", "desk-section");
+      attemptsSection.append(sectionHead(tr("最近作答与再次练习")));
+      for (const a of recentAttempts.slice(0, 5))
+        row(
+          attemptsSection,
+          tasks.find((t) => t.id === a.taskId)?.title || a.taskSnapshot.title,
+          taskURL(a.taskId, a.id),
+          new Date(a.submittedAt).toLocaleDateString(getLocale()),
+          statusBadge(a),
+        );
+      if (!recentAttempts.length)
+        attemptsSection.append(
+          el("p", "reader-muted", l("还没有作答记录。", "No answers yet.")),
+        );
+      main.append(attemptsSection);
+      const coursesSection = el("section", "desk-section");
+      coursesSection.append(
+        sectionHead(
+          tr("最近课程"),
+          courses.length ? link(l("全部课程", "All courses"), "/app/courses") : null,
         ),
       );
-    root.append(el("h2", "", tr("最近课程")));
-    for (const c of [...courses]
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-      .slice(0, 8))
-      row(
-        root,
-        c.title,
-        courseURL(c.id),
-        c.description || tr("打开课程，继续学习"),
+      for (const c of [...courses]
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+        .slice(0, 6))
+        row(
+          coursesSection,
+          c.title,
+          courseURL(c.id),
+          c.description || tr("打开课程，继续学习"),
+        );
+      coursesSection.append(create);
+      const docsSection = el("section", "desk-section");
+      docsSection.append(
+        sectionHead(
+          tr("最近材料"),
+          docs.length ? link(tr("资料库"), "/app/library") : null,
+        ),
       );
-    root.append(el("h2", "", tr("最近作答与再次练习")));
-    for (const a of recentAttempts.slice(0, 5))
-      row(
-        root,
-        tasks.find((t) => t.id === a.taskId)?.title || a.taskSnapshot.title,
-        taskURL(a.taskId, a.id),
-        statusLabel(a),
-      );
-    root.append(el("h2", "", tr("最近材料")));
-    for (const d of docs.slice(0, 4))
-      row(
-        root,
-        d.title,
-        "/app/reader/" + encodeURIComponent(d.id),
-        tr("继续阅读原文"),
-      );
+      for (const d of docs.slice(0, 4))
+        row(
+          docsSection,
+          d.title,
+          "/app/reader/" + encodeURIComponent(d.id),
+          tr("继续阅读原文"),
+        );
+      if (!docs.length)
+        docsSection.append(
+          el("p", "reader-muted", l("还没有导入材料。", "No sources imported yet.")),
+        );
+      side.append(coursesSection, docsSection);
+      if (!courses.length) {
+        // First visit: the setup form sits right under the onboarding card;
+        // empty archive sections would only add noise.
+        next.after(create);
+        coursesSection.remove();
+        if (!recentAttempts.length) attemptsSection.remove();
+        if (!unfinished.length) tasksSection.remove();
+        if (!docs.length) docsSection.remove();
+      }
+    }
   } else if (path.startsWith("/app/courses/")) {
     const course = courses.find((c) => c.id === id);
     if (!course) {
@@ -238,31 +481,61 @@ export async function mountTraining(container, db, isCurrent = () => true) {
       return () => {};
     }
     root.querySelector("h1").textContent = course.title;
+    root.querySelector(".page-kicker").textContent = l("课程", "Course");
     root.querySelector(".page-subtitle").textContent =
       course.description || tr("选择必要材料，围绕一个真实问题练习。");
+    header.prepend(backLink(tr("← 所有课程"), "/app/courses"));
     const courseDocs = docs.filter((d) => course.documentIds.includes(d.id));
-    root.append(
-      link(tr("← 所有课程"), "/app/courses"),
-      el("h2", "", tr("课程材料")),
+    const courseTasks = tasks.filter((t) => t.courseId === id);
+    header.append(
+      el(
+        "p",
+        "course-meta tabular",
+        l(
+          courseDocs.length + " 份材料 · " + courseTasks.length + " 个任务",
+          courseDocs.length +
+            " sources · " +
+            courseTasks.length +
+            (courseTasks.length === 1 ? " task" : " tasks"),
+        ),
+      ),
     );
+    const main = el("div", "desk-main"),
+      side = el("div", "desk-side"),
+      layout = el("div", "desk-layout");
+    layout.append(main, side);
+    root.append(layout);
+    const materials = el("section", "desk-section");
     const addMaterial = button(
       tr("添加课程材料"),
       () =>
         document.dispatchEvent(
           new CustomEvent("digest-import", { detail: { courseId: id } }),
         ),
-      "secondary-action",
+      "secondary-action btn-sm",
     );
-    root.append(addMaterial);
+    addMaterial.prepend(icon("plus"));
+    materials.append(sectionHead(tr("课程材料"), addMaterial));
     for (const d of courseDocs)
       row(
-        root,
+        materials,
         d.title,
         "/app/reader/" +
           encodeURIComponent(d.id) +
           "?return=" +
           encodeURIComponent(courseURL(id)),
         tr("阅读与核查原文"),
+      );
+    if (!courseDocs.length)
+      materials.append(
+        el(
+          "p",
+          "reader-muted",
+          l(
+            "还没有关联材料。添加材料，或在下方选择资料库中的已有材料。",
+            "No linked sources yet. Add one, or pick existing sources below.",
+          ),
+        ),
       );
     const edit = fold(tr("编辑课程与关联材料")),
       form = el("form", "training-form"),
@@ -286,9 +559,35 @@ export async function mountTraining(container, db, isCurrent = () => true) {
     });
     edit.open = !courseDocs.length;
     edit.append(form);
-    root.append(edit, el("h2", "", tr("学习任务")));
-    for (const t of tasks.filter((t) => t.courseId === id))
-      row(root, t.title, taskURL(t.id), t.prompt);
+    materials.append(edit);
+    side.append(materials);
+    const taskSection = el("section", "desk-section");
+    taskSection.append(sectionHead(tr("学习任务")));
+    for (const t of courseTasks) {
+      const r = row(
+        taskSection,
+        t.title,
+        taskURL(t.id),
+        t.prompt,
+        statusBadge(latestFor(t.id)) ||
+          (t.draftAnswer ? badge(l("草稿", "Draft"), "", "pen") : null),
+      );
+      if (t.targetGapId)
+        r.querySelector(".row-body").prepend(
+          badge(l("换情境检验", "Transfer challenge"), "accent", "repeat"),
+        );
+    }
+    if (!courseTasks.length)
+      taskSection.append(
+        el(
+          "p",
+          "reader-muted",
+          l(
+            "还没有任务。写下一个真正需要回答的问题。",
+            "No tasks yet. Write down a question you genuinely need to answer.",
+          ),
+        ),
+      );
     const taskForm = el("form", "training-form"),
       taskTitle = field(taskForm, tr("任务名称")),
       prompt = field(taskForm, tr("需要回答的问题"), "", true),
@@ -315,7 +614,7 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         const cancel = button(
           l("取消准备", "Cancel preparation"),
           () => local.abort(),
-          "secondary-action",
+          "secondary-action btn-sm",
         );
         suggestions.append(cancel);
         message(
@@ -324,6 +623,8 @@ export async function mountTraining(container, db, isCurrent = () => true) {
             "正在根据所选材料准备练习建议…",
             "Preparing suggestions from selected materials…",
           ),
+          false,
+          true,
         );
         try {
           const context = await prepareFeedbackContext(
@@ -370,7 +671,7 @@ export async function mountTraining(container, db, isCurrent = () => true) {
                     input.checked = candidate.documentIds.includes(input.value);
                   prompt.focus();
                 },
-                "secondary-action",
+                "secondary-action btn-sm",
               ),
             );
             suggestions.append(card);
@@ -395,8 +696,9 @@ export async function mountTraining(container, db, isCurrent = () => true) {
       },
       "secondary-action",
     );
+    suggest.prepend(icon("ai"));
     suggestions.append(suggest, suggestStatus);
-    taskForm.append(suggestions);
+    taskForm.prepend(suggestions);
     formAction(taskForm, tr("创建任务"), async () => {
       const task = await repo.saveTask({
         courseId: id,
@@ -408,15 +710,32 @@ export async function mountTraining(container, db, isCurrent = () => true) {
       location.assign(taskURL(task.id));
     });
     const create = fold(tr("创建学习任务"));
-    create.open = !tasks.some((t) => t.courseId === id) && !!courseDocs.length;
+    create.classList.add("is-emphasis");
+    create.open = !courseTasks.length && !!courseDocs.length;
     create.append(taskForm);
-    root.append(create, el("h2", "", tr("最近作答")));
-    for (const a of attempts
+    taskSection.append(create);
+    main.append(taskSection);
+    const gapSlot = el("div", "gap-slot");
+    main.append(gapSlot);
+    const recent = el("section", "desk-section");
+    recent.append(sectionHead(tr("最近作答")));
+    const courseAttempts = recentAttempts
       .filter((a) => a.courseId === id)
-      .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))
-      .slice(0, 8))
-      row(root, a.taskSnapshot.title, taskURL(a.taskId, a.id), statusLabel(a));
-    root.append(
+      .slice(0, 8);
+    for (const a of courseAttempts)
+      row(
+        recent,
+        a.taskSnapshot.title,
+        taskURL(a.taskId, a.id),
+        new Date(a.submittedAt).toLocaleDateString(getLocale()),
+        statusBadge(a),
+      );
+    if (!courseAttempts.length)
+      recent.append(
+        el("p", "reader-muted", l("还没有作答记录。", "No answers yet.")),
+      );
+    main.append(recent);
+    side.append(
       button(
         tr("删除课程…"),
         () =>
@@ -430,7 +749,7 @@ export async function mountTraining(container, db, isCurrent = () => true) {
               location.assign("/app/courses");
             },
           ),
-        "quiet-link",
+        "quiet-link is-danger danger-zone",
       ),
     );
   } else {
@@ -450,45 +769,25 @@ export async function mountTraining(container, db, isCurrent = () => true) {
     await repo.track("task_opened", { taskId: id, courseId: course.id });
     if (!current()) return () => {};
     root.querySelector("h1").textContent = task.title;
-    root.querySelector(".page-subtitle").textContent = task.prompt;
-    root.append(link("← " + course.title, courseURL(course.id)));
-    if (task.rubric)
-      root.append(
-        el("h2", "", tr("评价标准")),
-        el("p", "training-prose", task.rubric),
-      );
-    else
-      root.append(
-        el(
-          "p",
-          "reader-muted",
-          tr(
-            "未提供正式评分标准：反馈只检查解释、推理与材料依据，不代表教师评分。",
-          ),
-        ),
-      );
-    root.append(el("h2", "", tr("必要材料")));
-    for (const documentId of task.documentIds) {
-      const d = docs.find((d) => d.id === documentId);
-      if (d)
-        root.append(
-          link(
-            d.title,
-            "/app/reader/" +
-              encodeURIComponent(d.id) +
-              "?return=" +
-              encodeURIComponent(location.pathname + location.search),
-          ),
-        );
-      else
-        root.append(
-          el(
-            "p",
-            "inline-feedback is-error",
-            tr("一份关联材料已丢失，请编辑任务。"),
-          ),
-        );
-    }
+    root.querySelector(".page-kicker").textContent = tr("学习任务");
+    const promptBlock = root.querySelector(".page-subtitle");
+    promptBlock.textContent = task.prompt;
+    promptBlock.before(el("p", "question-label", l("题目", "Question")));
+    header.prepend(backLink("← " + course.title, courseURL(course.id)));
+    const stages = stepper([
+      tr("理解任务"),
+      tr("独立作答"),
+      tr("核查反馈"),
+      tr("保存修订"),
+    ]);
+    stages.set(2);
+    header.append(stages);
+    const main = el("div", "task-main"),
+      aside = el("aside", "task-aside"),
+      layout = el("div", "task-layout");
+    aside.setAttribute("aria-label", l("任务信息", "Task details"));
+    layout.append(main, aside);
+    root.append(layout);
     const list = attempts
       .filter((a) => a.taskId === id)
       .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
@@ -499,22 +798,47 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         : list.find((a) => a.id === selectedId) || list[0];
     const brief = fold(tr("任务材料与评价标准"));
     brief.classList.add("task-brief");
-    brief.open = !activeAttempt;
-    const rubricStart = [...root.children].findIndex((n) => n.tagName === "H2");
-    if (rubricStart >= 0) {
-      const nodes = [...root.children].slice(rubricStart);
-      root.append(brief);
-      nodes.forEach((n) => brief.append(n));
+    brief.open = !activeAttempt || matchMedia("(min-width: 1100px)").matches;
+    brief.append(el("h2", "", tr("必要材料")));
+    for (const documentId of task.documentIds) {
+      const d = docs.find((d) => d.id === documentId);
+      if (d)
+        brief.append(
+          link(
+            d.title,
+            "/app/reader/" +
+              encodeURIComponent(d.id) +
+              "?return=" +
+              encodeURIComponent(location.pathname + location.search),
+            "material-link",
+            "quote",
+          ),
+        );
+      else
+        brief.append(
+          el(
+            "p",
+            "inline-feedback is-error",
+            tr("一份关联材料已丢失，请编辑任务。"),
+          ),
+        );
     }
-    const stages = el("ol", "task-stages");
-    for (const text of [
-      tr("理解任务"),
-      tr("独立作答"),
-      tr("核查反馈"),
-      tr("保存修订"),
-    ])
-      stages.append(el("li", "", text));
-    root.querySelector(".page-subtitle").after(stages);
+    if (task.rubric)
+      brief.append(
+        el("h2", "", tr("评价标准")),
+        el("p", "training-prose", task.rubric),
+      );
+    else
+      brief.append(
+        el(
+          "p",
+          "reader-muted",
+          tr(
+            "未提供正式评分标准：反馈只检查解释、推理与材料依据，不代表教师评分。",
+          ),
+        ),
+      );
+    main.append(brief);
     const outputLabel = el("label", "output-language", tr("反馈语言")),
       outputLanguage = el("select", "core-input");
     for (const [value, text] of [
@@ -527,14 +851,16 @@ export async function mountTraining(container, db, isCurrent = () => true) {
     }
     outputLanguage.value = getLocale();
     outputLabel.append(outputLanguage);
-    root.append(outputLabel);
+    aside.append(outputLabel);
     const feedbackArea = el("section", "training-feedback"),
-      status = el("p");
+      status = el("p"),
+      statusRow = el("div", "status-row");
     status.setAttribute("aria-live", "polite");
-    root.append(status);
-    let answer;
+    statusRow.append(status);
+    main.append(statusRow);
+    let answer, retryButton;
     if (!activeAttempt) {
-      const form = el("form", "training-form");
+      const form = el("form", "training-form answer-sheet");
       answer = field(
         form,
         tr("先写下你自己的答案"),
@@ -543,25 +869,31 @@ export async function mountTraining(container, db, isCurrent = () => true) {
       );
       answer.rows = 12;
       answer.maxLength = 16000;
+      const saved = saveIndicator();
+      const meta = el("div", "field-meta");
+      meta.append(saved, charCount(answer, 16000));
+      form.append(meta);
       answer.addEventListener("input", () => {
         const value = answer.value;
+        saved.textContent = l("正在保存…", "Saving…");
+        saved.className = "save-indicator";
         draftQueue = draftQueue
           .catch(() => {})
           .then(() => repo.saveDraft(id, value));
         draftQueue.then(
           () => {
-            if (current()) message(status, tr("草稿已保存到此浏览器。"));
+            if (current()) showSaved(saved, tr("草稿已保存到此浏览器。"));
           },
           (e) => {
             if (current())
-              message(status, tr("草稿保存失败：") + e.message, true);
+              showSaved(saved, tr("草稿保存失败：") + e.message, true);
           },
         );
       });
       form.append(
         el(
           "p",
-          "reader-muted",
+          "reader-muted form-note",
           tr(
             "提交后，答案、任务与所选课程材料会发送到 AI 服务。首次答案会先保存，反馈不会替你写标准答案。",
           ),
@@ -577,9 +909,9 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         await displayAttempt();
         await runFeedback();
       });
-      root.append(form);
+      main.append(form);
     }
-    root.append(feedbackArea);
+    main.append(feedbackArea);
     async function runFeedback() {
       if (controller) return;
       const ctrl = new AbortController();
@@ -587,6 +919,7 @@ export async function mountTraining(container, db, isCurrent = () => true) {
       requestId = makeId("feedback");
       const runId = requestId,
         attemptId = activeAttempt.id;
+      if (retryButton) retryButton.hidden = true;
       const cancel = button(
         tr("取消反馈"),
         () => {
@@ -595,15 +928,17 @@ export async function mountTraining(container, db, isCurrent = () => true) {
             .cancel(attemptId, runId)
             .catch((e) => message(status, e.message, true));
         },
-        "secondary-action",
+        "secondary-action btn-sm",
       );
-      status.after(cancel);
+      statusRow.append(cancel);
       message(
         status,
         l(
           "答案已保存。正在核对相关材料，可以取消。",
           "Answer saved. Checking relevant material; you can cancel.",
         ),
+        false,
+        true,
       );
       try {
         const freshDocs = await repo.list("documents");
@@ -626,6 +961,8 @@ export async function mountTraining(container, db, isCurrent = () => true) {
             "正在分析你的回答，整理最重要的问题…",
             "Analyzing your answer and prioritizing the important issues…",
           ),
+          false,
+          true,
         );
         const payload = await generateFeedback(
           context,
@@ -651,8 +988,102 @@ export async function mountTraining(container, db, isCurrent = () => true) {
           );
       } finally {
         cancel.remove();
+        if (retryButton?.isConnected) retryButton.hidden = false;
         if (controller === ctrl) controller = null;
       }
+    }
+    function feedbackCard(item, index, kind, a, snapshots) {
+      const card = el(
+        index < 3 ? "article" : "details",
+        "learning-row feedback-item is-" + kind,
+      );
+      card.id = (kind === "gap" ? "gap-" : "strength-") + index;
+      const head = el(index < 3 ? "header" : "summary", "feedback-item-head");
+      const number = el("span", "item-index tabular", String(index + 1).padStart(2, "0"));
+      number.setAttribute("aria-hidden", "true");
+      const titleBox = el("div", "item-title");
+      titleBox.append(
+        el(
+          "small",
+          "voice-label is-ai",
+          l("AI 对你回答的判断： ", "AI judgment of your answer: "),
+        ),
+        el("strong", "", item.type),
+      );
+      head.append(number, titleBox);
+      card.append(head);
+      const body = el("div", "feedback-item-body");
+      if (item.userAnswerQuote)
+        body.append(
+          voiceLabel("you", l("你的答案", "Your answer")),
+          el("blockquote", "answer-quote", item.userAnswerQuote),
+        );
+      body.append(el("p", "training-prose item-explanation", item.explanation));
+      const advice = el("p", "item-advice", tr("修改建议：") + item.suggestedAction);
+      advice.prepend(icon("pen"));
+      body.append(advice);
+      const [supportText, tone] = SUPPORT[item.support] || SUPPORT.uncertain;
+      const support = el("p", "support-line", tr("模型对语义支持的判断："));
+      support.append(badge(tr(supportText), tone));
+      body.append(support);
+      card.append(body);
+      return { card, body };
+    }
+    async function appendEvidence(card, body, item, a, snapshots) {
+      let matched = 0;
+      for (const eid of item.evidenceIds) {
+        const stored = await repo.get("evidenceAnchors", eid),
+          snapshot = snapshots.find((s) => s.documentId === stored?.documentId);
+        const anchor =
+          stored && snapshot ? restoreAnchor(stored, snapshot) : null;
+        if (anchor?.validationStatus !== "matched") continue;
+        matched++;
+        const params = new URLSearchParams({
+          evidence: eid,
+          return: taskURL(id, a.id),
+        });
+        const evidence = link(
+          tr("查看课程依据 · 第 ") + (anchor.paragraphIndex + 1) + tr(" 段"),
+          "/app/reader/" + encodeURIComponent(anchor.documentId) + "?" + params,
+          "evidence-action",
+        );
+        evidence.addEventListener("click", () => {
+          sessionStorage.setItem(
+            "digest:feedback-return:" + a.id,
+            JSON.stringify({ card: card.id, scroll: window.scrollY }),
+          );
+          sessionStorage.setItem(
+            "digest:feedback-scroll",
+            JSON.stringify({
+              url: location.pathname + location.search,
+              y: scrollY,
+            }),
+          );
+          repo
+            .track("feedback_evidence_opened", {
+              attemptId: a.id,
+              evidenceId: eid,
+            })
+            .catch(() => {});
+        });
+        const actions = el("div", "evidence-actions");
+        const preview = previewButton(repo, eid);
+        preview.classList.add("btn-sm");
+        actions.append(preview, evidence);
+        body.append(
+          voiceLabel("source", l("来自课程材料", "From course material")),
+          el("blockquote", "training-evidence", anchor.quote),
+          actions,
+        );
+      }
+      if (!matched)
+        body.append(
+          el(
+            "p",
+            "evidence-unavailable",
+            tr("未找到足够可靠的课程材料依据。"),
+          ),
+        );
     }
     async function displayAttempt() {
       const a = activeAttempt,
@@ -664,22 +1095,28 @@ export async function mountTraining(container, db, isCurrent = () => true) {
           .map(documentSnapshot),
       );
       if (!current()) return;
-      stages.dataset.stage = a.status === "completed" ? "4" : f ? "3" : "2";
-      feedbackArea.replaceChildren(
+      if (a.status === "completed") stages.set(4, true);
+      else stages.set(f ? 3 : 2);
+      const original = el("section", "answer-record");
+      original.append(
+        voiceLabel("you", l("你的答案", "Your answer")),
         el("h2", "", tr("你的首次答案")),
         el("p", "training-prose", a.userAnswer),
-        el(
-          "p",
-          "reader-muted",
-          new Date(a.submittedAt).toLocaleString(getLocale()),
-        ),
       );
+      const stamp = el(
+        "p",
+        "reader-muted answer-stamp",
+        new Date(a.submittedAt).toLocaleString(getLocale()),
+      );
+      stamp.prepend(icon("check"));
+      original.append(stamp);
+      feedbackArea.replaceChildren(original);
       if (f) {
-        const original = fold(tr("查看首次答案（始终保留）"));
-        original.classList.add("original-answer");
-        const nodes = [...feedbackArea.children];
-        feedbackArea.replaceChildren(original);
-        nodes.forEach((n) => original.append(n));
+        const originalFold = fold(tr("查看首次答案（始终保留）"));
+        originalFold.classList.add("original-answer");
+        original.querySelector("h2").remove();
+        originalFold.append(original);
+        feedbackArea.replaceChildren(originalFold);
       }
       if (a.taskSnapshot.version !== task.version)
         feedbackArea.prepend(
@@ -691,24 +1128,41 @@ export async function mountTraining(container, db, isCurrent = () => true) {
               tr("\n请从历史作答与重新练习入口，为当前问题重新作答。"),
           ),
         );
-      if (!f)
-        feedbackArea.append(
-          button(tr("获取反馈 / 重试"), runFeedback, "primary-action"),
-        );
-      else {
-        feedbackArea.append(
-          el("h2", "", tr("反馈")),
-          el("p", "training-prose", f.overall),
+      if (!f) {
+        const pending = el("div", "pending-feedback");
+        pending.append(
           el(
             "p",
             "reader-muted",
+            l(
+              "你的答案已保存在此浏览器。获取反馈失败或取消时，可以随时重试，不会覆盖首次答案。",
+              "Your answer is saved in this browser. If feedback fails or is cancelled, retry any time; your first answer stays as written.",
+            ),
+          ),
+        );
+        retryButton = button(tr("获取反馈 / 重试"), runFeedback, "primary-action");
+        if (controller) retryButton.hidden = true;
+        pending.append(retryButton);
+        feedbackArea.append(pending);
+      } else {
+        const overview = el("section", "feedback-overview");
+        const overviewHead = el("div", "section-head");
+        overviewHead.append(el("h2", "", tr("反馈")), badge("AI", "ai", "ai"));
+        const summary = el("div", "ai-block");
+        summary.append(el("p", "training-prose", f.overall));
+        overview.append(
+          overviewHead,
+          summary,
+          el(
+            "p",
+            "reader-muted ai-caveat",
             tr(
               "AI 反馈可能有误。引用通过核对只表示原文存在，是否支持判断仍需你检查。",
             ),
           ),
         );
         if (f.retrievalScope?.partial)
-          feedbackArea.append(
+          overview.append(
             el(
               "p",
               "scope-notice",
@@ -717,9 +1171,53 @@ export async function mountTraining(container, db, isCurrent = () => true) {
               ),
             ),
           );
-        const reviseLink = el("a", "primary-action", tr("前往修订答案 ↓"));
-        reviseLink.href = "#revision-editor";
-        feedbackArea.append(reviseLink);
+        const stale = f.sourceRevisions.some(
+          (r) =>
+            !snapshots.some(
+              (s) =>
+                s.documentId === r.documentId &&
+                s.sourceRevision === r.sourceRevision,
+            ),
+        );
+        if (stale)
+          overview.append(
+            el(
+              "p",
+              "inline-feedback is-error",
+              tr("材料版本已变化；以下为历史反馈，旧依据不可定位。"),
+            ),
+          );
+        feedbackArea.append(overview);
+        for (const [label, items, kind] of [
+          [tr("具体缺口"), f.gaps, "gap"],
+          [tr("做对了什么"), f.strengths, "strength"],
+        ]) {
+          const group = el("section", "feedback-group is-" + kind);
+          const groupHead = el("div", "section-head");
+          groupHead.append(el("h3", "", label));
+          groupHead.append(
+            badge(
+              String(items.length),
+              kind === "gap" ? (items.length ? "warning" : "success") : "success",
+            ),
+          );
+          group.append(groupHead);
+          if (!items.length)
+            group.append(
+              el("p", "reader-muted", tr("本次未识别出可说明的条目。")),
+            );
+          for (const [index, item] of items.entries()) {
+            const { card, body } = feedbackCard(item, index, kind, a, snapshots);
+            await appendEvidence(card, body, item, a, snapshots);
+            group.append(card);
+          }
+          feedbackArea.append(group);
+        }
+        const nextStep = el("div", "ai-block next-hint");
+        nextStep.append(
+          el("p", "training-prose", tr("下一步：") + f.suggestedNextStep),
+        );
+        feedbackArea.append(nextStep);
         const opinion = el("div", "feedback-opinion");
         opinion.append(el("span", "", tr("这次反馈如何？")));
         for (const [value, text] of [
@@ -735,143 +1233,17 @@ export async function mountTraining(container, db, isCurrent = () => true) {
                   feedbackId: f.id,
                   rating: value,
                 });
+                opinion
+                  .querySelectorAll("button")
+                  .forEach((b) => b.setAttribute("aria-pressed", String(b.textContent === text)));
                 message(status, tr("评价已保存在此浏览器，可随备份导出。"));
               },
-              "secondary-action",
+              "secondary-action btn-sm",
             ),
           );
         feedbackArea.append(opinion);
-        const stale = f.sourceRevisions.some(
-          (r) =>
-            !snapshots.some(
-              (s) =>
-                s.documentId === r.documentId &&
-                s.sourceRevision === r.sourceRevision,
-            ),
-        );
-        if (stale)
-          feedbackArea.append(
-            el(
-              "p",
-              "inline-feedback is-error",
-              tr("材料版本已变化；以下为历史反馈，旧依据不可定位。"),
-            ),
-          );
-        for (const [label, items] of [
-          [tr("具体缺口"), f.gaps],
-          [tr("做对了什么"), f.strengths],
-        ]) {
-          feedbackArea.append(el("h3", "", label));
-          if (!items.length)
-            feedbackArea.append(
-              el("p", "reader-muted", tr("本次未识别出可说明的条目。")),
-            );
-          for (const [index, item] of items.entries()) {
-            const card = el(
-              index < 3 ? "article" : "details",
-              "learning-row feedback-item",
-            );
-            if (index >= 3) card.append(el("summary", "", item.type));
-            card.id = (label === tr("具体缺口") ? "gap-" : "strength-") + index;
-            card.append(
-              el(
-                "small",
-                "reader-muted",
-                l("AI 对你回答的判断： ", "AI judgment of your answer: "),
-              ),
-              el("strong", "", item.type),
-            );
-            if (item.userAnswerQuote)
-              card.append(
-                el("blockquote", "answer-quote", item.userAnswerQuote),
-              );
-            card.append(
-              el("p", "training-prose", item.explanation),
-              el("p", "", tr("修改建议：") + item.suggestedAction),
-            );
-            card.append(
-              el(
-                "small",
-                "reader-muted",
-                tr("模型对语义支持的判断：") +
-                  ({
-                    supported: tr("有支持"),
-                    partially_supported: tr("部分支持"),
-                    uncertain: tr("不确定"),
-                    no_evidence: tr("缺少依据"),
-                  }[item.support] || tr("不确定")),
-              ),
-            );
-            let matched = 0;
-            for (const eid of item.evidenceIds) {
-              const stored = await repo.get("evidenceAnchors", eid),
-                snapshot = snapshots.find(
-                  (s) => s.documentId === stored?.documentId,
-                );
-              const anchor =
-                stored && snapshot ? restoreAnchor(stored, snapshot) : null;
-              if (anchor?.validationStatus !== "matched") continue;
-              matched++;
-              const params = new URLSearchParams({
-                evidence: eid,
-                return: taskURL(id, a.id),
-              });
-              const evidence = link(
-                tr("查看课程依据 · 第 ") +
-                  (anchor.paragraphIndex + 1) +
-                  tr(" 段"),
-                "/app/reader/" +
-                  encodeURIComponent(anchor.documentId) +
-                  "?" +
-                  params,
-                "evidence-action",
-              );
-              evidence.addEventListener("click", () => {
-                sessionStorage.setItem(
-                  "digest:feedback-return:" + a.id,
-                  JSON.stringify({ card: card.id, scroll: window.scrollY }),
-                );
-                sessionStorage.setItem(
-                  "digest:feedback-scroll",
-                  JSON.stringify({
-                    url: location.pathname + location.search,
-                    y: scrollY,
-                  }),
-                );
-                repo
-                  .track("feedback_evidence_opened", {
-                    attemptId: a.id,
-                    evidenceId: eid,
-                  })
-                  .catch(() => {});
-              });
-              card.append(
-                el(
-                  "small",
-                  "reader-muted",
-                  l("来自课程材料", "From course material"),
-                ),
-                el("blockquote", "training-evidence", anchor.quote),
-                previewButton(repo, eid),
-                evidence,
-              );
-            }
-            if (!matched)
-              card.append(
-                el(
-                  "p",
-                  "evidence-unavailable",
-                  tr("未找到足够可靠的课程材料依据。"),
-                ),
-              );
-            feedbackArea.append(card);
-          }
-        }
-        feedbackArea.append(
-          el("p", "training-prose", tr("下一步：") + f.suggestedNextStep),
-        );
         if (!f.gaps.length && !a.revision.length && !stale) {
-          const checked = el("section", "training-completion");
+          const checked = el("section", "training-completion is-calm");
           checked.append(
             el(
               "p",
@@ -886,7 +1258,7 @@ export async function mountTraining(container, db, isCurrent = () => true) {
             checked.append(
               el(
                 "p",
-                "",
+                "completion-mark",
                 l(
                   "本次检查已完成，原答案保留。",
                   "Review complete. Your original answer is retained.",
@@ -914,6 +1286,17 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         const revision = el("form", "training-form revision-editor"),
           draftKey = "revision-draft:" + a.id;
         revision.id = "revision-editor";
+        revision.append(
+          voiceLabel("you", l("你的修订稿", "Your revision")),
+          el(
+            "p",
+            "reader-muted",
+            l(
+              "修订会追加保存，首次答案始终保留。",
+              "Revisions are added alongside; your first answer is always kept.",
+            ),
+          ),
+        );
         const savedDraft = await getSetting(draftKey, db);
         const revised = field(
           revision,
@@ -923,6 +1306,10 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         );
         revised.rows = 12;
         revised.maxLength = 16000;
+        const revisionSaved = saveIndicator();
+        const revisionMeta = el("div", "field-meta");
+        revisionMeta.append(revisionSaved, charCount(revised, 16000));
+        revision.append(revisionMeta);
         const reflection = field(
           revision,
           tr("你本次主要修正了什么？"),
@@ -930,19 +1317,35 @@ export async function mountTraining(container, db, isCurrent = () => true) {
           true,
         );
         reflection.maxLength = 4000;
+        reflection.rows = 3;
         for (const input of [revised, reflection])
           input.addEventListener("input", () => {
             const value = {
               answer: revised.value,
               reflection: reflection.value,
             };
+            revisionSaved.textContent = l("正在保存…", "Saving…");
+            revisionSaved.className = "save-indicator";
             draftQueue = draftQueue
               .catch(() => {})
               .then(() => putSetting(draftKey, value, db));
-            draftQueue.catch((e) => {
-              if (current())
-                message(status, tr("修订草稿保存失败：") + e.message, true);
-            });
+            draftQueue.then(
+              () => {
+                if (current())
+                  showSaved(
+                    revisionSaved,
+                    l("修订草稿已保存", "Revision draft saved"),
+                  );
+              },
+              (e) => {
+                if (current())
+                  showSaved(
+                    revisionSaved,
+                    tr("修订草稿保存失败：") + e.message,
+                    true,
+                  );
+              },
+            );
           });
         formAction(revision, tr("保存修订并完成本次练习"), async () => {
           await draftQueue;
@@ -951,28 +1354,29 @@ export async function mountTraining(container, db, isCurrent = () => true) {
           activeAttempt = await repo.get("attempts", a.id);
           await displayAttempt();
           message(status, tr("修订已保存，首次答案保持不变。"));
+          feedbackArea
+            .querySelector(".training-completion h2")
+            ?.scrollIntoView({ block: "start", behavior: "smooth" });
         });
-        if (!f.gaps.length && !a.revision.length) {
-          const optional = fold(
-            l("可选：补充或修订答案", "Optional: extend or revise your answer"),
-          );
-          optional.append(revision);
-          feedbackArea.append(optional);
-        } else feedbackArea.append(revision);
         if (a.revision.length) {
           const completion = el("section", "training-completion");
+          const title = el("h2", "", tr("本次修订已完成"));
+          const mark = el("span", "completion-icon");
+          mark.append(icon("check"));
           completion.append(
-            el("h2", "", tr("本次修订已完成")),
+            mark,
+            title,
             el("p", "", tr("主要修正：") + a.revision.at(-1).reflection),
             el(
               "p",
-              "",
+              "reader-muted",
               tr(
                 "仍未验证：修订后的理解尚未通过新的问题检验。几天后可在同一课程创建不同案例的问题再作答。",
               ),
             ),
             link(tr("创建新的问题再检验"), courseURL(course.id)),
           );
+          completion.append(diffView(repo, a, a.revision.at(-1)));
           for (const [i, r] of a.revision.entries()) {
             const history = fold(
               tr("修订 ") +
@@ -982,18 +1386,41 @@ export async function mountTraining(container, db, isCurrent = () => true) {
             );
             history.append(
               el("p", "training-prose", r.userAnswer),
-              el("p", "", r.reflection),
+              el("p", "reader-muted", r.reflection),
             );
             completion.append(history);
           }
-          completion.append(diffView(repo, a, a.revision.at(-1)));
           feedbackArea.append(completion);
+          await mountGapPanel(feedbackArea, repo, {
+            attemptId: a.id,
+            register: (fn) => loopCleanups.push(fn),
+          });
+          const again = fold(l("再次修订", "Revise again"));
+          again.classList.add("revision-again");
+          again.append(revision);
+          feedbackArea.append(again);
+        } else {
+          if (!f.gaps.length) {
+            const optional = fold(
+              l(
+                "可选：补充或修订答案",
+                "Optional: extend or revise your answer",
+              ),
+            );
+            optional.append(revision);
+            feedbackArea.append(optional);
+          } else {
+            const jump = el("a", "primary-action revise-jump", tr("前往修订答案 ↓"));
+            jump.href = "#revision-editor";
+            overviewJump(jump);
+            feedbackArea.append(revision);
+          }
+          await mountGapPanel(feedbackArea, repo, {
+            attemptId: a.id,
+            register: (fn) => loopCleanups.push(fn),
+          });
         }
       }
-      await mountGapPanel(feedbackArea, repo, {
-        attemptId: a.id,
-        register: (fn) => loopCleanups.push(fn),
-      });
       const returned = sessionStorage.getItem("digest:feedback-return:" + a.id);
       if (returned) {
         sessionStorage.removeItem("digest:feedback-return:" + a.id);
@@ -1012,20 +1439,24 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         } catch {}
       }
     }
+    function overviewJump(jump) {
+      feedbackArea.querySelector(".feedback-overview")?.append(jump);
+    }
     if (activeAttempt) await displayAttempt();
     if (list.length) {
       const history = fold(tr("历史作答与重新练习"));
       history.append(
-        link(tr("独立重答这道题（不展示旧答案）"), taskURL(id, "new")),
+        link(tr("独立重答这道题（不展示旧答案）"), taskURL(id, "new"), "quiet-link", "repeat"),
       );
       for (const a of list)
         row(
           history,
           new Date(a.submittedAt).toLocaleString(getLocale()),
           taskURL(id, a.id),
-          statusLabel(a),
-        );
-      root.append(history);
+          null,
+          statusBadge(a),
+        ).classList.toggle("is-current", a.id === activeAttempt?.id);
+      aside.append(history);
     }
     const edit = fold(tr("编辑任务")),
       form = el("form", "training-form"),
@@ -1065,10 +1496,10 @@ export async function mountTraining(container, db, isCurrent = () => true) {
               location.assign(courseURL(course.id));
             },
           ),
-        "quiet-link",
+        "quiet-link is-danger",
       ),
     );
-    root.append(edit);
+    aside.append(edit);
   }
   try {
     const saved = JSON.parse(
@@ -1079,34 +1510,13 @@ export async function mountTraining(container, db, isCurrent = () => true) {
       requestAnimationFrame(() => window.scrollTo(0, saved.y));
     }
   } catch {}
-  // Editorial sections: clear boundaries between the next action and the archive.
-  if (path === "/app" || path === "/app/courses") {
-    for (const n of [...root.childNodes]) if (n.nodeType === 3) n.remove();
-    const children = [...root.children];
-    let group = null,
-      index = 0;
-    for (const child of children) {
-      if (child.tagName === "H2") {
-        group = el("section", "desk-section");
-        group.dataset.section = index++;
-        child.before(group);
-        group.append(child);
-      } else if (group) group.append(child);
-    }
-    if (path === "/app/courses")
-      for (const section of root.querySelectorAll(".desk-section"))
-        if (section.dataset.section !== "1") section.remove();
-    if (courses.length) root.append(root.querySelector(".course-create"));
-  }
   if (path === "/app" || path.startsWith("/app/courses/")) {
-    const panel = await mountGapPanel(root, repo, {
+    const slot = root.querySelector(".gap-slot");
+    await mountGapPanel(slot, repo, {
       courseId: path.startsWith("/app/courses/") ? id : undefined,
       onlyNeeds: true,
       register: (fn) => loopCleanups.push(fn),
     });
-    if (panel && path === "/app")
-      root.querySelector(".desk-section")?.after(panel);
-    else if (panel) root.querySelector(".page-subtitle")?.after(panel);
   }
   return () => {
     loopCleanups.forEach((fn) => fn());
