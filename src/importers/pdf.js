@@ -42,7 +42,8 @@ export async function extractPdfFile(file) {
   }
   const rawContent = pages.join('\n\n').trim();
   await pdf.destroy();
-  if (rawContent.replace(/\s/g, '').length < 20) throw new Error(PDF_NO_TEXT_MESSAGE);
+  // Scanned PDFs have no text layer; the caller can offer local OCR for these pages.
+  if (rawContent.replace(/\s/g, '').length < 20) throw Object.assign(new Error(PDF_NO_TEXT_MESSAGE), { code: 'no_text', pageCount });
   return {
     title: file.name.replace(/\.pdf$/i, ''),
     sourceType: 'pdf',

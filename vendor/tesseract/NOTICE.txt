@@ -1,0 +1,3 @@
+tesseract.js 7.0.0 — Apache-2.0 — https://github.com/naptha/tesseract.js
+tesseract.js-core 7.0.0 — Apache-2.0 — https://github.com/naptha/tesseract.js-core
+Language data (chi_sim, eng; 4.0.0_best_int) via @tesseract.js-data — Apache-2.0 models from tesseract-ocr/tessdata_best

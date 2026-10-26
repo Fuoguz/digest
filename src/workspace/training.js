@@ -6,6 +6,7 @@ import {
   l,
 } from "./learning-loop.js";
 import { LoopRepository } from "../data/loop-repository.js";
+import { quickPractice } from "./quick-practice.js";
 import { rescueRetrieval } from "../ai/retrieval-rescue.js";
 import { suggestTasks } from "../ai/task-suggestions.js";
 import { t as tr } from "./i18n.js";
@@ -31,6 +32,14 @@ import {
   generateFeedback,
 } from "../domain/training.js";
 import { createTransport } from "../ai/proxy-transport.js";
+import {
+  startJob,
+  getJob,
+  runningJob,
+  cancelJob,
+  settleJob,
+  watchJob,
+} from "./jobs.js";
 import { getSetting, putSetting } from "../data/db.js";
 
 function field(form, title, value = "", multiline = false, required = true) {
@@ -198,7 +207,6 @@ export async function mountTraining(container, db, isCurrent = () => true) {
   if (!isCurrent()) return () => {};
   let disposed = false,
     controller,
-    requestId,
     activeAttempt,
     draftQueue = Promise.resolve();
   const current = () => !disposed && isCurrent();
@@ -354,31 +362,19 @@ export async function mountTraining(container, db, isCurrent = () => true) {
           link(l("查看待检验问题", "See what needs a recheck"), "#needs-recheck", "primary-action"),
         );
         next.querySelector("a").removeAttribute("data-route");
-      } else if (!courses.length) {
-        next.classList.add("is-onboarding");
-        next.append(
-          el("p", "next-step-label", tr("从一个真实问题开始")),
-          nextTitle(tr("读过了，试着解释清楚。")),
-          el("p", "next-step-detail", tr("添加课程材料，写下自己的答案，再用原文检查理解。")),
-        );
-        const steps = el("ol", "study-steps");
-        for (const text of [tr("添加材料"), tr("独立作答"), tr("核查与修订")])
-          steps.append(el("li", "", text));
-        next.append(steps);
-      } else {
-        next.classList.add("is-calm");
-        next.append(
-          el("p", "next-step-label", l("当前没有待办", "Nothing pending")),
-          nextTitle(
-            l(
-              "可以在课程里提出一个新问题。",
-              "Ask a new question in one of your courses.",
-            ),
-          ),
-          link(l("打开课程", "Open courses"), "/app/courses", "secondary-action"),
-        );
       }
-      header.after(next);
+      // The fastest way in is one question; it replaces onboarding and "nothing pending".
+      const quick = quickPractice({
+        repo,
+        db,
+        docs,
+        compact: !!next.childNodes.length,
+        register: (fn) => loopCleanups.push(fn),
+      });
+      if (next.childNodes.length) {
+        header.after(next);
+        next.after(quick);
+      } else header.after(quick);
       const main = el("div", "desk-main"),
         side = el("div", "desk-side"),
         layout = el("div", "desk-layout");
@@ -464,7 +460,7 @@ export async function mountTraining(container, db, isCurrent = () => true) {
       if (!courses.length) {
         // First visit: the setup form sits right under the onboarding card;
         // empty archive sections would only add noise.
-        next.after(create);
+        quick.after(create);
         coursesSection.remove();
         if (!recentAttempts.length) attemptsSection.remove();
         if (!unfinished.length) tasksSection.remove();
@@ -657,9 +653,30 @@ export async function mountTraining(container, db, isCurrent = () => true) {
           );
           for (const candidate of candidates) {
             const card = el("article", "suggested-task");
+            const practise = button(
+              l("直接练这道", "Practise this now"),
+              async () => {
+                practise.disabled = true;
+                try {
+                  const created = await repo.saveTask({
+                    courseId: id,
+                    title: candidate.title,
+                    prompt: candidate.prompt,
+                    rubric: "",
+                    documentIds: candidate.documentIds,
+                  });
+                  location.assign(taskURL(created.id) + "?start=1");
+                } catch (e) {
+                  message(suggestStatus, e.message, true);
+                  practise.disabled = false;
+                }
+              },
+              "primary-action btn-sm",
+            );
             card.append(
               el("h3", "", candidate.title),
               el("p", "", candidate.prompt),
+              practise,
               button(
                 l("使用这道题", "Use this question"),
                 () => {
@@ -907,90 +924,118 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         history.replaceState({}, "", taskURL(id, activeAttempt.id));
         form.remove();
         await displayAttempt();
-        await runFeedback();
+        runFeedback();
       });
       main.append(form);
     }
     main.append(feedbackArea);
-    async function runFeedback() {
-      if (controller) return;
-      const ctrl = new AbortController();
-      controller = ctrl;
-      requestId = makeId("feedback");
-      const runId = requestId,
-        attemptId = activeAttempt.id;
-      if (retryButton) retryButton.hidden = true;
-      const cancel = button(
-        tr("取消反馈"),
-        () => {
-          ctrl.abort();
-          repo
-            .cancel(attemptId, runId)
-            .catch((e) => message(status, e.message, true));
+    // Feedback runs as an app-level job: leaving this page does not cancel it.
+    const feedbackKey = (attemptId) => "feedback:" + attemptId;
+    let cancelFeedback = null,
+      unwatchFeedback = null;
+    function runFeedback() {
+      const attempt = activeAttempt;
+      if (runningJob(feedbackKey(attempt.id))) return;
+      const language = outputLanguage.value;
+      watchFeedback(attempt.id);
+      startJob(
+        feedbackKey(attempt.id),
+        {
+          kind: "feedback",
+          label: l("反馈 · ", "Feedback · ") + task.title,
+          href: taskURL(id, attempt.id),
         },
-        "secondary-action btn-sm",
+        async (signal, update) => {
+          const runId = makeId("feedback");
+          update({ phase: "material" });
+          try {
+            const freshDocs = await repo.list("documents");
+            let context = await prepareFeedbackContext(
+              attempt.taskSnapshot,
+              course,
+              freshDocs,
+              attempt.userAnswer,
+            );
+            context.outputLanguage = language;
+            await repo.begin(attempt.id, runId);
+            context = await rescueRetrieval(
+              context,
+              createTransport("digest"),
+              signal,
+            );
+            update({ phase: "model" });
+            const payload = await generateFeedback(
+              context,
+              createTransport("digest"),
+              runId,
+              signal,
+            );
+            signal.throwIfAborted();
+            await repo.commit(attempt.id, runId, context, payload, signal);
+            return { attemptId: attempt.id };
+          } catch (e) {
+            await repo.cancel(attempt.id, runId).catch(() => {});
+            throw e;
+          }
+        },
       );
-      statusRow.append(cancel);
-      message(
-        status,
-        l(
-          "答案已保存。正在核对相关材料，可以取消。",
-          "Answer saved. Checking relevant material; you can cancel.",
-        ),
-        false,
-        true,
+    }
+    function watchFeedback(attemptId) {
+      unwatchFeedback?.();
+      unwatchFeedback = watchJob(feedbackKey(attemptId), (job) =>
+        showFeedbackJob(job, attemptId),
       );
-      try {
-        const freshDocs = await repo.list("documents");
-        let context = await prepareFeedbackContext(
-          activeAttempt.taskSnapshot,
-          course,
-          freshDocs,
-          activeAttempt.userAnswer,
-        );
-        context.outputLanguage = outputLanguage.value;
-        await repo.begin(attemptId, runId);
-        context = await rescueRetrieval(
-          context,
-          createTransport("digest"),
-          ctrl.signal,
-        );
+      loopCleanups.push(() => unwatchFeedback?.());
+      const job = getJob(feedbackKey(attemptId));
+      if (job && job.status !== "idle") showFeedbackJob(job, attemptId);
+    }
+    async function showFeedbackJob(job, attemptId) {
+      if (!current() || activeAttempt?.id !== attemptId) return;
+      if (job.status === "running") {
+        if (retryButton) retryButton.hidden = true;
+        if (!cancelFeedback?.isConnected) {
+          cancelFeedback = button(
+            tr("取消反馈"),
+            () => cancelJob(feedbackKey(attemptId)),
+            "secondary-action btn-sm",
+          );
+          statusRow.append(cancelFeedback);
+        }
         message(
           status,
-          l(
-            "正在分析你的回答，整理最重要的问题…",
-            "Analyzing your answer and prioritizing the important issues…",
-          ),
+          job.progress?.phase === "model"
+            ? l(
+                "正在分析你的回答，整理最重要的问题…可以先去别处，完成后会提醒你。",
+                "Analyzing your answer and prioritizing the important issues… You can leave; you'll be told when it's ready.",
+              )
+            : l(
+                "答案已保存。正在核对相关材料，可以取消。",
+                "Answer saved. Checking relevant material; you can cancel.",
+              ),
           false,
           true,
         );
-        const payload = await generateFeedback(
-          context,
-          createTransport("digest"),
-          runId,
-          ctrl.signal,
-        );
-        ctrl.signal.throwIfAborted();
-        await repo.commit(attemptId, runId, context, payload, ctrl.signal);
-        if (!current()) return;
+        return;
+      }
+      if (job.status === "idle") return;
+      settleJob(job.key);
+      cancelFeedback?.remove();
+      cancelFeedback = null;
+      if (job.status === "done") {
         activeAttempt = await repo.get("attempts", attemptId);
+        if (!current()) return;
         message(status, tr("反馈已保存。请核查依据后，用自己的话修订。"));
         await displayAttempt();
-      } catch (e) {
-        await repo.cancel(attemptId, runId).catch(() => {});
-        if (current())
-          message(
-            status,
-            e.name === "AbortError"
-              ? tr("已取消，首次答案与已有反馈保留。")
-              : e.message,
-            e.name !== "AbortError",
-          );
-      } finally {
-        cancel.remove();
-        if (retryButton?.isConnected) retryButton.hidden = false;
-        if (controller === ctrl) controller = null;
+        return;
       }
+      if (retryButton?.isConnected) retryButton.hidden = false;
+      message(
+        status,
+        job.status === "cancelled"
+          ? tr("已取消，首次答案与已有反馈保留。")
+          : job.error?.message || tr("反馈未完成，请重试。"),
+        job.status !== "cancelled",
+      );
     }
     function feedbackCard(item, index, kind, a, snapshots) {
       const card = el(
@@ -1141,7 +1186,7 @@ export async function mountTraining(container, db, isCurrent = () => true) {
           ),
         );
         retryButton = button(tr("获取反馈 / 重试"), runFeedback, "primary-action");
-        if (controller) retryButton.hidden = true;
+        if (runningJob(feedbackKey(a.id))) retryButton.hidden = true;
         pending.append(retryButton);
         feedbackArea.append(pending);
       } else {
@@ -1206,10 +1251,33 @@ export async function mountTraining(container, db, isCurrent = () => true) {
             group.append(
               el("p", "reader-muted", tr("本次未识别出可说明的条目。")),
             );
+          // Lead with the one issue that matters most; the rest stay one click away.
+          let rest = group;
+          const collapse =
+            kind === "gap" ? items.length > 1 : f.gaps.length > 0 && items.length > 0;
           for (const [index, item] of items.entries()) {
             const { card, body } = feedbackCard(item, index, kind, a, snapshots);
             await appendEvidence(card, body, item, a, snapshots);
-            group.append(card);
+            if (kind === "gap" && index === 0) {
+              card.classList.add("is-key");
+              card.prepend(
+                el("p", "key-label", l("AI 认为最需要先改的一处", "What the AI would fix first")),
+              );
+            }
+            if (collapse && rest === group && (kind !== "gap" || index === 1)) {
+              rest = el("details", "more-items");
+              rest.append(
+                el(
+                  "summary",
+                  "",
+                  kind === "gap"
+                    ? l("还有 " + (items.length - 1) + " 个问题", (items.length - 1) + " more issue(s)")
+                    : l("展开 " + items.length + " 条", "Show " + items.length),
+                ),
+              );
+              group.append(rest);
+            }
+            rest.append(card);
           }
           feedbackArea.append(group);
         }
@@ -1442,7 +1510,25 @@ export async function mountTraining(container, db, isCurrent = () => true) {
     function overviewJump(jump) {
       feedbackArea.querySelector(".feedback-overview")?.append(jump);
     }
-    if (activeAttempt) await displayAttempt();
+    if (activeAttempt) {
+      await displayAttempt();
+      watchFeedback(activeAttempt.id);
+    }
+    // Hand-off from quick practice: start feedback for a brought-in answer, or focus the answer box.
+    const handoff = new URLSearchParams(location.search);
+    if (
+      handoff.get("run") === "feedback" &&
+      activeAttempt &&
+      !activeAttempt.feedbackId &&
+      !runningJob(feedbackKey(activeAttempt.id))
+    )
+      runFeedback();
+    if (handoff.get("start") === "1") answer?.focus();
+    if (handoff.has("run") || handoff.has("start")) {
+      handoff.delete("run");
+      handoff.delete("start");
+      history.replaceState({}, "", location.pathname + (handoff.size ? "?" + handoff : ""));
+    }
     if (list.length) {
       const history = fold(tr("历史作答与重新练习"));
       history.append(
@@ -1522,8 +1608,7 @@ export async function mountTraining(container, db, isCurrent = () => true) {
     loopCleanups.forEach((fn) => fn());
     unbindLanguage();
     disposed = true;
+    // Course task suggestions are page-bound; feedback jobs keep running.
     controller?.abort();
-    if (activeAttempt && requestId)
-      repo.cancel(activeAttempt.id, requestId).catch(() => {});
   };
 }

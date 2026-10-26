@@ -5,6 +5,8 @@ import { groupPageText, PDF_NO_TEXT_MESSAGE } from '../../src/importers/pdf.js';
 import { extractEpubFile, extractEpubBytes, decodeEntities, xhtmlToText, EPUB_ENCRYPTED_MESSAGE, EPUB_NO_TEXT_MESSAGE } from '../../src/importers/epub.js';
 import { buildZip, sampleEpubFiles } from '../fixtures/epub-fixture.mjs';
 import { createDocument, documentChapters } from '../../src/domain/documents.js';
+import { extractOfficeFile, LEGACY_OFFICE_MESSAGE } from '../../src/importers/office.js';
+import { docxFiles, pptxFiles } from '../fixtures/office-fixture.mjs';
 import { documentSnapshot } from '../../src/domain/evidence.js';
 
 test('Markdown import keeps readable content and source metadata', async () => {
@@ -107,6 +109,65 @@ test('EPUB structure survives into the document snapshot and is dropped once it 
   assert.ok(editedSnapshot.paragraphs.every((p) => p.heading === undefined && p.chapter === undefined));
   assert.deepEqual(documentChapters(edited, editedSnapshot.paragraphs.length), []);
   assert.deepEqual(documentChapters({ metadata: { chapters: [{ title: 'x', start: 0, end: 1 }] } }, 5), []);
+});
+
+test('Word import keeps heading styles, skips tracked deletions and builds chapters', async () => {
+  const files = docxFiles();
+  const doc = files.find((f) => f.name === 'word/document.xml');
+  doc.content = doc.content.replace('<w:p><w:r><w:t>被删除的旧句子</w:t></w:r></w:p>', '');
+  const result = await extractOfficeFile(new File([await buildZip(files)], 'lecture.docx'));
+  assert.equal(result.sourceType, 'docx');
+  assert.equal(result.title, '心理学导论讲义');
+  assert.deepEqual(result.paragraphs.map((p) => [p.text, p.heading ?? null, p.chapter]), [
+    ['第一章 认知失调', 1, 0],
+    ['当行为与态度不一致时，人会感到不适，并倾向于调整态度。', null, 0],
+    ['经典实验 报酬越少，态度改变越大。', null, 0],
+    ['1.1 实验设计', 2, 0],
+    ['组别', null, 0],
+    ['报酬', null, 0],
+    ['第二章 社会认同', 1, 1],
+    ['人们通过所属群体界定自我。', null, 1],
+  ]);
+  assert.doesNotMatch(result.rawContent, /修订中删掉的内容/);
+  assert.deepEqual(result.metadata.chapters.map((c) => [c.title, c.start, c.end]), [['第一章 认知失调', 0, 5], ['第二章 社会认同', 6, 7]]);
+  const snapshot = await documentSnapshot(createDocument(result));
+  assert.equal(snapshot.paragraphs[3].heading, 2);
+});
+
+test('PPT import follows slide order, marks titles and uses sections as chapters', async () => {
+  const result = await extractOfficeFile(new File([await buildZip(pptxFiles())], 'philosophy.pptx'));
+  assert.equal(result.sourceType, 'pptx');
+  assert.equal(result.title, 'philosophy');
+  assert.equal(result.metadata.slideCount, 3);
+  assert.deepEqual(result.paragraphs.map((p) => [p.text, p.heading ?? null]), [
+    ['什么是现象学', 2],
+    ['回到事情本身', null],
+    ['悬置自然态度', null],
+    ['意向性：意识总是关于某物的意识', null],
+    ['存在先于本质', 2],
+    ['人首先存在，然后通过选择界定自己', null],
+  ]);
+  assert.deepEqual(result.metadata.chapters, [
+    { title: '现象学基础', start: 0, end: 3 },
+    { title: '存在主义', start: 4, end: 5 },
+  ]);
+  const plain = await extractOfficeFile(new File([await buildZip(pptxFiles({ sections: false }))], 'plain.pptx'));
+  assert.equal(plain.metadata.chapters, undefined);
+});
+
+test('legacy .doc/.ppt and damaged Office files fail with clear messages', async () => {
+  await assert.rejects(() => extractOfficeFile(new File(['x'], 'old.doc')), (e) => e.message === LEGACY_OFFICE_MESSAGE);
+  await assert.rejects(() => extractOfficeFile(new File(['x'], 'old.ppt')), (e) => e.message === LEGACY_OFFICE_MESSAGE);
+  await assert.rejects(() => extractOfficeFile(new File([new TextEncoder().encode('not a zip')], 'broken.docx')), /无法读取/);
+});
+
+test('OCR text normalisation joins CJK without spaces and keeps page numbers', async () => {
+  const { normalizeOcrText, pageBlocks, assembleOcr } = await import('../../src/importers/ocr.js');
+  assert.equal(normalizeOcrText('认 知 失 调\n理 论 很 重 要'), '认知失调理论很重要');
+  assert.equal(normalizeOcrText('Cognitive disso-\nnance theory\nmatters'), 'Cognitive dissonance theory matters');
+  const blocks = [...pageBlocks({ blocks: [{ paragraphs: [{ text: '第 一 段' }, { text: 'x' }] }] }, 3), ...pageBlocks({ text: '第 二 段\n\n第 三 段' }, 4)];
+  const { paragraphs } = assembleOcr(blocks);
+  assert.deepEqual(paragraphs.map((p) => [p.text, p.pageNumber]), [['第一段', 3], ['第二段', 4], ['第三段', 4]]);
 });
 
 test('XHTML conversion decodes entities without inventing text', () => {

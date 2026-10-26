@@ -41,7 +41,7 @@ export function markdownBlocks(markdown) {
 
 export async function extractTextFile(file) {
   const extension = fileExtension(file.name);
-  if (!['txt', ...MARKDOWN_EXTENSIONS].includes(extension)) throw new Error(tr('仅支持 PDF、EPUB、TXT 和 Markdown 文件'));
+  if (!['txt', ...MARKDOWN_EXTENSIONS].includes(extension)) throw new Error(tr('仅支持 PDF、Word、PPT、EPUB、TXT 和 Markdown 文件'));
   const original = await file.text();
   const markdown = MARKDOWN_EXTENSIONS.has(extension);
   const blocks = markdown ? markdownBlocks(original) : null;

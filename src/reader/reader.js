@@ -21,6 +21,14 @@ import { AnalysisSession } from "../ai/analysis-session.js";
 import { openAIConfiguration } from "./config-dialog.js";
 import { message, editName, link } from "../workspace/components.js";
 import { icon } from "../workspace/icons.js";
+import {
+  startJob,
+  getJob,
+  runningJob,
+  cancelJob,
+  settleJob,
+  watchJob,
+} from "../workspace/jobs.js";
 
 const MAX_CHUNKS = 12;
 const l = (zh, en) => (getLocale() === "en" ? en : zh);
@@ -75,7 +83,6 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   } catch {
     partial = null;
   }
-  const session = new AnalysisSession(repository);
   const prefs = loadPrefs();
   let disposed = false,
     status = saved.result
@@ -89,7 +96,6 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     progress = null,
     activeClaim = null,
     selectedAnchor = null,
-    runNumber = 0,
     kindFilter = "all",
     records = [],
     currentIndex = 0,
@@ -266,6 +272,19 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   );
   if (item.metadata?.originalFileName)
     article.append(el("p", "source-filename", item.metadata.originalFileName));
+  if (item.metadata?.ocr)
+    article.append(
+      el(
+        "p",
+        "scope-notice ocr-note",
+        l(
+          "这份材料的文字由本地识别（OCR）得到，可能有识别错误；核对引文时请对照原件第 ",
+          "This text was recognised locally (OCR) and may contain errors. When checking quotes, compare with pages ",
+        ) +
+          item.metadata.ocr.pages.join("–") +
+          l(" 页。", " of the original."),
+      ),
+    );
   const paragraphNodes = new Map();
   const wrappers = [];
   for (const paragraph of snapshot.paragraphs) {
@@ -645,6 +664,10 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       });
   }
   requestAnimationFrame(updatePosition);
+  const readingKey = "reading:" + item.id;
+  const unwatchReading = watchJob(readingKey, onReadingJob);
+  const runningReading = getJob(readingKey);
+  if (runningReading && runningReading.status !== "idle") onReadingJob(runningReading);
 
   function setTab(tab) {
     root.dataset.tab = tab;
@@ -902,14 +925,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     }
     box.append(
       el("p", "reader-muted", l("可以继续阅读原文；每完成一个分段，判断会陆续出现在下方，原文旁也会出现标记。", "Keep reading; notes and source markers appear as each section finishes.")),
-      button(tr("取消分析"), () => {
-        runNumber++;
-        session.cancel();
-        status = saved.result ? saved.result.status : "idle";
-        errorMessage = tr("已取消分析。");
-        progress = null;
-        renderAI();
-      }, "secondary-action btn-sm"),
+      button(tr("取消分析"), () => cancelJob(readingKey), "secondary-action btn-sm"),
     );
     return box;
   }
@@ -1222,8 +1238,9 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     aiScroll.scrollTop = keep;
     updatePosition();
   }
-  async function analyze() {
-    if (disposed || status === "analyzing" || !snapshot.source) return;
+  // AI reading runs as an app-level job, so leaving the Reader does not cancel it.
+  function analyze() {
+    if (disposed || runningJob(readingKey) || !snapshot.source) return;
     setTab("ai");
     const config = readDeveloperConfig();
     if (!useProxy() && (!config.endpoint || !config.model || !config.key)) {
@@ -1235,58 +1252,84 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       renderAI();
       return;
     }
-    const run = ++runNumber;
+    const problem = scopeProblem();
+    if (problem) {
+      errorCode = "";
+      errorMessage = problem;
+      status = "failed";
+      renderAI();
+      return;
+    }
+    const scope = currentScope();
+    const lang = language.value;
     errorMessage = "";
     errorCode = "";
     progress = null;
     progressText = "";
-    status = "analyzing";
     new TrainingRepository(db)
       .track("reading_started", { documentId: item.id })
       .catch(() => {});
-    renderAI();
+    startJob(
+      readingKey,
+      {
+        kind: "reading",
+        label:
+          l("研读 · ", "Reading · ") +
+          short(item.title, 24) +
+          (scope.label ? " · " + short(scope.label, 20) : ""),
+        href: "/app/reader/" + encodeURIComponent(item.id),
+      },
+      async (signal, update) => {
+        const session = new AnalysisSession(repository);
+        signal.addEventListener("abort", () => session.cancel(), { once: true });
+        const service = new DigestAIService(createTransport("digest"));
+        service.options = {
+          start: scope.start,
+          end: scope.end,
+          label: scope.label,
+          language: lang,
+          load: () => getSetting(checkpointKey, db),
+          save: async (value, requestId, s) => {
+            await repository.saveCheckpoint(snapshot, checkpointKey, value, requestId, s);
+            update({ partial: value, firstResult: true });
+          },
+          progress: (done, totalChunks, synthesizing) =>
+            update({ done, total: totalChunks, synth: !!synthesizing }),
+        };
+        signal.throwIfAborted();
+        return { payload: await session.run(snapshot, service) };
+      },
+    );
     aiScroll.scrollTop = 0;
-    try {
-      const problem = scopeProblem();
-      if (problem) throw new Error(problem);
-      const scope = currentScope();
-      const service = new DigestAIService(createTransport("digest"));
-      service.options = {
-        start: scope.start,
-        end: scope.end,
-        label: scope.label,
-        language: language.value,
-        load: () => getSetting(checkpointKey, db),
-        save: async (value, requestId, signal) => {
-          await repository.saveCheckpoint(
-            snapshot,
-            checkpointKey,
-            value,
-            requestId,
-            signal,
-          );
-          partial = value;
-          renderAI();
-        },
-        progress: (done, totalChunks, synthesizing) => {
-          progress = { done, total: totalChunks, synth: !!synthesizing };
-          progressText = synthesizing
-            ? tr("分段已保存，正在整合整体概览…")
-            : tr("正在核查分段：") +
-              Math.min(done + 1, totalChunks) +
-              " / " +
-              totalChunks +
-              tr(" · 已完成：") +
-              done;
-          renderAI();
-        },
-      };
-      const payload = await session.run(snapshot, service);
+  }
+  function onReadingJob(job) {
+    if (disposed) return;
+    if (job.status === "running") {
+      status = "analyzing";
+      const p = job.progress || {};
+      if (p.partial) partial = p.partial;
+      if (p.total) {
+        progress = { done: p.done, total: p.total, synth: p.synth };
+        progressText = p.synth
+          ? tr("分段已保存，正在整合整体概览…")
+          : tr("正在核查分段：") +
+            Math.min(p.done + 1, p.total) +
+            " / " +
+            p.total +
+            tr(" · 已完成：") +
+            p.done;
+      }
+      renderAI();
+      return;
+    }
+    if (job.status === "idle") return;
+    settleJob(readingKey);
+    progress = null;
+    if (job.status === "done") {
+      const payload = job.result.payload;
       partial = null;
-      if (disposed || run !== runNumber) return;
       saved = { ...payload, stale: false };
       status = payload.result.status;
-      progress = null;
       activeClaim = null;
       selectedAnchor = null;
       kindFilter = "all";
@@ -1303,16 +1346,13 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
         history.replaceState({}, "", location.pathname + (params.size ? "?" + params : ""));
       }
       renderRecords().catch(() => {});
-    } catch (error) {
-      if (disposed || run !== runNumber) return;
-      progress = null;
-      if (error.name === "AbortError") {
-        status = saved.result?.status || "idle";
-      } else {
-        status = "failed";
-        errorMessage = tr(error.message) || tr("分析失败，请稍后重试。");
-        errorCode = error.code;
-      }
+    } else if (job.status === "cancelled") {
+      status = saved.result ? saved.result.status : "idle";
+      errorMessage = tr("已取消分析。");
+    } else {
+      status = "failed";
+      errorMessage = tr(job.error?.message) || tr("分析失败，请稍后重试。");
+      errorCode = job.error?.code || "";
     }
     renderAI();
   }
@@ -1455,8 +1495,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   document.addEventListener("click", onClick);
   return () => {
     disposed = true;
-    runNumber++;
-    session.cancel();
+    unwatchReading();
     if (positionFrame) cancelAnimationFrame(positionFrame);
     document.removeEventListener("keydown", onKey);
     document.removeEventListener("click", onClick);

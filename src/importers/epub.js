@@ -74,7 +74,7 @@ async function inflate(entry) {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-async function readText(entries, name) {
+export async function readZipText(entries, name) {
   const entry = entries.get(name);
   if (!entry) return null;
   return new TextDecoder().decode(await inflate(entry));
@@ -176,7 +176,7 @@ async function tocLabels(entries, opf, manifest, base) {
   const nav = items.find((item) => /\bnav\b/.test(item.properties || ""));
   if (nav) {
     const navPath = resolvePath(base, nav.href);
-    const xhtml = (await readText(entries, navPath)) || "";
+    const xhtml = (await readZipText(entries, navPath)) || "";
     const toc =
       /<nav\b[^>]*epub:type\s*=\s*["'][^"']*\btoc\b[^"']*["'][^>]*>([\s\S]*?)<\/nav>/i.exec(xhtml)?.[1] ??
       /<nav\b[^>]*>([\s\S]*?)<\/nav>/i.exec(xhtml)?.[1] ??
@@ -192,7 +192,7 @@ async function tocLabels(entries, opf, manifest, base) {
     items.find((item) => /application\/x-dtbncx\+xml/i.test(item["media-type"] || ""));
   if (ncx) {
     const ncxPath = resolvePath(base, ncx.href);
-    const xml = (await readText(entries, ncxPath)) || "";
+    const xml = (await readZipText(entries, ncxPath)) || "";
     for (const match of xml.matchAll(/<navPoint\b[\s\S]*?<text>([\s\S]*?)<\/text>[\s\S]*?<content\b([^>]*)>/gi)) {
       const src = attributes(match[2]).src;
       if (src) add(ncxPath, src, plain(match[1]));
@@ -203,12 +203,12 @@ async function tocLabels(entries, opf, manifest, base) {
 
 export async function extractEpubBytes(bytes, fileName = "book.epub") {
   const entries = readZipEntries(bytes);
-  if (entries.has("META-INF/rights.xml") || isEncrypted(await readText(entries, "META-INF/encryption.xml")))
+  if (entries.has("META-INF/rights.xml") || isEncrypted(await readZipText(entries, "META-INF/encryption.xml")))
     throw new Error(EPUB_ENCRYPTED_MESSAGE);
-  const container = await readText(entries, "META-INF/container.xml");
+  const container = await readZipText(entries, "META-INF/container.xml");
   const rootTag = container && /<rootfile\b[^>]*>/i.exec(container)?.[0];
   const opfPath = rootTag && attributes(rootTag)["full-path"];
-  const opf = opfPath && (await readText(entries, opfPath));
+  const opf = opfPath && (await readZipText(entries, opfPath));
   if (!opf) throw new Error(INVALID_MESSAGE);
   const base = opfPath.includes("/") ? opfPath.slice(0, opfPath.lastIndexOf("/")) : "";
   const manifest = new Map();
@@ -224,7 +224,7 @@ export async function extractEpubBytes(bytes, fileName = "book.epub") {
     if (!item || /\bnav\b/.test(item.properties || "")) continue;
     if (!/x?html/i.test(item["media-type"] || "")) continue;
     const path = resolvePath(base, item.href);
-    const xhtml = await readText(entries, path);
+    const xhtml = await readZipText(entries, path);
     const chapterBlocks = xhtml ? xhtmlToBlocks(xhtml) : [];
     if (!chapterBlocks.length) continue;
     const start = blocks.length;

@@ -17,6 +17,14 @@ import { needsRecheck, revisionDiff } from "../domain/gaps.js";
 import { generateChallenge, generateRetest } from "../ai/learning-loop.js";
 import { rescueRetrieval } from "../ai/retrieval-rescue.js";
 import { createTransport } from "../ai/proxy-transport.js";
+import {
+  startJob,
+  getJob,
+  runningJob,
+  cancelJob,
+  settleJob,
+  watchJob,
+} from "./jobs.js";
 import { makeId } from "../domain/documents.js";
 export const l = (zh, en) => (getLocale() === "en" ? en : zh);
 export const gapLabel = (status) =>
@@ -301,89 +309,119 @@ export async function mountGapPanel(
     const actions = el("div", "gap-actions");
     card.append(status, actions);
     if (a?.revision.length) {
-      let ctrl;
-      register(() => ctrl?.abort());
+      // Preparing a challenge is an app-level job; leaving the page does not cancel it.
+      const key = "challenge:" + g.id;
+      let cancel = null;
       const next = button(
         l("立即换题检验", "Try a different challenge"),
-        async () => {
-          if (ctrl) return;
-          ctrl = new AbortController();
-          const signal = ctrl.signal,
-            rid = makeId("challenge");
-          next.disabled = true;
-          const cancel = button(
-            l("取消准备", "Cancel preparation"),
-            () => ctrl?.abort(),
-            "secondary-action",
+        () => {
+          if (runningJob(key)) return;
+          startJob(
+            key,
+            {
+              kind: "challenge",
+              label: l("换题检验 · ", "Challenge · ") + g.title,
+              href: "/app/gaps/" + encodeURIComponent(g.id),
+            },
+            async (signal) => {
+              const tasks = await repo.list("tasks"),
+                attempts = await repo.list("attempts");
+              const existing = tasks.find(
+                (t) =>
+                  t.targetGapId === g.id &&
+                  !attempts.some((a) => a.taskId === t.id && a.retestId),
+              );
+              if (existing) return { href: taskUrl(existing.id) };
+              const rid = makeId("challenge");
+              try {
+                await repo.beginGap(g.id, rid);
+                const course = await repo.get("courses", g.courseId),
+                  feedback = await repo.get("feedback", g.feedbackId);
+                let context = await prepareFeedbackContext(
+                  a.taskSnapshot,
+                  course,
+                  await repo.list("documents"),
+                  a.userAnswer,
+                );
+                context.outputLanguage = feedback.outputLanguage || getLocale();
+                const transport = createTransport("digest");
+                context = await rescueRetrieval(context, transport, signal);
+                const candidate = await generateChallenge(
+                  context,
+                  g,
+                  a,
+                  feedback,
+                  transport,
+                  signal,
+                );
+                signal.throwIfAborted();
+                const task = await repo.commitChallenge(
+                  g.id,
+                  rid,
+                  context,
+                  candidate,
+                  signal,
+                );
+                return { href: taskUrl(task.id) };
+              } finally {
+                await repo.cancelGap(g.id, rid).catch(() => {});
+              }
+            },
           );
-          actions.append(cancel);
-          try {
-            const tasks = await repo.list("tasks"),
-              attempts = await repo.list("attempts");
-            const existing = tasks.find(
-              (t) =>
-                t.targetGapId === g.id &&
-                !attempts.some((a) => a.taskId === t.id && a.retestId),
-            );
-            if (existing) {
-              location.assign(taskUrl(existing.id));
-              return;
-            }
-            await repo.beginGap(g.id, rid);
-            message(
-              status,
-              l("正在准备新的检验任务…", "Preparing a new challenge…"),
-              false,
-              true,
-            );
-            const course = await repo.get("courses", g.courseId),
-              feedback = await repo.get("feedback", g.feedbackId);
-            let context = await prepareFeedbackContext(
-              a.taskSnapshot,
-              course,
-              await repo.list("documents"),
-              a.userAnswer,
-            );
-            context.outputLanguage = feedback.outputLanguage || getLocale();
-            const transport = createTransport("digest");
-            context = await rescueRetrieval(context, transport, signal);
-            const candidate = await generateChallenge(
-              context,
-              g,
-              a,
-              feedback,
-              transport,
-              signal,
-            );
-            signal.throwIfAborted();
-            const task = await repo.commitChallenge(
-              g.id,
-              rid,
-              context,
-              candidate,
-              signal,
-            );
-            location.assign(taskUrl(task.id));
-          } catch (e) {
-            message(
-              status,
-              e.name === "AbortError"
-                ? l(
-                    "已取消，学习记录保留。",
-                    "Cancelled. Learning history is safe.",
-                  )
-                : e.message,
-              e.name !== "AbortError",
-            );
-          } finally {
-            await repo.cancelGap(g.id, rid).catch(() => {});
-            ctrl = null;
-            next.disabled = false;
-            cancel.remove();
-          }
         },
         "primary-action",
       );
+      let watchedRunning = false;
+      const show = (job) => {
+        if (job.status === "running") {
+          watchedRunning = true;
+          next.disabled = true;
+          if (!cancel?.isConnected) {
+            cancel = button(
+              l("取消准备", "Cancel preparation"),
+              () => cancelJob(key),
+              "secondary-action",
+            );
+            actions.append(cancel);
+          }
+          message(
+            status,
+            l(
+              "正在准备新的检验任务…可以先去别处，准备好后会提醒你。",
+              "Preparing a new challenge… You can leave; you'll be told when it's ready.",
+            ),
+            false,
+            true,
+          );
+          return;
+        }
+        if (job.status === "idle") return;
+        settleJob(key);
+        next.disabled = false;
+        cancel?.remove();
+        cancel = null;
+        if (job.status === "done") {
+          // Jump only if the user watched it finish here; otherwise offer the link.
+          if (watchedRunning) location.assign(job.result.href);
+          else {
+            message(status, l("新的检验任务已准备好。", "The new challenge is ready."));
+            status.append(link(l("开始作答", "Start answering"), job.result.href));
+          }
+          return;
+        }
+        message(
+          status,
+          job.status === "cancelled"
+            ? l("已取消，学习记录保留。", "Cancelled. Learning history is safe.")
+            : job.error?.message,
+          job.status !== "cancelled",
+        );
+      };
+      register(watchJob(key, show));
+      queueMicrotask(() => {
+        const job = getJob(key);
+        if (job && job.status !== "idle") show(job);
+      });
       actions.append(
         next,
         button(
@@ -592,8 +630,7 @@ export async function mountChallenge(
 ) {
   const repo = new LoopRepository(db),
     g = await repo.get("learningGaps", task.targetGapId);
-  let ctrl,
-    queue = Promise.resolve(),
+  let queue = Promise.resolve(),
     disposed = false;
   const childCleanups = [];
   const unbind = beforeLanguageChange(() => queue);
@@ -839,7 +876,7 @@ export async function mountChallenge(
         attempt = await repo.submit(task.id, input.value);
         history.replaceState({}, "", taskUrl(task.id, attempt.id));
         await render();
-        await run();
+        run();
       } catch (e) {
         message(status, e.message, true);
         submit.disabled = false;
@@ -847,81 +884,115 @@ export async function mountChallenge(
     });
     area.append(form);
   }
-  async function run() {
-    if (ctrl) return;
-    ctrl = new AbortController();
-    const local = ctrl,
-      rid = makeId("retest");
+  // The recheck is an app-level job; leaving the page does not cancel it.
+  const retestKey = () => "retest:" + attempt.id;
+  let cancelRetest = null,
+    unwatchRetest = null;
+  function run() {
+    const current = attempt;
+    if (runningJob(retestKey())) return;
+    const lang = language.value;
+    watchRetest();
+    startJob(
+      retestKey(),
+      {
+        kind: "retest",
+        label: l("再测 · ", "Recheck · ") + task.title,
+        href: taskUrl(task.id, current.id),
+      },
+      async (signal) => {
+        const rid = makeId("retest");
+        try {
+          await repo.beginRetest(current.id, rid);
+          let context = await prepareFeedbackContext(
+            current.taskSnapshot,
+            course,
+            await repo.list("documents"),
+            current.userAnswer,
+          );
+          context.outputLanguage = lang;
+          const transport = createTransport("digest");
+          context = await rescueRetrieval(context, transport, signal);
+          const result = await generateRetest(
+            context,
+            g,
+            task.challenge,
+            transport,
+            rid,
+            signal,
+          );
+          await repo.commitRetest(current.id, rid, context, result, signal);
+          return { attemptId: current.id };
+        } finally {
+          await repo.cancel(current.id, rid).catch(() => {});
+          await repo.cancelGap(g.id, rid).catch(() => {});
+        }
+      },
+    );
+  }
+  function watchRetest() {
+    if (!attempt) return;
+    unwatchRetest?.();
+    unwatchRetest = watchJob(retestKey(), showRetest);
+    const job = getJob(retestKey());
+    if (job && job.status !== "idle") showRetest(job);
+  }
+  async function showRetest(job) {
+    if (disposed || !isCurrent()) return;
     const retry = area.querySelector(".pending-feedback .primary-action");
-    if (retry) retry.hidden = true;
+    if (job.status === "running") {
+      if (retry) retry.hidden = true;
+      if (!cancelRetest?.isConnected) {
+        cancelRetest = button(
+          l("取消再测", "Cancel recheck"),
+          () => cancelJob(job.key),
+          "secondary-action btn-sm",
+        );
+        statusRow.append(cancelRetest);
+      }
+      message(
+        status,
+        l(
+          "正在核对新答案是否仍有同一个问题…可以先去别处，完成后会提醒你。",
+          "Checking whether the same issue recurs… You can leave; you'll be told when it's ready.",
+        ),
+        false,
+        true,
+      );
+      return;
+    }
+    if (job.status === "idle") return;
+    settleJob(job.key);
+    cancelRetest?.remove();
+    cancelRetest = null;
+    if (job.status === "done") {
+      attempt = await repo.get("attempts", attempt.id);
+      if (disposed || !isCurrent()) return;
+      message(
+        status,
+        l(
+          "再测结果已保存。一次表现不代表长期掌握。",
+          "Recheck saved. One performance does not establish mastery.",
+        ),
+      );
+      await render();
+      return;
+    }
+    if (retry?.isConnected) retry.hidden = false;
     message(
       status,
-      l(
-        "正在核对新答案是否仍有同一个问题…",
-        "Checking whether the same issue recurs…",
-      ),
-      false,
-      true,
+      job.status === "cancelled"
+        ? l("已取消，回答已保存。", "Cancelled. Your answer is saved.")
+        : job.error?.message,
+      job.status !== "cancelled",
     );
-    const cancel = button(
-      l("取消再测", "Cancel recheck"),
-      () => local.abort(),
-      "secondary-action btn-sm",
-    );
-    statusRow.append(cancel);
-    try {
-      await repo.beginRetest(attempt.id, rid);
-      let context = await prepareFeedbackContext(
-        attempt.taskSnapshot,
-        course,
-        await repo.list("documents"),
-        attempt.userAnswer,
-      );
-      context.outputLanguage = language.value;
-      const transport = createTransport("digest");
-      context = await rescueRetrieval(context, transport, local.signal);
-      const result = await generateRetest(
-        context,
-        g,
-        task.challenge,
-        transport,
-        rid,
-        local.signal,
-      );
-      await repo.commitRetest(attempt.id, rid, context, result, local.signal);
-      attempt = await repo.get("attempts", attempt.id);
-      if (!disposed && isCurrent()) {
-        message(
-          status,
-          l(
-            "再测结果已保存。一次表现不代表长期掌握。",
-            "Recheck saved. One performance does not establish mastery.",
-          ),
-        );
-        await render();
-      }
-    } catch (e) {
-      if (!disposed)
-        message(
-          status,
-          e.name === "AbortError"
-            ? l("已取消，回答已保存。", "Cancelled. Your answer is saved.")
-            : e.message,
-          e.name !== "AbortError",
-        );
-    } finally {
-      await repo.cancel(attempt.id, rid).catch(() => {});
-      await repo.cancelGap(g.id, rid).catch(() => {});
-      cancel.remove();
-      if (retry?.isConnected) retry.hidden = false;
-      ctrl = null;
-    }
   }
   await render();
+  if (attempt && !attempt.retestId) watchRetest();
   restoreLoopScroll();
   return () => {
     disposed = true;
-    ctrl?.abort();
+    unwatchRetest?.();
     childCleanups.forEach((f) => f());
     unbind();
   };

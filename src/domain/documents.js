@@ -11,6 +11,8 @@ export const SOURCE_TYPES = Object.freeze({
   markdown: "Markdown",
   pdf: "PDF",
   epub: "EPUB",
+  docx: "Word",
+  pptx: "PPT",
   legacy: "Legacy",
 });
 

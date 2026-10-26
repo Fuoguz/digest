@@ -843,3 +843,49 @@ Object.assign(en, {
   "正文已修改：保存时将按普通文本重新分段，章节结构不会保留。":
     "Text edited: it will be split into plain paragraphs on save, and the chapter structure will not be kept.",
 });
+// Background AI jobs, Word/PPT import, timing record.
+Object.assign(en, {
+  进行中: "Running",
+  "进行中的 AI 任务": "Running AI tasks",
+  "可以继续浏览其他页面，完成后会提示你。": "You can keep browsing; you'll be told when it's done.",
+  关闭后台完成通知: "Turn off background notifications",
+  页面在后台时也通知我: "Notify me when the page is in the background",
+  "浏览器没有允许通知。": "The browser did not allow notifications.",
+  已完成: "done",
+  "未完成，已保存的内容不受影响": "did not finish; saved work is safe",
+  查看: "Open",
+  "反馈未完成，请重试。": "Feedback did not finish. Please retry.",
+  "AI 等待时间（本机记录）": "AI waiting time (this device)",
+  "还没有记录。使用反馈、研读或再测后，这里会显示实际等待时间。":
+    "Nothing recorded yet. Real waiting times appear here after you use feedback, reading or rechecks.",
+  类型: "Type",
+  次数: "Runs",
+  中位总时长: "Median total",
+  首个结果: "First result",
+  未完成: "Not finished",
+  反馈: "Feedback",
+  研读: "Reading",
+  再测: "Recheck",
+  换题检验: "Challenge",
+  "只记录时长与是否完成，不记录材料、答案或 AI 内容。":
+    "Only durations and outcomes are recorded, never material, answers or AI text.",
+  "文件中没有可导入的正文。": "The file has no text to import.",
+  "暂不支持旧版 .doc / .ppt 格式。请在 Word 或 PowerPoint 中另存为 .docx / .pptx 后再导入。":
+    "Legacy .doc / .ppt files are not supported. Save as .docx / .pptx in Word or PowerPoint, then import.",
+  "文件不能超过 50 MB": "Files cannot exceed 50 MB",
+  "无法读取这个 Word 文件，文件可能已损坏。": "This Word file could not be read. It may be damaged.",
+  "无法读取这个 PPT 文件，文件可能已损坏。": "This PowerPoint file could not be read. It may be damaged.",
+  未命名分节: "Untitled section",
+  "选择 PDF、Word、PPT、EPUB、TXT 或 Markdown 文件": "Choose a PDF, Word, PowerPoint, EPUB, TXT or Markdown file",
+  "拖入 PDF、Word、PPT、EPUB、TXT 或 Markdown": "Drop a PDF, Word, PowerPoint, EPUB, TXT or Markdown file",
+  "支持带文本层的 PDF、Word、PPT、无加密 EPUB、TXT、Markdown，也可以直接粘贴正文。":
+    "Supports PDFs with a text layer, Word, PowerPoint, DRM-free EPUB, TXT and Markdown, or paste the text directly.",
+  "仅支持 PDF、Word、PPT、EPUB、TXT 和 Markdown 文件": "Only PDF, Word, PowerPoint, EPUB, TXT and Markdown files are supported",
+});
+// Local OCR.
+Object.assign(en, {
+  "单次最多识别 ": "Up to ",
+  " 页，请缩小页码范围。": " pages per run. Narrow the page range.",
+  "没有识别出可用的文字。请确认扫描清晰，或换一个页码范围。":
+    "No usable text was recognised. Check the scan quality or try another page range.",
+});

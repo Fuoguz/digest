@@ -17,9 +17,8 @@ import {
   LEGACY_BACKUP_KEY,
   runLegacyMigration,
 } from "../data/legacy-migration.js";
-import { extractTextFile, fileExtension } from "../importers/text.js";
-import { extractPdfFile } from "../importers/pdf.js";
-import { extractEpubFile } from "../importers/epub.js";
+import { extractFile } from "../importers/index.js";
+import { ocrOffer } from "./ocr-offer.js";
 import { shellHTML, renderLibrary, renderComingSoon } from "./views.js";
 import { mountReader } from "../reader/reader.js";
 import { mountReview } from "./review.js";
@@ -30,6 +29,16 @@ import { el, button, link } from "./components.js";
 import { sourceSignature } from "../domain/evidence.js";
 import { atomic } from "../data/learning-repository.js";
 import { mountTraining } from "./training.js";
+import {
+  onJobs,
+  activeJobs,
+  cancelJob,
+  notifyDone,
+  canNotify,
+  notificationsOn,
+  enableNotifications,
+  disableNotifications,
+} from "./jobs.js";
 
 const root = document.querySelector("#app");
 const state = {
@@ -237,13 +246,85 @@ async function renderSafely() {
   }
 }
 
-function showToast(message, type = "") {
+function showToast(message, type = "", action = null) {
   const target = document.querySelector("#toast-root");
-  target.replaceChildren(el("div", "toast " + type, message));
+  const toast = el("div", "toast " + type, message);
+  if (action) toast.append(link(action.text, action.href, "toast-action"));
+  target.replaceChildren(toast);
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
     target.innerHTML = "";
-  }, 3600);
+  }, action ? 8000 : 3600);
+}
+
+// Running AI jobs: a top-bar indicator, and a toast when one ends on another page.
+const jobStates = new Map();
+function renderJobIndicator() {
+  const box = document.querySelector("#job-indicator");
+  if (!box) return;
+  const running = activeJobs();
+  box.hidden = !running.length;
+  if (!running.length) {
+    box.replaceChildren();
+    return;
+  }
+  const details = el("details", "job-menu");
+  const summary = el("summary", "job-summary");
+  summary.append(
+    el("span", "spinner"),
+    document.createTextNode(tr("进行中") + " " + running.length),
+  );
+  summary.setAttribute("aria-label", tr("进行中的 AI 任务") + " " + running.length);
+  const panel = el("div", "job-panel");
+  for (const job of running) {
+    const row = el("div", "job-row");
+    row.append(link(job.label, job.href, "job-link"));
+    row.append(button(tr("取消"), () => cancelJob(job.key), "quiet-link"));
+    panel.append(row);
+  }
+  panel.append(
+    el("p", "job-note", tr("可以继续浏览其他页面，完成后会提示你。")),
+  );
+  if (canNotify()) {
+    const on = notificationsOn();
+    panel.append(
+      button(
+        on ? tr("关闭后台完成通知") : tr("页面在后台时也通知我"),
+        async () => {
+          if (on) disableNotifications();
+          else if (!(await enableNotifications()))
+            showToast(tr("浏览器没有允许通知。"), "error");
+          renderJobIndicator();
+        },
+        "secondary-action btn-sm",
+      ),
+    );
+  }
+  details.append(summary, panel);
+  box.replaceChildren(details);
+}
+function onJobChange(job) {
+  const before = jobStates.get(job.key);
+  jobStates.set(job.key, job.status);
+  renderJobIndicator();
+  if (before !== "running" || ["running", "idle"].includes(job.status)) return;
+  // Local timing record only: kind, outcome and durations, never content.
+  new TrainingRepository(db)
+    .track("ai_job_timing", {
+      kind: job.kind,
+      status: job.status,
+      firstResultMs: job.timings.firstResult ?? null,
+      totalMs: job.timings.total ?? null,
+    })
+    .catch(() => {});
+  notifyDone(job);
+  const href = job.result?.href || job.href;
+  const here = href && new URL(href, location.origin).pathname === location.pathname;
+  if (here) return;
+  if (job.status === "done")
+    showToast(job.label + " · " + tr("已完成"), "", href ? { text: tr("查看"), href } : null);
+  else if (job.status === "failed")
+    showToast(job.label + " · " + tr("未完成，已保存的内容不受影响"), "error", href ? { text: tr("查看"), href } : null);
 }
 
 function openImportDialog(courseId = null) {
@@ -255,6 +336,7 @@ function openImportDialog(courseId = null) {
   form.reset();
   setFileStatus("");
   renderImportStructure(null);
+  document.querySelector("#import-ocr").replaceChildren();
   document.querySelector("#import-dialog").showModal();
   setTimeout(() => document.querySelector("#file-input").focus(), 50);
 }
@@ -312,14 +394,9 @@ async function processFile(file) {
   state.importData = null;
   document.querySelector("#import-submit").disabled = true;
   setFileStatus(tr("正在解析 ") + file.name + "…");
+  document.querySelector("#import-ocr").replaceChildren();
   try {
-    const extension = fileExtension(file.name);
-    const result =
-      extension === "pdf" || file.type === "application/pdf"
-        ? await extractPdfFile(file)
-        : extension === "epub" || file.type === "application/epub+zip"
-          ? await extractEpubFile(file)
-          : await extractTextFile(file);
+    const result = await extractFile(file);
     if (version !== importVersion) return;
     state.importData = result;
     document.querySelector("#import-title").value = result.title;
@@ -342,6 +419,23 @@ async function processFile(file) {
   } catch (error) {
     if (version !== importVersion) return;
     setFileStatus(error.message || tr("文件解析失败，请重试。"), "error");
+    // Scanned PDF: offer local OCR right here; the file never leaves the browser.
+    if (error.code === "no_text")
+      document.querySelector("#import-ocr").replaceChildren(
+        ocrOffer(file, error.pageCount, {
+          register: (fn) => document.querySelector("#import-dialog").addEventListener("close", fn, { once: true }),
+          onResult: (result) => {
+            if (version !== importVersion) return;
+            state.importData = result;
+            document.querySelector("#import-title").value = result.title;
+            document.querySelector("#import-content").value = result.rawContent;
+            setFileStatus(
+              file.name + " · " + result.rawContent.length.toLocaleString(getLocale()) + tr(" 字符 · ") + result.paragraphs.length + tr(" 个段落"),
+              "ready",
+            );
+          },
+        }),
+      );
   } finally {
     if (version === importVersion)
       document.querySelector("#import-submit").disabled = false;
@@ -570,6 +664,7 @@ async function init() {
     root.innerHTML = shellHTML(normalizedPath());
     bindEvents();
     installLanguageControl(document.querySelector(".topbar-actions"));
+    onJobs(onJobChange);
     document.addEventListener("digest-import", (event) =>
       openImportDialog(event.detail?.courseId),
     );

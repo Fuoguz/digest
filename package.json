@@ -10,13 +10,19 @@
     "test": "node --test --test-isolation=none tests/unit/*.test.mjs",
     "qa:browser": "node tests/browser/next-release.mjs",
     "qa:v03": "node tests/browser/v03.mjs",
-    "qa:epub": "node tests/browser/epub.mjs"
+    "qa:epub": "node tests/browser/epub.mjs",
+    "qa:quick": "node tests/browser/quick.mjs",
+    "qa:ocr": "node tests/browser/ocr.mjs",
+    "qa:real-timing": "node tests/real-timing.mjs"
   },
   "dependencies": {
     "d3": "^7.9.0",
-    "pdfjs-dist": "^5.4.149"
+    "pdfjs-dist": "^5.4.149",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
+    "@tesseract.js-data/chi_sim": "^1.0.0",
+    "@tesseract.js-data/eng": "^1.0.0",
     "fake-indexeddb": "^6.2.2",
     "playwright": "1.62.1"
   }

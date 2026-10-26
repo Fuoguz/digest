@@ -225,12 +225,47 @@ export async function mountSettings(container, db, isCurrent) {
       "primary-action",
     ),
   );
+  // Waiting times measured on this device (durations only), to judge real AI speed.
+  const timing = el("section", "settings-section");
+  const records = (await getAllRecords("activities", db)).filter((a) => a.type === "ai_job_timing");
+  timing.append(el("h2", "", tr("AI 等待时间（本机记录）")));
+  if (!records.length)
+    timing.append(el("p", "reader-muted", tr("还没有记录。使用反馈、研读或再测后，这里会显示实际等待时间。")));
+  else {
+    const median = (xs) => {
+      const s = xs.filter(Number.isFinite).sort((a, b) => a - b);
+      return s.length ? s[Math.floor((s.length - 1) / 2)] : null;
+    };
+    const seconds = (ms) => (ms === null ? "—" : (ms / 1000).toFixed(ms < 10000 ? 1 : 0) + " s");
+    const table = el("table", "timing-table");
+    const head = el("tr");
+    for (const h of [tr("类型"), tr("次数"), tr("中位总时长"), tr("首个结果"), tr("未完成")]) head.append(el("th", "", h));
+    table.append(head);
+    const names = { feedback: tr("反馈"), reading: tr("研读"), retest: tr("再测"), challenge: tr("换题检验") };
+    for (const kind of Object.keys(names)) {
+      const rows = records.filter((r) => r.kind === kind);
+      if (!rows.length) continue;
+      const done = rows.filter((r) => r.status === "done");
+      const tr_ = el("tr");
+      for (const v of [
+        names[kind],
+        String(rows.length),
+        seconds(median(done.map((r) => r.totalMs))),
+        seconds(median(done.map((r) => r.firstResultMs))),
+        String(rows.length - done.length),
+      ])
+        tr_.append(el("td", "", v));
+      table.append(tr_);
+    }
+    timing.append(table, el("p", "reader-muted", tr("只记录时长与是否完成，不记录材料、答案或 AI 内容。")));
+  }
   const advanced = el("details", "training-fold");
   advanced.append(el("summary", "", tr("开发者选项")), ai);
   root.append(
     feedback,
     ...(useProxy() ? [pilot] : []),
     data,
+    timing,
     advanced,
     el(
       "p",
