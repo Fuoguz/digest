@@ -105,6 +105,45 @@ export function createDocument(input = {}) {
   };
 }
 
+// Chapters from the top heading level, used when a source has headings but no table of contents.
+// Text before the first top heading belongs to the first chapter. Annotates paragraph.chapter.
+export function chaptersFromHeadings(paragraphs) {
+  const levels = paragraphs.map((p) => p.heading).filter(Boolean);
+  if (!levels.length) return [];
+  const top = Math.min(...levels);
+  const starts = paragraphs.filter((p) => p.heading === top);
+  if (starts.length < 2) return [];
+  const chapters = starts.map((p, i) => ({
+    title: p.text.slice(0, 120),
+    start: i === 0 ? 0 : p.paragraphIndex,
+    end: i + 1 < starts.length ? starts[i + 1].paragraphIndex - 1 : paragraphs.length - 1,
+  }));
+  chapters.forEach((chapter, i) => {
+    for (let n = chapter.start; n <= chapter.end; n++) paragraphs[n].chapter = i;
+  });
+  return chapters;
+}
+
+// Chapter ranges from an import (EPUB, Markdown), kept only if they still cover the current paragraphs.
+export function documentChapters(document, paragraphCount) {
+  const chapters = document?.metadata?.chapters;
+  if (!Array.isArray(chapters) || !chapters.length) return [];
+  let next = 0;
+  for (const chapter of chapters) {
+    if (
+      typeof chapter?.title !== "string" ||
+      chapter.start !== next ||
+      !Number.isInteger(chapter.end) ||
+      chapter.end < chapter.start
+    )
+      return [];
+    next = chapter.end + 1;
+  }
+  return next === paragraphCount
+    ? chapters.map(({ title, start, end }) => ({ title, start, end }))
+    : [];
+}
+
 export function matchesDocument(document, filters = {}) {
   const query = String(filters.query || "")
     .trim()

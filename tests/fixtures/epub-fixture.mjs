@@ -82,7 +82,7 @@ export function sampleEpubFiles({ encrypted = false } = {}) {
       name: "OEBPS/content.opf",
       content: `<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>传播学导论 &amp; 案例</dc:title></metadata><manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/><item media-type="application/xhtml+xml" href="text/ch2.xhtml" id="c2"/><item id="c1" href="text/ch1.xhtml" media-type="application/xhtml+xml"/><item id="img" href="images/cover.jpg" media-type="image/jpeg"/></manifest><spine><itemref idref="nav"/><itemref idref="c1"/><itemref idref="c2"/></spine></package>`,
     },
-    { name: "OEBPS/nav.xhtml", content: chapter("目录", "<nav><ol><li>不应出现的目录</li></ol></nav>") },
+    { name: "OEBPS/nav.xhtml", content: chapter("目录", '<nav epub:type="toc"><ol><li><a href="text/ch1.xhtml">目录：议程设置</a></li><li><a href="text/ch2.xhtml#s1">目录：框架理论</a></li></ol></nav>') },
     {
       name: "OEBPS/text/ch1.xhtml",
       content: chapter(

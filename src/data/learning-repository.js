@@ -50,12 +50,18 @@ export function atomic(db, names, mutate, signal) {
     }
   });
 }
+// Any saved reading of this exact source version may be used (e.g. an earlier chapter).
 function guard(data, snapshot, result) {
   const doc = data.documents.find((d) => d.id === snapshot.documentId);
   if (
     !doc ||
     sourceSignature(doc) !== snapshot.signature ||
-    doc.digestResultId !== result.id ||
+    !data.readingResults.some(
+      (r) =>
+        r.id === result.id &&
+        r.documentId === doc.id &&
+        r.sourceRevision === snapshot.sourceRevision,
+    ) ||
     result.sourceRevision !== snapshot.sourceRevision
   )
     throw new Error(tr("资料或研读版本已变化，请重新打开 Reader"));
@@ -71,7 +77,7 @@ export class LearningRepository {
   addReview(snapshot, result, question) {
     return atomic(
       this.db,
-      ["documents", "reviewCards", "evidenceAnchors"],
+      ["documents", "readingResults", "reviewCards", "evidenceAnchors"],
       (data, tx) => {
         guard(data, snapshot, result);
         const key = normalizeQuestion(question.question);
@@ -175,7 +181,7 @@ export class LearningRepository {
   confirmUnit(snapshot, result, claim, label) {
     return atomic(
       this.db,
-      ["documents", "knowledgeUnits", "activities", "evidenceAnchors"],
+      ["documents", "readingResults", "knowledgeUnits", "activities", "evidenceAnchors"],
       (data, tx) => {
         const doc = guard(data, snapshot, result);
         if (!label.trim()) throw new Error(tr("请输入知识点名称"));

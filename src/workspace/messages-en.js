@@ -834,3 +834,12 @@ Object.assign(en, {
   "支持带文本层的 PDF、无加密 EPUB、TXT、Markdown，也可以直接粘贴正文。":
     "Supports PDFs with a text layer, DRM-free EPUB, TXT and Markdown, or paste the text directly.",
 });
+// Structured (EPUB) import preview.
+Object.assign(en, {
+  "识别到 ": "Found ",
+  " 章 · ": " chapters · ",
+  " 个标题，将保留为可导航的章节结构。":
+    " headings. They will be kept as navigable structure.",
+  "正文已修改：保存时将按普通文本重新分段，章节结构不会保留。":
+    "Text edited: it will be split into plain paragraphs on save, and the chapter structure will not be kept.",
+});

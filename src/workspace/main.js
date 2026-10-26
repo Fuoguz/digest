@@ -254,6 +254,7 @@ function openImportDialog(courseId = null) {
   const form = document.querySelector("#import-form");
   form.reset();
   setFileStatus("");
+  renderImportStructure(null);
   document.querySelector("#import-dialog").showModal();
   setTimeout(() => document.querySelector("#file-input").focus(), 50);
 }
@@ -262,6 +263,41 @@ function closeImportDialog() {
   if (state.importing) return;
   importVersion++;
   document.querySelector("#import-dialog").close();
+}
+
+// Shows what structure an import found (chapters, headings) before it is saved.
+function renderImportStructure(result, edited = false) {
+  const box = document.querySelector("#import-structure");
+  const chapters = result?.metadata?.chapters || [];
+  const headings = (result?.paragraphs || []).filter((p) => p.heading).length;
+  box.hidden = !result || (!chapters.length && !headings);
+  if (box.hidden) {
+    box.replaceChildren();
+    return;
+  }
+  const summary = el(
+    "p",
+    "import-structure-summary",
+    tr("识别到 ") +
+      chapters.length +
+      tr(" 章 · ") +
+      headings +
+      tr(" 个标题，将保留为可导航的章节结构。"),
+  );
+  const list = el("ol", "import-outline");
+  for (const chapter of chapters.slice(0, 40))
+    list.append(el("li", "", chapter.title));
+  if (chapters.length > 40)
+    list.append(el("li", "import-outline-more", "… +" + (chapters.length - 40)));
+  box.replaceChildren(summary, list);
+  if (edited)
+    box.append(
+      el(
+        "p",
+        "import-structure-warning",
+        tr("正文已修改：保存时将按普通文本重新分段，章节结构不会保留。"),
+      ),
+    );
 }
 
 function setFileStatus(message, type = "") {
@@ -288,6 +324,7 @@ async function processFile(file) {
     state.importData = result;
     document.querySelector("#import-title").value = result.title;
     document.querySelector("#import-content").value = result.rawContent;
+    renderImportStructure(result);
     setFileStatus(
       file.name +
         " · " +
@@ -324,10 +361,22 @@ async function saveImport(event) {
   submit.disabled = true;
   submit.innerHTML = th('<span class="button-spinner"></span> 正在保存');
   try {
-    const base = state.importData || {
-      sourceType: "text",
-      metadata: { inputMethod: "paste" },
-    };
+    // Imported paragraph offsets and chapters describe the extracted text only;
+    // once the text is edited they would point at the wrong places, so rebuild.
+    const imported = state.importData;
+    const unchanged = imported && content === imported.rawContent.trim();
+    const base = imported
+      ? unchanged
+        ? imported
+        : {
+            ...imported,
+            paragraphs: undefined,
+            metadata: { ...imported.metadata, chapters: undefined, editedBeforeImport: true },
+          }
+      : {
+          sourceType: "text",
+          metadata: { inputMethod: "paste" },
+        };
     const item = createDocument({
       ...base,
       rawContent: content,
@@ -461,6 +510,11 @@ function bindEvents() {
     }
   });
   document.addEventListener("input", (event) => {
+    if (event.target.matches("#import-content") && state.importData)
+      renderImportStructure(
+        state.importData,
+        event.target.value.trim() !== state.importData.rawContent.trim(),
+      );
     if (event.target.matches("[data-library-search]") && !event.isComposing) {
       state.filters.query = event.target.value;
       renderSafely().then(() =>

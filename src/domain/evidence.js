@@ -16,19 +16,26 @@ export async function documentSnapshot(document) {
     if (!text.trim()) continue;
     const index = paragraphs.length;
     const original = document.paragraphs?.[index];
+    // Imported structure is trusted only while it still lines up with the source text.
+    const aligned = original?.startOffset === match.index;
     const pageNumber =
-      original?.startOffset === match.index &&
+      aligned &&
       Number.isInteger(original.pageNumber) &&
       original.pageNumber > 0
         ? original.pageNumber
         : null;
-    paragraphs.push({
+    const paragraph = {
       paragraphIndex: index,
       text,
       startOffset: match.index,
       endOffset: match.index + text.length,
       pageNumber,
-    });
+    };
+    if (aligned && Number.isInteger(original.heading) && original.heading >= 1 && original.heading <= 6)
+      paragraph.heading = original.heading;
+    if (aligned && Number.isInteger(original.chapter) && original.chapter >= 0)
+      paragraph.chapter = original.chapter;
+    paragraphs.push(paragraph);
   }
   const signature = sourceSignature(document);
   const bytes = await crypto.subtle.digest(

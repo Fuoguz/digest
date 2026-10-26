@@ -55,6 +55,7 @@ export function analysisMessages(snapshot) {
           title: snapshot.title,
           paragraphs: snapshot.paragraphs.map((p) => ({
             paragraphIndex: p.paragraphIndex,
+            ...(p.heading ? { heading: p.heading } : {}),
             text: p.text,
             evidenceExcerpts: evidenceExcerpts(p),
           })),
@@ -215,6 +216,7 @@ export class DigestAIService {
           chunks: chunks.length,
           totalParagraphs: snapshot.paragraphs.length,
           partial: paragraphs.length !== snapshot.paragraphs.length,
+          label: typeof options.label === "string" ? options.label.slice(0, 200) : null,
         },
         createdAt: new Date().toISOString(),
       },

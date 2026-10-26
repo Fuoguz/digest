@@ -4,9 +4,16 @@ import { el, button, highlightQuote } from "./dom.js";
 import { documentSnapshot, restoreAnchor } from "../domain/evidence.js";
 import { getLocale, installLanguageControl } from "../workspace/i18n.js";
 import { readingChunks } from "../domain/context.js";
-import { getSetting, putSetting, getRecord } from "../data/db.js";
+import { getSetting, putSetting, getRecord, getAllRecords } from "../data/db.js";
 import { TrainingRepository } from "../data/training-repository.js";
-import { READING_MODES, SOURCE_TYPES } from "../domain/documents.js";
+import {
+  READING_MODES,
+  SOURCE_TYPES,
+  documentChapters,
+} from "../domain/documents.js";
+
+const MAX_CHUNKS = 12;
+const l = (zh, en) => (getLocale() === "en" ? en : zh);
 import { MODE_SECTIONS, CLAIM_KINDS } from "../ai/schema.js";
 import { DigestAIService } from "../ai/service.js";
 import {
@@ -136,11 +143,14 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   sourcePanel.id = "reader-source";
   sourcePanel.setAttribute("aria-label", tr("原文"));
   const sourceTop = el("div", "reader-panel-label");
+  const position = el("span", "reading-position tabular");
+  position.setAttribute("aria-live", "off");
   sourceTop.append(
     el("span", "", tr("SOURCE / 原始资料")),
+    position,
     el(
       "span",
-      "",
+      "source-size",
       snapshot.paragraphs.length +
         tr(" 段 · ") +
         snapshot.source.length.toLocaleString(getLocale()) +
@@ -157,8 +167,28 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   );
   if (item.metadata?.originalFileName)
     article.append(el("p", "source-filename", item.metadata.originalFileName));
+  const chapters = documentChapters(item, snapshot.paragraphs.length);
+  const chapterAt = (index) =>
+    chapters.findIndex((c) => index >= c.start && index <= c.end);
+  // Most books already number their chapters in the title; only number the rest.
+  const numbered =
+    /^\s*(第\s*[\d一二三四五六七八九十百千零〇两]+\s*[章节篇部卷回讲课]|(chapter|part|section|lecture|unit)\s+[\divxlc]+\b|\d+(\.\d+)*[\s.、:：])/i;
+  const chapterLabel = (i) =>
+    numbered.test(chapters[i].title)
+      ? chapters[i].title
+      : l("第 " + (i + 1) + " 章 · ", "Ch. " + (i + 1) + " · ") + chapters[i].title;
   const paragraphNodes = new Map();
+  const wrappers = [];
   for (const paragraph of snapshot.paragraphs) {
+    const chapterIndex = chapters.findIndex(
+      (c) => c.start === paragraph.paragraphIndex,
+    );
+    // Chapter titles come from the book's table of contents; they are labels, not source text.
+    if (chapterIndex >= 0 && !paragraph.heading) {
+      const divider = el("p", "chapter-divider", chapterLabel(chapterIndex));
+      divider.setAttribute("aria-hidden", "true");
+      article.append(divider);
+    } else if (chapterIndex > 0) article.append(el("hr", "chapter-rule"));
     const wrapper = el("div", "source-paragraph");
     wrapper.dataset.paragraphIndex = paragraph.paragraphIndex;
     const marker = el(
@@ -168,8 +198,14 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     );
     marker.setAttribute("aria-hidden", "true");
     const text = el("p", "paragraph-text", paragraph.text);
+    if (paragraph.heading) {
+      wrapper.classList.add("is-heading", "heading-" + paragraph.heading);
+      text.setAttribute("role", "heading");
+      text.setAttribute("aria-level", String(Math.min(paragraph.heading + 2, 6)));
+    }
     wrapper.append(marker, text);
     article.append(wrapper);
+    wrappers.push(wrapper);
     paragraphNodes.set(paragraph.paragraphIndex, { wrapper, text });
   }
   if (!snapshot.source)
@@ -216,17 +252,47 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   aiPanel.append(aiTop, aiScroll);
   split.append(sourcePanel, aiPanel);
   const controls = el("div", "reading-controls");
+  const total = snapshot.paragraphs.length;
+  const chunkCount = (start, end) =>
+    readingChunks(
+      snapshot.paragraphs.filter(
+        (p) => p.paragraphIndex >= start && p.paragraphIndex <= end,
+      ),
+    ).length;
+  const wholeFits = total > 0 && chunkCount(0, total - 1) <= MAX_CHUNKS;
+  const short = (text, n = 36) => (text.length > n ? text.slice(0, n) + "…" : text);
   const rangeLabel = el("label", "", tr("研读范围"));
   const range = el("select", "core-input");
-  for (const [value, text] of [
-    ["all", tr("全文分段研读")],
+  for (const [value, text, disabled] of [
+    ...(chapters.length > 1 ? [["chapters", l("按章节研读", "By chapter")]] : []),
+    [
+      "all",
+      wholeFits
+        ? tr("全文分段研读")
+        : l("全文（超出单次上限）", "Whole text (over the limit)"),
+      !wholeFits,
+    ],
     ["range", tr("选择段落范围")],
   ]) {
     const option = el("option", "", text);
     option.value = value;
+    option.disabled = !!disabled;
     range.append(option);
   }
   rangeLabel.append(range);
+  const fromChapterLabel = el("label", "", l("起始章节", "From chapter")),
+    toChapterLabel = el("label", "", l("结束章节", "To chapter"));
+  const fromChapter = el("select", "core-input"),
+    toChapter = el("select", "core-input");
+  chapters.forEach((_, i) => {
+    for (const select of [fromChapter, toChapter]) {
+      const option = el("option", "", short(chapterLabel(i)));
+      option.value = i;
+      select.append(option);
+    }
+  });
+  fromChapterLabel.append(fromChapter);
+  toChapterLabel.append(toChapter);
   const fromLabel = el("label", "", tr("起始段落")),
     toLabel = el("label", "", tr("结束段落"));
   const from = el("input", "core-input"),
@@ -234,17 +300,16 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   for (const input of [from, to]) {
     input.type = "number";
     input.min = 1;
-    input.max = snapshot.paragraphs.length;
+    input.max = total;
   }
   from.value = 1;
-  to.value = snapshot.paragraphs.length;
+  // Default paragraph range: the longest opening stretch that fits one run.
+  let fitEnd = 0;
+  while (fitEnd + 1 < total && chunkCount(0, fitEnd + 1) <= MAX_CHUNKS) fitEnd++;
+  to.value = wholeFits ? total : fitEnd + 1;
   fromLabel.append(from);
   toLabel.append(to);
-  fromLabel.hidden = toLabel.hidden = true;
-  range.addEventListener("change", () => {
-    fromLabel.hidden = toLabel.hidden = range.value === "all";
-    updateScope();
-  });
+  range.value = wholeFits ? "all" : chapters.length > 1 ? "chapters" : "range";
   const languageLabel = el("label", "", tr("反馈语言")),
     language = el("select", "core-input");
   for (const [value, text] of [
@@ -257,67 +322,238 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   }
   language.value = getLocale();
   languageLabel.append(language);
-  const scopeHint = el("p", "reader-muted");
-  function updateScope() {
-    const selected = snapshot.paragraphs.filter(
-      (p) =>
-        range.value === "all" ||
-        (p.paragraphIndex >= Number(from.value) - 1 &&
-          p.paragraphIndex < Number(to.value)),
-    );
-    const count = readingChunks(selected).length;
-    scopeHint.textContent =
-      tr("预计分段：") +
-      count +
-      tr(" · 每段单独核查，已完成部分可续跑。单次最多 12 段。");
+  const scopeHint = el("p", "scope-hint");
+  scopeHint.setAttribute("role", "status");
+  function currentScope() {
+    if (range.value === "chapters") {
+      const a = Number(fromChapter.value),
+        b = Number(toChapter.value);
+      if (b < a)
+        return { error: l("结束章节不能早于起始章节。", "The last chapter must not come before the first.") };
+      return {
+        start: chapters[a].start,
+        end: chapters[b].end,
+        label:
+          a === b
+            ? chapterLabel(a)
+            : l("第 " + (a + 1) + "–" + (b + 1) + " 章", "Chapters " + (a + 1) + "–" + (b + 1)),
+      };
+    }
+    if (range.value === "range") {
+      const a = Number(from.value),
+        b = Number(to.value);
+      if (!Number.isInteger(a) || !Number.isInteger(b) || a < 1 || b > total || a > b)
+        return { error: tr("请选择有效的段落范围。") };
+      return {
+        start: a - 1,
+        end: b - 1,
+        label: l("段落 " + a + "–" + b, "Paragraphs " + a + "–" + b),
+      };
+    }
+    return { start: 0, end: total - 1, label: null };
   }
-  from.addEventListener("input", updateScope);
-  to.addEventListener("input", updateScope);
-  updateScope();
+  function scopeProblem() {
+    const scope = currentScope();
+    if (scope.error) return scope.error;
+    if (chunkCount(scope.start, scope.end) > MAX_CHUNKS)
+      return l(
+        "这个范围超过单次 12 个分段的上限，请缩小范围" +
+          (chapters.length > 1 ? "（例如只选一章）。" : "。"),
+        "This range is over the 12-section limit for one run. Choose a smaller range" +
+          (chapters.length > 1 ? " (for example, one chapter)." : "."),
+      );
+    return "";
+  }
+  function updateScope() {
+    fromChapterLabel.hidden = toChapterLabel.hidden = range.value !== "chapters";
+    fromLabel.hidden = toLabel.hidden = range.value !== "range";
+    const problem = scopeProblem();
+    scopeHint.classList.toggle("is-error", !!problem);
+    if (problem) scopeHint.textContent = problem;
+    else {
+      const scope = currentScope();
+      scopeHint.textContent =
+        (scope.label ? scope.label + " · " : "") +
+        tr("预计分段：") +
+        chunkCount(scope.start, scope.end) +
+        " / " +
+        MAX_CHUNKS +
+        l(" · 已完成部分可续跑", " · Finished sections resume");
+    }
+    if (status !== "analyzing")
+      for (const action of [analyzeButton, ...aiScroll.querySelectorAll(".analysis-empty .primary-action")])
+        action.disabled = !snapshot.source || !!problem;
+  }
+  range.addEventListener("change", updateScope);
+  for (const input of [from, to]) input.addEventListener("input", updateScope);
+  fromChapter.addEventListener("change", () => {
+    if (Number(toChapter.value) < Number(fromChapter.value))
+      toChapter.value = fromChapter.value;
+    updateScope();
+  });
+  toChapter.addEventListener("change", updateScope);
   if (partial?.parts?.length) {
     const [, start, end, lang] = JSON.parse(partial.key);
     language.value = lang || getLocale();
-    if (start !== 0 || end !== snapshot.paragraphs.length - 1) {
+    const a = chapters.findIndex((c) => c.start === start),
+      b = chapters.findIndex((c) => c.end === end);
+    if (start === 0 && end === total - 1 && wholeFits) range.value = "all";
+    else if (a >= 0 && b >= a) {
+      range.value = "chapters";
+      fromChapter.value = a;
+      toChapter.value = b;
+    } else {
       range.value = "range";
       from.value = start + 1;
       to.value = end + 1;
-      fromLabel.hidden = toLabel.hidden = false;
     }
-    updateScope();
   }
-  const outlineLabel = el("label", "", tr("段落导航")),
-    outline = el("select", "core-input");
+  // Navigation: a table of contents when the source has structure, otherwise paragraphs.
+  const toc = [];
   for (const p of snapshot.paragraphs) {
-    const o = el(
-      "option",
-      "",
-      p.paragraphIndex + 1 + " · " + p.text.slice(0, 52),
-    );
-    o.value = p.paragraphIndex;
-    outline.append(o);
+    const c = chapters.findIndex((ch) => ch.start === p.paragraphIndex);
+    if (c >= 0) toc.push({ index: p.paragraphIndex, label: chapterLabel(c), depth: 0 });
+    else if (p.heading && p.heading <= 3)
+      toc.push({ index: p.paragraphIndex, label: p.text, depth: chapters.length ? p.heading : p.heading - 1 });
   }
-  outline.addEventListener("change", () => {
+  let outline;
+  const jumpTo = (index) => {
     setTab("source");
-    const nodes = paragraphNodes.get(Number(outline.value));
+    const nodes = paragraphNodes.get(index);
     if (nodes) {
       nodes.wrapper.tabIndex = -1;
       nodes.wrapper.focus({ preventScroll: true });
-      centerWithin(sourceScroll, nodes.wrapper);
+      centerWithin(sourceScroll, nodes.wrapper, "start");
     }
-  });
+  };
+  let outlineLabel;
+  if (toc.length) {
+    outlineLabel = el("label", "", l("目录", "Contents"));
+    outline = el("select", "core-input");
+    for (const entry of toc.slice(0, 600)) {
+      const o = el("option", "", "　".repeat(Math.min(entry.depth, 3)) + short(entry.label, 48));
+      o.value = entry.index;
+      outline.append(o);
+    }
+    outline.addEventListener("change", () => jumpTo(Number(outline.value)));
+  } else if (total <= 150) {
+    outlineLabel = el("label", "", tr("段落导航"));
+    outline = el("select", "core-input");
+    for (const p of snapshot.paragraphs) {
+      const o = el("option", "", p.paragraphIndex + 1 + " · " + p.text.slice(0, 52));
+      o.value = p.paragraphIndex;
+      outline.append(o);
+    }
+    outline.addEventListener("change", () => jumpTo(Number(outline.value)));
+  } else {
+    outlineLabel = el("label", "", l("跳到段落", "Go to paragraph"));
+    outline = el("input", "core-input");
+    outline.type = "number";
+    outline.min = 1;
+    outline.max = total;
+    outline.placeholder = "1–" + total;
+    outline.addEventListener("change", () => {
+      const n = Math.round(Number(outline.value));
+      if (n >= 1 && n <= total) jumpTo(n - 1);
+    });
+  }
+  outlineLabel.classList.add("outline-control");
   outlineLabel.append(outline);
   controls.append(
     rangeLabel,
+    fromChapterLabel,
+    toChapterLabel,
     fromLabel,
     toLabel,
     languageLabel,
     outlineLabel,
     scopeHint,
   );
+  // Live reading position in the source panel; also keeps the contents menu in step.
+  let positionFrame = 0;
+  function updatePosition() {
+    positionFrame = 0;
+    if (!wrappers.length || disposed) return;
+    const top = sourceScroll.getBoundingClientRect().top + 12;
+    let lo = 0,
+      hi = wrappers.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (wrappers[mid].getBoundingClientRect().bottom > top) hi = mid;
+      else lo = mid + 1;
+    }
+    const index = Number(wrappers[lo].dataset.paragraphIndex);
+    const c = chapterAt(index);
+    position.textContent =
+      (c >= 0 ? short(chapterLabel(c), 28) + " · " : "") +
+      l("第 " + (index + 1) + " / " + total + " 段", "¶ " + (index + 1) + " / " + total);
+    if (outline.tagName === "SELECT" && document.activeElement !== outline) {
+      let value = null;
+      for (const option of outline.options)
+        if (Number(option.value) <= index) value = option.value;
+        else break;
+      if (value !== null) outline.value = value;
+    }
+  }
+  sourceScroll.addEventListener(
+    "scroll",
+    () => {
+      if (!positionFrame) positionFrame = requestAnimationFrame(updatePosition);
+    },
+    { passive: true },
+  );
+  // Earlier readings (e.g. other chapters) stay available for this exact source version.
+  const records = el("div", "reading-records");
+  aiPanel.insertBefore(records, aiScroll);
+  async function renderRecords() {
+    const results = (await getAllRecords("readingResults", db))
+      .filter(
+        (r) =>
+          r.documentId === item.id &&
+          r.sourceRevision === snapshot.sourceRevision,
+      )
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    if (disposed) return;
+    records.replaceChildren();
+    if (results.length < 2) return;
+    const label = el("label", "", l("研读记录", "Readings"));
+    const select = el("select", "core-input");
+    for (const r of results) {
+      const o = el(
+        "option",
+        "",
+        short(
+          r.scope?.label ||
+            (r.scope?.partial
+              ? l("段落 " + (r.scope.start + 1) + "–" + (r.scope.end + 1), "Paragraphs " + (r.scope.start + 1) + "–" + (r.scope.end + 1))
+              : l("全文", "Whole text")),
+          30,
+        ) +
+          " · " +
+          new Date(r.createdAt).toLocaleDateString(getLocale()),
+      );
+      o.value = r.id;
+      select.append(o);
+    }
+    select.value = saved.result?.id || results[0].id;
+    select.addEventListener("change", () => {
+      const params = new URLSearchParams(location.search);
+      params.set("result", select.value);
+      params.delete("evidence");
+      params.delete("claim");
+      history.pushState({}, "", location.pathname + "?" + params);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    label.append(select);
+    records.append(label, el("span", "reader-muted", results.length + l(" 次研读", " readings")));
+  }
   root.append(header, controls, tabs, split);
   container.replaceChildren(root);
   setTab("source");
   renderAI();
+  updateScope();
+  renderRecords().catch(() => {});
+  requestAnimationFrame(updatePosition);
   const initialAnchor = saved.anchors.find(
     (a) =>
       a.id === routeParams.get("evidence") && a.validationStatus === "matched",
@@ -344,11 +580,15 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     sourceTab.tabIndex = tab === "source" ? 0 : -1;
     aiTab.tabIndex = tab === "ai" ? 0 : -1;
   }
-  function centerWithin(scroll, target) {
+  function centerWithin(scroll, target, align = "center") {
     const a = scroll.getBoundingClientRect(),
       b = target.getBoundingClientRect();
     scroll.scrollTo({
-      top: scroll.scrollTop + b.top - a.top - (a.height - b.height) / 2,
+      top:
+        scroll.scrollTop +
+        b.top -
+        a.top -
+        (align === "start" ? 24 : (a.height - b.height) / 2),
       behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
         ? "instant"
         : "smooth",
@@ -399,9 +639,10 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
         : saved.result
           ? tr("重新研读")
           : tr("开始研读");
-    analyzeButton.disabled = status === "analyzing" || !snapshot.source;
+    analyzeButton.disabled =
+      status === "analyzing" || !snapshot.source || !!scopeProblem();
     for (const input of controls.querySelectorAll("input,select"))
-      input.disabled = status === "analyzing";
+      if (input !== outline) input.disabled = status === "analyzing";
     aiScroll.replaceChildren();
     aiScroll.scrollTop = 0;
     claimNodes.clear();
@@ -464,7 +705,9 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
             "研读会围绕这份资料提炼结构，区分资料陈述与 AI 推论。每条可靠引用都能带你回到原文。",
           ),
         ),
-        button(tr("开始 AI 研读"), analyze, "primary-action"),
+        Object.assign(button(tr("开始 AI 研读"), analyze, "primary-action"), {
+          disabled: !snapshot.source || !!scopeProblem(),
+        }),
         el("small", "", tr("先读原文也很好。你的资料已保存在本地。")),
       );
     }
@@ -493,7 +736,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
         el(
           "p",
           "scope-notice",
-          (scope.partial ? tr("范围研读") : tr("全文分段研读")) +
+          (scope.label || (scope.partial ? tr("范围研读") : tr("全文分段研读"))) +
             " · " +
             (scope.start + 1) +
             "–" +
@@ -654,22 +897,14 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       .catch(() => {});
     renderAI();
     try {
-      if (
-        range.value === "range" &&
-        (!Number.isInteger(Number(from.value)) ||
-          !Number.isInteger(Number(to.value)) ||
-          Number(from.value) < 1 ||
-          Number(to.value) > snapshot.paragraphs.length ||
-          Number(from.value) > Number(to.value))
-      )
-        throw new Error(tr("请选择有效的段落范围。"));
+      const problem = scopeProblem();
+      if (problem) throw new Error(problem);
+      const scope = currentScope();
       const service = new DigestAIService(createTransport("digest"));
       service.options = {
-        start: range.value === "all" ? 0 : Number(from.value) - 1,
-        end:
-          range.value === "all"
-            ? snapshot.paragraphs.length - 1
-            : Number(to.value) - 1,
+        start: scope.start,
+        end: scope.end,
+        label: scope.label,
         language: language.value,
         load: () => getSetting(checkpointKey, db),
         save: async (value, requestId, signal) => {
@@ -708,6 +943,13 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
         nodes.wrapper.classList.remove("evidence-target");
         nodes.text.textContent = paragraph.text;
       }
+      // The new reading is now current; drop a pinned earlier reading from the URL.
+      const params = new URLSearchParams(location.search);
+      if (params.has("result")) {
+        params.delete("result");
+        history.replaceState({}, "", location.pathname + (params.size ? "?" + params : ""));
+      }
+      renderRecords().catch(() => {});
     } catch (error) {
       if (disposed || run !== runNumber) return;
       if (error.name === "AbortError") {
@@ -724,5 +966,6 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     disposed = true;
     runNumber++;
     session.cancel();
+    if (positionFrame) cancelAnimationFrame(positionFrame);
   };
 }
