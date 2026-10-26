@@ -59,7 +59,8 @@ try {
   assert.equal(await page.locator(".document-row").count(), 1);
   pass("DRM-protected EPUB is refused honestly; a DRM-free EPUB is saved with EPUB type and filter");
 
-  // Edited text drops structure instead of keeping misaligned offsets.  await page.goto(base + "/app/library");
+  // Edited text drops structure instead of keeping misaligned offsets.
+  await page.goto(base + "/app/library");
   await page.getByRole("button", { name: /导入资料/ }).first().click();
   await page.locator("#file-input").setInputFiles({ name: "book.epub", mimeType: "application/epub+zip", buffer: book });
   await page.locator("#file-status.ready").waitFor();
@@ -75,7 +76,11 @@ try {
   await page.locator(".doc-title", { hasText: "编辑过的教材" }).click();
   await page.locator(".source-paragraph").first().waitFor();
   assert.equal(await page.locator(".source-paragraph.is-heading").count(), 0);
-  assert.equal(await page.locator(".outline-control").innerText().then((t) => t.includes("跳到段落")), true);
+  await page.getByRole("button", { name: "目录", exact: true }).click();
+  await page.locator(".reader-toc-jump").waitFor();
+  assert.match(await page.locator(".reader-toc").innerText(), /没有可识别的标题结构/);
+  await page.keyboard.press("Escape");
+  assert.equal(await page.locator(".reader-toc").isVisible(), false);
   pass("structure preview lists 20 chapters; editing the text warns and saves without stale structure");
 
   await page.goto(base + "/app/library");
@@ -91,6 +96,7 @@ try {
   assert.equal(await page.locator(".chapter-rule").count(), 19);
   pass("Reader renders 20 chapter headings and 20 section headings with heading semantics");
 
+  // Study setup lives in the notes panel; the header keeps a single start action.
   const range = control("研读范围");
   assert.equal(await range.inputValue(), "chapters");
   assert.equal(await page.locator('option[value="all"]').evaluate((o) => o.disabled), true);
@@ -98,14 +104,26 @@ try {
   await control("结束章节").selectOption("19");
   assert.match(await page.locator(".scope-hint.is-error").innerText(), /超过单次 12 个分段的上限/);
   assert.equal(await page.getByRole("button", { name: "开始研读", exact: true }).isDisabled(), true);
+  assert.equal(await page.locator(".start-reading").isDisabled(), true);
   await page.screenshot({ path: out + "/book-scope-error.png" });
   await control("结束章节").selectOption("0");
   assert.equal(await page.getByRole("button", { name: "开始研读", exact: true }).isDisabled(), false);
   pass("whole book is marked over the limit; chapter scope defaults to chapter 1 and over-limit ranges are blocked before any request");
 
-  await page.getByRole("button", { name: "开始研读", exact: true }).click();
-  await page.locator(".reading-section").first().waitFor();
+  await page.locator(".start-reading").click();
+  await page.locator(".reading-claim").first().waitFor();
   assert.match(await page.locator(".ai-panel .scope-notice").innerText(), /第1章 媒介效果专题1/);
+  assert.ok((await page.locator(".note-mark").count()) > 0);
+  await page.locator(".note-mark").first().click();
+  await page.locator(".claim-inline").waitFor();
+  await page.locator(".claim-inline").getByRole("button", { name: "在笔记中查看" }).first().click();
+  await page.locator(".reading-claim:focus").waitFor();
+  await page.locator(".evidence-action").first().click();
+  await page.locator("mark.evidence-highlight").waitFor();
+  await page.screenshot({ path: out + "/book-linked.png" });
+  pass("chapter reading shows source markers; marker opens inline notes; note evidence highlights the source");
+
+  await page.locator(".reading-setup > summary").click();
   await control("起始章节").selectOption("1");
   await page.getByRole("button", { name: "重新研读", exact: true }).click();
   await page.locator(".reading-records select").waitFor();
@@ -115,34 +133,62 @@ try {
 
   await page.locator(".reading-records select").selectOption({ index: 1 });
   await page.waitForURL(/result=/);
-  await page.locator(".reading-section").first().waitFor();
+  await page.locator(".reading-claim").first().waitFor();
   assert.match(await page.locator(".ai-panel .scope-notice").innerText(), /第1章/);
   await page.getByRole("button", { name: "沉淀为知识点", exact: true }).first().click();
   await page.getByLabel("知识点名称", { exact: true }).fill("议程设置（第一章）");
   await page.getByRole("dialog").getByRole("button", { name: "保存", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   assert.equal(await page.locator(".inline-feedback.is-error").count(), 0);
+  await page.getByRole("button", { name: "加入复习", exact: true }).first().click();
+  await page.getByText("题目已保存，可开始今日复习").waitFor();
   await page.screenshot({ path: out + "/book-records.png" });
-  pass("switching back to the chapter 1 reading works and saving a concept from it succeeds");
+  pass("switching back to the chapter 1 reading works; saving a concept and a review question from it succeeds");
 
-  await control("目录").selectOption({ label: "第15章 媒介效果专题15" });
+  await page.getByRole("button", { name: "目录", exact: true }).click();
+  assert.match(await page.locator(".reader-toc-list > li").first().innerText(), /已研读/);
+  await page.locator(".reader-toc-entry", { hasText: "第15章 媒介效果专题15" }).click();
   await page.waitForFunction(() => /第15章/.test(document.querySelector(".reading-position").textContent));
   assert.match(await page.locator(".reading-position").innerText(), /第 \d+ \/ \d+ 段/);
+  await page.locator(".scope-banner:not([hidden])").waitFor();
+  assert.match(await page.locator(".scope-banner").innerText(), /不包括这一章/);
   await page.screenshot({ path: out + "/book-reader-1440.png" });
-  pass("contents menu jumps to chapter 15 and the live position follows");
+  pass("contents drawer marks read chapters and jumps; position follows; banner offers the current chapter");
+
+  await page.getByRole("button", { name: "阅读设置" }).click();
+  await page.getByRole("button", { name: "夜间", exact: true }).click();
+  await page.getByRole("button", { name: "大", exact: true }).click();
+  await page.keyboard.press("Escape");
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.readerTheme), "night");
+  await page.screenshot({ path: out + "/book-night.png" });
+  await page.getByRole("button", { name: "研读笔记" }).click();
+  assert.equal(await page.locator(".ai-panel").isVisible(), false);
+  assert.ok(await overflow());
+  await page.getByRole("button", { name: "研读笔记" }).click();
+  await page.reload();
+  await page.locator(".source-paragraph").first().waitFor();
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.readerTheme), "night");
+  await page.getByRole("button", { name: "阅读设置" }).click();
+  await page.getByRole("button", { name: "纸面", exact: true }).last().click();
+  await page.keyboard.press("Escape");
+  await page.goto(base + "/app/library");
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.readerTheme), undefined);
+  await page.goBack();
+  await page.locator(".source-paragraph").first().waitFor();
+  pass("night page and text size persist per viewer; collapsing notes has no overflow; leaving the Reader restores the app theme");
 
   for (const w of [1024, 768, 390]) {
     await page.setViewportSize({ width: w, height: 860 });
     assert.ok(await overflow(), "overflow " + w);
   }
-  assert.equal(await page.locator(".reading-controls > .outline-control").isVisible(), true);
-  assert.equal(await range.isVisible(), false);
+  assert.equal(await page.locator(".source-panel").isVisible(), true);
   await page.screenshot({ path: out + "/book-reader-390.png" });
-  await page.getByRole("tab", { name: "AI 研读" }).click();
-  assert.equal(await range.isVisible(), true);
-  assert.equal(await page.locator(".reading-controls > .outline-control").isVisible(), false);
+  await page.locator(".note-mark").first().scrollIntoViewIfNeeded().catch(() => {});
+  await page.getByRole("tab", { name: "研读笔记" }).click();
+  assert.equal(await page.locator(".ai-panel").isVisible(), true);
+  assert.equal(await page.locator(".source-panel").isVisible(), false);
   await page.screenshot({ path: out + "/book-reader-390-ai.png" });
-  pass("no horizontal overflow at 1024/768/390; phone shows only the controls for the active tab");
+  pass("no horizontal overflow at 1024/768/390; phone switches between source and notes");
   assert.deepEqual(errors, []);
   pass("no page errors");
 } catch (e) {

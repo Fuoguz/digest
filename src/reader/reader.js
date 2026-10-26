@@ -1,33 +1,55 @@
-import { t as tr, th } from "../workspace/i18n.js";
+import { t as tr } from "../workspace/i18n.js";
 import { createTransport, useProxy } from "../ai/proxy-transport.js";
 import { el, button, highlightQuote } from "./dom.js";
 import { documentSnapshot, restoreAnchor } from "../domain/evidence.js";
 import { getLocale, installLanguageControl } from "../workspace/i18n.js";
 import { readingChunks } from "../domain/context.js";
-import { getSetting, putSetting, getRecord, getAllRecords } from "../data/db.js";
+import { getSetting, getRecord, getAllRecords } from "../data/db.js";
 import { TrainingRepository } from "../data/training-repository.js";
+import { LearningRepository } from "../data/learning-repository.js";
+import { normalizeQuestion } from "../domain/learning.js";
 import {
   READING_MODES,
   SOURCE_TYPES,
   documentChapters,
 } from "../domain/documents.js";
-
-const MAX_CHUNKS = 12;
-const l = (zh, en) => (getLocale() === "en" ? en : zh);
 import { MODE_SECTIONS, CLAIM_KINDS } from "../ai/schema.js";
 import { DigestAIService } from "../ai/service.js";
-import {
-  DeveloperTransport,
-  readDeveloperConfig,
-} from "../ai/developer-transport.js";
+import { readDeveloperConfig } from "../ai/developer-transport.js";
 import { ReadingRepository } from "../data/reading-repository.js";
 import { AnalysisSession } from "../ai/analysis-session.js";
 import { openAIConfiguration } from "./config-dialog.js";
-import { appendLearningTools } from "./learning-tools.js";
+import { message, editName, link } from "../workspace/components.js";
+import { icon } from "../workspace/icons.js";
+
+const MAX_CHUNKS = 12;
+const l = (zh, en) => (getLocale() === "en" ? en : zh);
+const KIND_TONE = {
+  source_statement: "source",
+  inference: "ai",
+  reusable_insight: "insight",
+};
+// Per-viewer reading comfort only; the page works the same without storage.
+const PREFS_KEY = "digest:reader-prefs";
+const PREF_DEFAULTS = { size: "m", leading: "comfort", theme: "paper", notes: true, follow: true };
+function loadPrefs() {
+  try {
+    return { ...PREF_DEFAULTS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || "{}") };
+  } catch {
+    return { ...PREF_DEFAULTS };
+  }
+}
+function savePrefs(prefs) {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {}
+}
+const short = (text, n = 36) => (text.length > n ? text.slice(0, n) + "…" : text);
 
 export async function mountReader(container, item, db, isCurrent = () => true) {
   const snapshot = await documentSnapshot(item);
   const repository = new ReadingRepository(db);
+  const learning = new LearningRepository(db);
   const routeParams = new URLSearchParams(location.search);
   let saved = await repository.load(snapshot, routeParams.get("result"));
   const externalAnchor = routeParams.get("evidence")
@@ -35,11 +57,14 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     : null;
   if (externalAnchor && !saved.anchors.some((a) => a.id === externalAnchor.id))
     saved.anchors.push(restoreAnchor(externalAnchor, snapshot));
-  if (!isCurrent()) return () => {};
-  const session = new AnalysisSession(repository);
-  let progressText = "";
   const checkpointKey = "reading-progress:" + item.id;
-  let partial = await getSetting(checkpointKey, db);
+  let [partial, cards, units, courses] = await Promise.all([
+    getSetting(checkpointKey, db),
+    learning.list("reviewCards").catch(() => []),
+    learning.list("knowledgeUnits").catch(() => []),
+    getAllRecords("courses", db).catch(() => []),
+  ]);
+  if (!isCurrent()) return () => {};
   try {
     if (
       partial &&
@@ -50,6 +75,8 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   } catch {
     partial = null;
   }
+  const session = new AnalysisSession(repository);
+  const prefs = loadPrefs();
   let disposed = false,
     status = saved.result
       ? saved.stale
@@ -58,9 +85,30 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       : "idle";
   let errorMessage = "",
     errorCode = "",
+    progressText = "",
+    progress = null,
     activeClaim = null,
     selectedAnchor = null,
-    runNumber = 0;
+    runNumber = 0,
+    kindFilter = "all",
+    records = [],
+    currentIndex = 0,
+    feedbackLine = null,
+    positionFrame = 0,
+    followPausedUntil = 0;
+  const total = snapshot.paragraphs.length;
+  const chapters = documentChapters(item, total);
+  const chapterAt = (index) =>
+    chapters.findIndex((c) => index >= c.start && index <= c.end);
+  // Most books already number their chapters in the title; only number the rest.
+  const numbered =
+    /^\s*(第\s*[\d一二三四五六七八九十百千零〇两]+\s*[章节篇部卷回讲课]|(chapter|part|section|lecture|unit)\s+[\divxlc]+\b|\d+(\.\d+)*[\s.、:：])/i;
+  const chapterLabel = (i) =>
+    numbered.test(chapters[i].title)
+      ? chapters[i].title
+      : l("第 " + (i + 1) + " 章 · ", "Ch. " + (i + 1) + " · ") + chapters[i].title;
+
+  // ---------- Header ----------
   const root = el("section", "reader");
   root.dataset.tab = "source";
   const header = el("header", "reader-header");
@@ -70,12 +118,27 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   const heading = el("div", "reader-heading");
   const title = el("h1", "", item.title);
   const metadata = el("div", "reader-metadata");
+  const position = el("span", "reading-position tabular");
   metadata.append(
     el("span", "reader-source-type", SOURCE_TYPES[item.sourceType] || "Text"),
     el("span", "", READING_MODES[item.readingMode]),
     ...item.tags.map((tag) => el("span", "reader-tag", tag)),
+    position,
   );
   heading.append(title, metadata);
+  const tool = (iconName, text, label) => {
+    const b = button("", () => {}, "reader-tool");
+    b.append(typeof iconName === "string" ? icon(iconName) : iconName, el("span", "", text));
+    b.setAttribute("aria-label", label);
+    b.title = label;
+    return b;
+  };
+  const tocButton = tool("library", l("目录", "Contents"), l("目录", "Contents"));
+  const aa = el("b", "reader-aa", "Aa");
+  aa.setAttribute("aria-hidden", "true");
+  const prefsButton = tool(aa, l("阅读", "Reading"), l("阅读设置", "Reading settings"));
+  prefsButton.setAttribute("aria-expanded", "false");
+  const notesButton = tool("ai", l("笔记", "Notes"), l("研读笔记", "Study notes"));
   const analyzeButton = button(tr("开始研读"), analyze, "primary-action");
   const more = el("details", "reader-more");
   more.append(el("summary", "", tr("更多 ···")));
@@ -94,18 +157,18 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       : []),
     button(tr("导出原文 TXT"), () => {
       more.open = false;
-      const link = el("a");
-      link.href = URL.createObjectURL(
+      const a = el("a");
+      a.href = URL.createObjectURL(
         new Blob([snapshot.source], { type: "text/plain;charset=utf-8" }),
       );
-      link.download = item.title.replace(/[\\/:*?"<>|]/g, "_") + ".txt";
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      a.download = item.title.replace(/[\\/:*?"<>|]/g, "_") + ".txt";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     }),
   );
   more.append(menu);
   const headerActions = el("div", "reader-header-actions");
-  headerActions.append(analyzeButton, more);
+  headerActions.append(tocButton, prefsButton, notesButton, analyzeButton, more);
   installLanguageControl(headerActions);
   header.append(back, heading, headerActions);
   const returnPath = routeParams.get("return");
@@ -115,16 +178,65 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       returnPath,
     )
   ) {
-    const returnLink = el("a", "reader-back", tr("← 返回学习任务"));
+    const returnLink = el("a", "reader-back reader-return", tr("← 返回学习任务"));
     returnLink.href = returnPath;
     returnLink.dataset.route = "";
     headerActions.append(returnLink);
   }
+
+  // Reading settings popover.
+  const prefsPanel = el("div", "reader-prefs");
+  prefsPanel.hidden = true;
+  prefsPanel.setAttribute("role", "group");
+  prefsPanel.setAttribute("aria-label", l("阅读设置", "Reading settings"));
+  for (const [key, label, options] of [
+    ["size", l("字号", "Text size"), [["s", l("小", "S")], ["m", l("中", "M")], ["l", l("大", "L")]]],
+    ["leading", l("行距", "Line spacing"), [["comfort", l("舒适", "Comfortable")], ["loose", l("宽松", "Loose")]]],
+    ["theme", l("纸面", "Page"), [["paper", l("纸面", "Paper")], ["night", l("夜间", "Night")]]],
+  ]) {
+    prefsPanel.append(el("p", "reader-prefs-label", label));
+    const group = el("div", "reader-seg");
+    for (const [value, text] of options) {
+      const b = button(text, () => {
+        prefs[key] = value;
+        savePrefs(prefs);
+        applyPrefs();
+      });
+      b.dataset.pref = key;
+      b.dataset.value = value;
+      group.append(b);
+    }
+    prefsPanel.append(group);
+  }
+  function applyPrefs() {
+    root.dataset.size = prefs.size;
+    root.dataset.leading = prefs.leading;
+    document.documentElement.dataset.readerTheme = prefs.theme;
+    for (const b of prefsPanel.querySelectorAll("[data-pref]"))
+      b.setAttribute("aria-pressed", String(prefs[b.dataset.pref] === b.dataset.value));
+    root.classList.toggle("notes-collapsed", !prefs.notes);
+    notesButton.setAttribute("aria-pressed", String(prefs.notes));
+  }
+  prefsButton.addEventListener("click", () => {
+    prefsPanel.hidden = !prefsPanel.hidden;
+    prefsButton.setAttribute("aria-expanded", String(!prefsPanel.hidden));
+  });
+  notesButton.addEventListener("click", () => {
+    if (matchMedia("(max-width: 799px)").matches) {
+      setTab(root.dataset.tab === "ai" ? "source" : "ai");
+      return;
+    }
+    prefs.notes = !prefs.notes;
+    savePrefs(prefs);
+    applyPrefs();
+  });
+
+  // ---------- Tabs (phones) ----------
   const tabs = el("div", "reader-tabs");
   tabs.setAttribute("role", "tablist");
   tabs.setAttribute("aria-label", tr("阅读区域"));
   const sourceTab = button(tr("原文"), () => setTab("source"), "reader-tab");
-  const aiTab = button(tr("AI 研读"), () => setTab("ai"), "reader-tab");
+  const aiTab = button(l("研读笔记", "Study notes"), () => setTab("ai"), "reader-tab");
   [sourceTab, aiTab].forEach((tab, index) => {
     tab.setAttribute("role", "tab");
     tab.id = index ? "ai-tab" : "source-tab";
@@ -138,25 +250,12 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     });
   });
   tabs.append(sourceTab, aiTab);
+
+  // ---------- Source ----------
   const split = el("div", "reader-split");
   const sourcePanel = el("section", "source-panel");
   sourcePanel.id = "reader-source";
   sourcePanel.setAttribute("aria-label", tr("原文"));
-  const sourceTop = el("div", "reader-panel-label");
-  const position = el("span", "reading-position tabular");
-  position.setAttribute("aria-live", "off");
-  sourceTop.append(
-    el("span", "", tr("SOURCE / 原始资料")),
-    position,
-    el(
-      "span",
-      "source-size",
-      snapshot.paragraphs.length +
-        tr(" 段 · ") +
-        snapshot.source.length.toLocaleString(getLocale()) +
-        tr(" 字符"),
-    ),
-  );
   const sourceScroll = el("div", "source-scroll");
   sourceScroll.tabIndex = 0;
   sourceScroll.setAttribute("aria-label", tr("原文滚动区域"));
@@ -167,16 +266,6 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   );
   if (item.metadata?.originalFileName)
     article.append(el("p", "source-filename", item.metadata.originalFileName));
-  const chapters = documentChapters(item, snapshot.paragraphs.length);
-  const chapterAt = (index) =>
-    chapters.findIndex((c) => index >= c.start && index <= c.end);
-  // Most books already number their chapters in the title; only number the rest.
-  const numbered =
-    /^\s*(第\s*[\d一二三四五六七八九十百千零〇两]+\s*[章节篇部卷回讲课]|(chapter|part|section|lecture|unit)\s+[\divxlc]+\b|\d+(\.\d+)*[\s.、:：])/i;
-  const chapterLabel = (i) =>
-    numbered.test(chapters[i].title)
-      ? chapters[i].title
-      : l("第 " + (i + 1) + " 章 · ", "Ch. " + (i + 1) + " · ") + chapters[i].title;
   const paragraphNodes = new Map();
   const wrappers = [];
   for (const paragraph of snapshot.paragraphs) {
@@ -191,22 +280,22 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     } else if (chapterIndex > 0) article.append(el("hr", "chapter-rule"));
     const wrapper = el("div", "source-paragraph");
     wrapper.dataset.paragraphIndex = paragraph.paragraphIndex;
-    const marker = el(
+    const number = el(
       "span",
       "paragraph-number",
       String(paragraph.paragraphIndex + 1).padStart(2, "0"),
     );
-    marker.setAttribute("aria-hidden", "true");
+    number.setAttribute("aria-hidden", "true");
     const text = el("p", "paragraph-text", paragraph.text);
     if (paragraph.heading) {
       wrapper.classList.add("is-heading", "heading-" + paragraph.heading);
       text.setAttribute("role", "heading");
       text.setAttribute("aria-level", String(Math.min(paragraph.heading + 2, 6)));
     }
-    wrapper.append(marker, text);
+    wrapper.append(number, text);
     article.append(wrapper);
     wrappers.push(wrapper);
-    paragraphNodes.set(paragraph.paragraphIndex, { wrapper, text });
+    paragraphNodes.set(paragraph.paragraphIndex, { wrapper, text, mark: null });
   }
   if (!snapshot.source)
     article.append(
@@ -228,31 +317,128 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
         }
       }
       setTab("ai");
-      const target = claimNodes.get(activeClaim);
-      if (target) {
-        target.focus({ preventScroll: true });
-        centerWithin(aiScroll, target);
-      }
+      focusCard(activeClaim);
     },
     "return-to-claim",
   );
   returnButton.hidden = true;
-  sourcePanel.append(sourceTop, sourceScroll, returnButton);
+  sourcePanel.append(sourceScroll, returnButton);
+
+  // ---------- Notes panel ----------
   const aiPanel = el("section", "ai-panel");
   aiPanel.id = "reader-ai";
-  aiPanel.setAttribute("aria-label", tr("AI 研读"));
-  const aiTop = el("div", "reader-panel-label");
-  aiTop.append(
-    el("span", "", tr("READING / AI 研读")),
-    el("span", "", READING_MODES[item.readingMode]),
+  aiPanel.setAttribute("aria-label", l("研读笔记", "Study notes"));
+  const notesHead = el("div", "notes-head");
+  const notesTitle = el("div", "notes-title");
+  notesTitle.append(
+    el("p", "notes-kicker", l("研读笔记", "Study notes")),
+    el("p", "notes-mode", READING_MODES[item.readingMode]),
   );
+  const recordsBox = el("div", "reading-records");
+  notesHead.append(notesTitle, recordsBox);
   const aiScroll = el("div", "ai-scroll");
   aiScroll.tabIndex = 0;
   const claimNodes = new Map();
-  aiPanel.append(aiTop, aiScroll);
+  // Pinned outside the scroll so it is seen wherever the notes are scrolled.
+  const banner = el("div", "scope-banner");
+  banner.hidden = true;
+  aiPanel.append(notesHead, banner, aiScroll);
   split.append(sourcePanel, aiPanel);
+
+  // ---------- Contents drawer ----------
+  const scrim = el("div", "reader-scrim");
+  scrim.hidden = true;
+  const toc = el("aside", "reader-toc");
+  toc.hidden = true;
+  toc.setAttribute("aria-label", l("目录", "Contents"));
+  let tocReturn = null;
+  function openToc() {
+    renderToc();
+    tocReturn = document.activeElement;
+    toc.hidden = scrim.hidden = false;
+    toc.querySelector(".is-current button, button, input")?.focus();
+  }
+  function closeToc(restore = true) {
+    if (toc.hidden) return;
+    toc.hidden = scrim.hidden = true;
+    if (restore) tocReturn?.focus({ preventScroll: true });
+  }
+  tocButton.addEventListener("click", openToc);
+  scrim.addEventListener("click", () => closeToc());
+  function covered(chapter) {
+    return records.some(
+      (r) => r.scope && r.scope.start <= chapter.start && r.scope.end >= chapter.end,
+    );
+  }
+  function renderToc() {
+    const head = el("div", "reader-toc-head");
+    head.append(el("h2", "", l("目录", "Contents")));
+    const close = button("", () => closeToc(), "dialog-close");
+    close.append(icon("x"));
+    close.setAttribute("aria-label", l("关闭目录", "Close contents"));
+    head.append(close);
+    const list = el("ol", "reader-toc-list");
+    const headings = snapshot.paragraphs.filter((p) => p.heading && p.heading <= 3);
+    const currentChapter = chapterAt(currentIndex);
+    const entry = (label, index, depth, badge) => {
+      const b = button(short(label, 60), () => jumpTo(index), "reader-toc-entry depth-" + depth);
+      if (badge) b.append(badge);
+      return b;
+    };
+    if (chapters.length) {
+      chapters.forEach((chapter, c) => {
+        const li = el("li", c === currentChapter ? "is-current" : "");
+        const done = covered(chapter);
+        li.append(
+          entry(
+            chapterLabel(c),
+            chapter.start,
+            0,
+            el("span", "badge " + (done ? "is-success" : "is-outline"), done ? l("已研读", "Read") : l("未研读", "Not yet")),
+          ),
+        );
+        const subs = el("ol");
+        for (const p of headings)
+          if (p.paragraphIndex > chapter.start && p.paragraphIndex <= chapter.end && p.heading >= 2) {
+            const sub = el("li");
+            sub.append(entry(p.text, p.paragraphIndex, 1));
+            subs.append(sub);
+          }
+        if (subs.children.length) li.append(subs);
+        list.append(li);
+      });
+    } else if (headings.length) {
+      for (const p of headings) {
+        const li = el("li");
+        li.append(entry(p.text, p.paragraphIndex, p.heading - 1));
+        list.append(li);
+      }
+    }
+    const jump = el("label", "reader-toc-jump", l("跳到段落", "Go to paragraph"));
+    const input = el("input", "core-input");
+    input.type = "number";
+    input.min = 1;
+    input.max = total;
+    input.placeholder = "1–" + total;
+    input.addEventListener("change", () => {
+      const n = Math.round(Number(input.value));
+      if (n >= 1 && n <= total) jumpTo(n - 1);
+    });
+    jump.append(input);
+    toc.replaceChildren(head, list.children.length ? list : el("p", "reader-muted", l("这份资料没有可识别的标题结构。", "No headings were detected in this source.")), jump);
+  }
+  function jumpTo(index) {
+    closeToc(false);
+    setTab("source");
+    const nodes = paragraphNodes.get(index);
+    if (!nodes) return;
+    nodes.wrapper.tabIndex = -1;
+    nodes.wrapper.focus({ preventScroll: true });
+    centerWithin(sourceScroll, nodes.wrapper, "start");
+  }
+
+  // ---------- Study scope (lives in the notes panel) ----------
   const controls = el("div", "reading-controls");
-  const total = snapshot.paragraphs.length;
   const chunkCount = (start, end) =>
     readingChunks(
       snapshot.paragraphs.filter(
@@ -260,7 +446,6 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       ),
     ).length;
   const wholeFits = total > 0 && chunkCount(0, total - 1) <= MAX_CHUNKS;
-  const short = (text, n = 36) => (text.length > n ? text.slice(0, n) + "…" : text);
   const rangeLabel = el("label", "", tr("研读范围"));
   const range = el("select", "core-input");
   for (const [value, text, disabled] of [
@@ -324,6 +509,32 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   languageLabel.append(language);
   const scopeHint = el("p", "scope-hint");
   scopeHint.setAttribute("role", "status");
+  controls.append(
+    rangeLabel,
+    fromChapterLabel,
+    toChapterLabel,
+    fromLabel,
+    toLabel,
+    languageLabel,
+    scopeHint,
+  );
+  // Start the scope at the loaded reading, so "re-read" repeats what is on screen.
+  const startScope = saved.result?.scope;
+  function setScope(start, end) {
+    const a = chapters.findIndex((c) => c.start === start),
+      b = chapters.findIndex((c) => c.end === end);
+    if (start === 0 && end === total - 1 && wholeFits) range.value = "all";
+    else if (a >= 0 && b >= a) {
+      range.value = "chapters";
+      fromChapter.value = a;
+      toChapter.value = b;
+    } else {
+      range.value = "range";
+      from.value = start + 1;
+      to.value = end + 1;
+    }
+  }
+  if (startScope && Number.isInteger(startScope.start)) setScope(startScope.start, startScope.end);
   function currentScope() {
     if (range.value === "chapters") {
       const a = Number(fromChapter.value),
@@ -381,7 +592,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
         l(" · 已完成部分可续跑", " · Finished sections resume");
     }
     if (status !== "analyzing")
-      for (const action of [analyzeButton, ...aiScroll.querySelectorAll(".analysis-empty .primary-action")])
+      for (const action of [analyzeButton, ...aiScroll.querySelectorAll(".start-reading")])
         action.disabled = !snapshot.source || !!problem;
   }
   range.addEventListener("change", updateScope);
@@ -395,165 +606,16 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   if (partial?.parts?.length) {
     const [, start, end, lang] = JSON.parse(partial.key);
     language.value = lang || getLocale();
-    const a = chapters.findIndex((c) => c.start === start),
-      b = chapters.findIndex((c) => c.end === end);
-    if (start === 0 && end === total - 1 && wholeFits) range.value = "all";
-    else if (a >= 0 && b >= a) {
-      range.value = "chapters";
-      fromChapter.value = a;
-      toChapter.value = b;
-    } else {
-      range.value = "range";
-      from.value = start + 1;
-      to.value = end + 1;
-    }
+    setScope(start, end);
   }
-  // Navigation: a table of contents when the source has structure, otherwise paragraphs.
-  const toc = [];
-  for (const p of snapshot.paragraphs) {
-    const c = chapters.findIndex((ch) => ch.start === p.paragraphIndex);
-    if (c >= 0) toc.push({ index: p.paragraphIndex, label: chapterLabel(c), depth: 0 });
-    else if (p.heading && p.heading <= 3)
-      toc.push({ index: p.paragraphIndex, label: p.text, depth: chapters.length ? p.heading : p.heading - 1 });
-  }
-  let outline;
-  const jumpTo = (index) => {
-    setTab("source");
-    const nodes = paragraphNodes.get(index);
-    if (nodes) {
-      nodes.wrapper.tabIndex = -1;
-      nodes.wrapper.focus({ preventScroll: true });
-      centerWithin(sourceScroll, nodes.wrapper, "start");
-    }
-  };
-  let outlineLabel;
-  if (toc.length) {
-    outlineLabel = el("label", "", l("目录", "Contents"));
-    outline = el("select", "core-input");
-    for (const entry of toc.slice(0, 600)) {
-      const o = el("option", "", "　".repeat(Math.min(entry.depth, 3)) + short(entry.label, 48));
-      o.value = entry.index;
-      outline.append(o);
-    }
-    outline.addEventListener("change", () => jumpTo(Number(outline.value)));
-  } else if (total <= 150) {
-    outlineLabel = el("label", "", tr("段落导航"));
-    outline = el("select", "core-input");
-    for (const p of snapshot.paragraphs) {
-      const o = el("option", "", p.paragraphIndex + 1 + " · " + p.text.slice(0, 52));
-      o.value = p.paragraphIndex;
-      outline.append(o);
-    }
-    outline.addEventListener("change", () => jumpTo(Number(outline.value)));
-  } else {
-    outlineLabel = el("label", "", l("跳到段落", "Go to paragraph"));
-    outline = el("input", "core-input");
-    outline.type = "number";
-    outline.min = 1;
-    outline.max = total;
-    outline.placeholder = "1–" + total;
-    outline.addEventListener("change", () => {
-      const n = Math.round(Number(outline.value));
-      if (n >= 1 && n <= total) jumpTo(n - 1);
-    });
-  }
-  outlineLabel.classList.add("outline-control");
-  outlineLabel.append(outline);
-  controls.append(
-    rangeLabel,
-    fromChapterLabel,
-    toChapterLabel,
-    fromLabel,
-    toLabel,
-    languageLabel,
-    outlineLabel,
-    scopeHint,
-  );
-  // Live reading position in the source panel; also keeps the contents menu in step.
-  let positionFrame = 0;
-  function updatePosition() {
-    positionFrame = 0;
-    if (!wrappers.length || disposed) return;
-    const top = sourceScroll.getBoundingClientRect().top + 12;
-    let lo = 0,
-      hi = wrappers.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (wrappers[mid].getBoundingClientRect().bottom > top) hi = mid;
-      else lo = mid + 1;
-    }
-    const index = Number(wrappers[lo].dataset.paragraphIndex);
-    const c = chapterAt(index);
-    position.textContent =
-      (c >= 0 ? short(chapterLabel(c), 28) + " · " : "") +
-      l("第 " + (index + 1) + " / " + total + " 段", "¶ " + (index + 1) + " / " + total);
-    if (outline.tagName === "SELECT" && document.activeElement !== outline) {
-      let value = null;
-      for (const option of outline.options)
-        if (Number(option.value) <= index) value = option.value;
-        else break;
-      if (value !== null) outline.value = value;
-    }
-  }
-  sourceScroll.addEventListener(
-    "scroll",
-    () => {
-      if (!positionFrame) positionFrame = requestAnimationFrame(updatePosition);
-    },
-    { passive: true },
-  );
-  // Earlier readings (e.g. other chapters) stay available for this exact source version.
-  const records = el("div", "reading-records");
-  aiPanel.insertBefore(records, aiScroll);
-  async function renderRecords() {
-    const results = (await getAllRecords("readingResults", db))
-      .filter(
-        (r) =>
-          r.documentId === item.id &&
-          r.sourceRevision === snapshot.sourceRevision,
-      )
-      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-    if (disposed) return;
-    records.replaceChildren();
-    if (results.length < 2) return;
-    const label = el("label", "", l("研读记录", "Readings"));
-    const select = el("select", "core-input");
-    for (const r of results) {
-      const o = el(
-        "option",
-        "",
-        short(
-          r.scope?.label ||
-            (r.scope?.partial
-              ? l("段落 " + (r.scope.start + 1) + "–" + (r.scope.end + 1), "Paragraphs " + (r.scope.start + 1) + "–" + (r.scope.end + 1))
-              : l("全文", "Whole text")),
-          30,
-        ) +
-          " · " +
-          new Date(r.createdAt).toLocaleDateString(getLocale()),
-      );
-      o.value = r.id;
-      select.append(o);
-    }
-    select.value = saved.result?.id || results[0].id;
-    select.addEventListener("change", () => {
-      const params = new URLSearchParams(location.search);
-      params.set("result", select.value);
-      params.delete("evidence");
-      params.delete("claim");
-      history.pushState({}, "", location.pathname + "?" + params);
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    });
-    label.append(select);
-    records.append(label, el("span", "reader-muted", results.length + l(" 次研读", " readings")));
-  }
-  root.append(header, controls, tabs, split);
+
+  root.append(header, prefsPanel, tabs, split, scrim, toc);
   container.replaceChildren(root);
+  applyPrefs();
   setTab("source");
   renderAI();
   updateScope();
   renderRecords().catch(() => {});
-  requestAnimationFrame(updatePosition);
   const initialAnchor = saved.anchors.find(
     (a) =>
       a.id === routeParams.get("evidence") && a.validationStatus === "matched",
@@ -571,7 +633,18 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     locate(initialAnchor, initialClaim?.id || null);
     if (!initialClaim && returnPath)
       returnButton.textContent = tr("← 返回反馈");
+  } else {
+    // Switching between readings keeps the reader where it was.
+    const key = "digest:reader-pos:" + item.id;
+    const kept = Number(sessionStorage.getItem(key));
+    sessionStorage.removeItem(key);
+    if (kept > 0)
+      requestAnimationFrame(() => {
+        const nodes = paragraphNodes.get(kept);
+        if (nodes) centerWithin(sourceScroll, nodes.wrapper, "start", true);
+      });
   }
+  requestAnimationFrame(updatePosition);
 
   function setTab(tab) {
     root.dataset.tab = tab;
@@ -580,7 +653,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     sourceTab.tabIndex = tab === "source" ? 0 : -1;
     aiTab.tabIndex = tab === "ai" ? 0 : -1;
   }
-  function centerWithin(scroll, target, align = "center") {
+  function centerWithin(scroll, target, align = "center", instant = false) {
     const a = scroll.getBoundingClientRect(),
       b = target.getBoundingClientRect();
     scroll.scrollTo({
@@ -589,10 +662,25 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
         b.top -
         a.top -
         (align === "start" ? 24 : (a.height - b.height) / 2),
-      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "instant"
-        : "smooth",
+      behavior:
+        instant || matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
     });
+  }
+  // A second smooth scroll would cancel the source scroll in Chromium, so notes move instantly.
+  function revealCard(node) {
+    if (!node || root.classList.contains("notes-collapsed")) return;
+    const a = aiScroll.getBoundingClientRect(),
+      b = node.getBoundingClientRect();
+    if (b.top < a.top + 60 || b.bottom > a.bottom - 20)
+      aiScroll.scrollTo({ top: aiScroll.scrollTop + b.top - a.top - 120, behavior: "instant" });
+  }
+  function focusCard(claimId) {
+    const target = claimNodes.get(claimId);
+    if (!target) return;
+    target.focus({ preventScroll: true });
+    revealCard(target);
   }
   function locate(anchor, claimId) {
     if (anchor.validationStatus !== "matched") return;
@@ -601,6 +689,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       .catch(() => {});
     activeClaim = claimId;
     selectedAnchor = anchor.id;
+    document.querySelectorAll(".claim-inline").forEach((n) => n.remove());
     for (const [index, nodes] of paragraphNodes) {
       const paragraph = snapshot.paragraphs.find(
         (p) => p.paragraphIndex === index,
@@ -621,6 +710,8 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       );
     setTab("source");
     returnButton.hidden = false;
+    pauseFollow();
+    revealCard(claimNodes.get(claimId));
     requestAnimationFrame(() => {
       const target = paragraphNodes.get(anchor.paragraphIndex);
       if (target)
@@ -630,109 +721,283 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
         );
     });
   }
-  function renderAI() {
-    if (disposed) return;
-    root.dataset.analysisState = status;
-    analyzeButton.textContent =
-      status === "analyzing"
-        ? tr("分析中…")
-        : saved.result
-          ? tr("重新研读")
-          : tr("开始研读");
-    analyzeButton.disabled =
-      status === "analyzing" || !snapshot.source || !!scopeProblem();
-    for (const input of controls.querySelectorAll("input,select"))
-      if (input !== outline) input.disabled = status === "analyzing";
-    aiScroll.replaceChildren();
-    aiScroll.scrollTop = 0;
-    claimNodes.clear();
-    const stateBox = el("div", "analysis-state");
-    stateBox.setAttribute("role", "status");
-    if (status === "analyzing") {
-      stateBox.append(
-        el("span", "analysis-progress"),
-        el("h3", "", tr("正在研读这份资料")),
-        el("p", "", progressText || tr("提炼判断，并逐条核对原文引用。")),
-        button(tr("取消分析"), () => {
-          runNumber++;
-          session.cancel();
-          status = saved.result ? saved.result.status : "idle";
-          errorMessage = tr("已取消分析。");
-          renderAI();
-        }),
+
+  // ---------- Claims shown in notes and as source markers ----------
+  function claimsFrom(result, anchors, partialPart = false) {
+    const sections = MODE_SECTIONS[item.readingMode] || {};
+    return Object.entries(result.sections).flatMap(([name, section]) =>
+      section.items.map((claim) => {
+        const evidence = claim.evidenceIds
+          .map((id) => anchors.find((a) => a.id === id))
+          .filter(Boolean);
+        const reliable = evidence.filter((a) => a.validationStatus === "matched");
+        return {
+          raw: claim,
+          id: claim.id,
+          text: claim.text,
+          kind: claim.kind,
+          section: sections[name] || name,
+          evidence,
+          reliable,
+          at: reliable.length ? reliable[0].paragraphIndex : Infinity,
+          partial: partialPart,
+        };
+      }),
+    );
+  }
+  function byPosition(a, b) {
+    return a.at - b.at;
+  }
+  function partialClaims() {
+    return (partial?.parts || []).flatMap((part) =>
+      claimsFrom(part.result, part.anchors || [], true),
+    );
+  }
+  function resultClaims() {
+    return saved.result ? claimsFrom(saved.result, saved.anchors) : [];
+  }
+  function shownClaims() {
+    return (status === "analyzing" || errorMessage || !saved.result) && partial?.parts?.length
+      ? partialClaims()
+      : resultClaims();
+  }
+  function renderMarks() {
+    const claims = shownClaims();
+    for (const [index, nodes] of paragraphNodes) {
+      const here = claims.filter((c) => c.reliable.some((a) => a.paragraphIndex === index));
+      nodes.mark?.remove();
+      nodes.mark = null;
+      nodes.wrapper.classList.toggle("has-notes", here.length > 0);
+      if (!here.length) continue;
+      const mark = button(String(here.length), () => toggleInline(index, mark), "note-mark");
+      mark.dataset.kinds = [...new Set(here.map((c) => KIND_TONE[c.kind]))].join(" ");
+      mark.setAttribute(
+        "aria-label",
+        l("本段有 " + here.length + " 条研读判断", here.length + " study notes on this paragraph"),
       );
-    } else if (errorMessage) {
-      stateBox.classList.add("analysis-error");
-      stateBox.append(
-        el(
-          "h3",
-          "",
-          errorCode === "no_configuration"
-            ? tr("连接你的 Developer AI Service")
-            : tr("本次分析未完成"),
-        ),
-        el("p", "", errorMessage),
-      );
-      if (errorCode === "no_configuration")
-        stateBox.append(
-          button(tr("配置 Developer AI Service"), () =>
-            openAIConfiguration(() => {
-              errorMessage = "";
-              errorCode = "";
-              renderAI();
-            }),
-          ),
-        );
-      else
-        stateBox.append(
-          button(tr("重试"), analyze),
-          ...(!useProxy()
-            ? [button(tr("检查服务配置"), () => openAIConfiguration())]
-            : []),
-        );
-      if (saved.result)
-        stateBox.append(el("small", "", tr("以下保留上一次成功结果。")));
-    } else if (!saved.result) {
-      stateBox.classList.add("analysis-empty");
-      stateBox.append(
-        el("span", "analysis-monogram", "D"),
-        el("p", "page-kicker", tr("FROM SOURCE TO UNDERSTANDING")),
-        el("h2", "", tr("让每个判断，有据可查。")),
-        el(
-          "p",
-          "",
-          tr(
-            "研读会围绕这份资料提炼结构，区分资料陈述与 AI 推论。每条可靠引用都能带你回到原文。",
-          ),
-        ),
-        Object.assign(button(tr("开始 AI 研读"), analyze, "primary-action"), {
-          disabled: !snapshot.source || !!scopeProblem(),
-        }),
-        el("small", "", tr("先读原文也很好。你的资料已保存在本地。")),
-      );
+      mark.setAttribute("aria-expanded", "false");
+      nodes.wrapper.prepend(mark);
+      nodes.mark = mark;
     }
-    if (stateBox.childNodes.length) aiScroll.append(stateBox);
-    if (partial?.parts?.length) {
-      const preview = el("aside", "partial-preview");
-      preview.append(
-        el("strong", "", tr("已保存分段：") + partial.parts.length),
-        el(
-          "p",
-          "reader-muted",
-          tr(
-            "这是已完成部分的预览，不是全文结论。保持相同范围与语言重试，可继续未完成部分。",
-          ),
+  }
+  function toggleInline(index, mark) {
+    const nodes = paragraphNodes.get(index);
+    const open = nodes.wrapper.nextElementSibling?.classList.contains("claim-inline");
+    document.querySelectorAll(".claim-inline").forEach((n) => n.remove());
+    document
+      .querySelectorAll(".note-mark[aria-expanded=true]")
+      .forEach((m) => m.setAttribute("aria-expanded", "false"));
+    if (open) return;
+    const here = shownClaims().filter((c) => c.reliable.some((a) => a.paragraphIndex === index));
+    if (matchMedia("(max-width: 799px)").matches) {
+      setTab("ai");
+      if (here[0]) requestAnimationFrame(() => focusCard(here[0].id));
+      return;
+    }
+    const box = el("div", "claim-inline");
+    for (const claim of here) {
+      const row = el("div", "claim-inline-item");
+      row.append(kindChip(claim), el("p", "", claim.text));
+      const go = button(l("在笔记中查看", "Show in notes"), () => {
+        if (!prefs.notes) {
+          prefs.notes = true;
+          savePrefs(prefs);
+          applyPrefs();
+        }
+        claimNodes.get(claim.id)?.classList.add("claim-selected");
+        focusCard(claim.id);
+      }, "quiet-link");
+      row.append(go);
+      box.append(row);
+    }
+    nodes.wrapper.after(box);
+    mark.setAttribute("aria-expanded", "true");
+  }
+  function kindChip(claim) {
+    const chip = el("span", "claim-kind kind-" + claim.kind, CLAIM_KINDS[claim.kind]);
+    chip.dataset.tone = KIND_TONE[claim.kind];
+    return chip;
+  }
+  function claimCard(claim, editable) {
+    const node = el("article", "reading-claim");
+    node.tabIndex = -1;
+    node.dataset.claimId = claim.id;
+    if (Number.isFinite(claim.at)) node.dataset.at = claim.at;
+    node.classList.toggle("claim-selected", claim.id === activeClaim);
+    const head = el("div", "claim-head");
+    head.append(kindChip(claim), el("span", "claim-section", claim.section));
+    node.append(head, el("p", "claim-text", claim.text));
+    const actions = el("div", "claim-evidence");
+    for (const anchor of claim.reliable) {
+      const action = button("", () => locate(anchor, claim.id), "evidence-action");
+      action.dataset.evidenceId = anchor.id;
+      action.setAttribute("aria-pressed", String(anchor.id === selectedAnchor));
+      const where =
+        (anchor.pageNumber ? tr("第 ") + anchor.pageNumber + tr(" 页 · ") : "") +
+        tr("第 ") +
+        (anchor.paragraphIndex + 1) +
+        tr(" 段");
+      const label = el("span", "evidence-location", l("原文 · ", "Source · ") + where);
+      label.prepend(icon("quote"));
+      action.append(label, el("q", "evidence-quote", anchor.quote));
+      action.title = where;
+      actions.append(action);
+    }
+    if (!claim.reliable.length)
+      actions.append(el("span", "evidence-unavailable", tr("暂无可靠原文依据")));
+    if (claim.evidence.some((a) => a.validationStatus === "ambiguous"))
+      actions.append(el("small", "evidence-note", tr("引文重复，无法唯一定位")));
+    else if (claim.evidence.some((a) => a.validationStatus === "invalid"))
+      actions.append(el("small", "evidence-note", tr("引用未通过原文核对")));
+    node.append(actions);
+    if (editable) {
+      const label = claim.raw.knowledgeLabel || claim.text.slice(0, 36);
+      const exists = units.some(
+        (u) => u.readingResultId === saved.result.id && u.claimId === claim.id,
+      );
+      const save = button(
+        exists ? tr("已沉淀") : tr("沉淀为知识点"),
+        () =>
+          editName(tr("知识点名称"), label, async (name) => {
+            const unit = await learning.confirmUnit(snapshot, saved.result, claim.raw, name);
+            units.push(unit || { readingResultId: saved.result.id, claimId: claim.id });
+            save.disabled = true;
+            save.textContent = tr("已沉淀");
+            if (feedbackLine) message(feedbackLine, tr("知识点已保存，来源和判断一同保留"));
+          }),
+        "secondary-action btn-sm",
+      );
+      save.disabled = exists;
+      const row = el("div", "claim-actions");
+      row.append(save);
+      node.append(row);
+    }
+    claimNodes.set(claim.id, node);
+    return node;
+  }
+
+  // ---------- Notes rendering ----------
+  function progressCard() {
+    const box = el("div", "analysis-state analysis-running");
+    box.setAttribute("role", "status");
+    box.append(
+      el("span", "analysis-progress"),
+      el("h3", "", tr("正在研读这份资料")),
+      el("p", "", progressText || tr("提炼判断，并逐条核对原文引用。")),
+    );
+    if (progress?.total) {
+      const steps = el("ol", "progress-steps");
+      for (let i = 0; i < progress.total; i++) {
+        const state = i < progress.done ? "done" : i === progress.done && !progress.synth ? "running" : "todo";
+        const li = el("li", "is-" + state, l("分段 " + (i + 1) + "/" + progress.total, "Section " + (i + 1) + "/" + progress.total));
+        li.prepend(el("span", "step-dot"));
+        steps.append(li);
+      }
+      if (progress.total > 1) {
+        const li = el("li", "is-" + (progress.synth ? "running" : "todo"), l("整合整体概览", "Overview"));
+        li.prepend(el("span", "step-dot"));
+        steps.append(li);
+      }
+      box.append(steps);
+    }
+    box.append(
+      el("p", "reader-muted", l("可以继续阅读原文；每完成一个分段，判断会陆续出现在下方，原文旁也会出现标记。", "Keep reading; notes and source markers appear as each section finishes.")),
+      button(tr("取消分析"), () => {
+        runNumber++;
+        session.cancel();
+        status = saved.result ? saved.result.status : "idle";
+        errorMessage = tr("已取消分析。");
+        progress = null;
+        renderAI();
+      }, "secondary-action btn-sm"),
+    );
+    return box;
+  }
+  function errorCard() {
+    const box = el("div", "analysis-state analysis-error");
+    box.setAttribute("role", "status");
+    box.append(
+      el(
+        "h3",
+        "",
+        errorCode === "no_configuration"
+          ? tr("连接你的 Developer AI Service")
+          : tr("本次分析未完成"),
+      ),
+      el("p", "", errorMessage),
+    );
+    if (partial?.parts?.length && errorCode !== "no_configuration")
+      box.append(
+        el("p", "", l("已完成的 " + partial.parts.length + " 个分段已保存，保持相同范围与语言重试会从断点继续。", partial.parts.length + " finished section(s) are saved; retrying with the same range and language continues from there.")),
+      );
+    if (errorCode === "no_configuration")
+      box.append(
+        button(tr("配置 Developer AI Service"), () =>
+          openAIConfiguration(() => {
+            errorMessage = "";
+            errorCode = "";
+            renderAI();
+          }),
+          "primary-action btn-sm",
         ),
       );
-      const last = partial.parts.at(-1).result;
-      const first = Object.values(last.sections).flatMap((s) => s.items)[0];
-      if (first) preview.append(el("p", "", first.text));
-      aiScroll.append(preview);
-    }
-    if (!saved.result) return;
-    const scope = saved.result.scope;
+    else
+      box.append(
+        button(tr("重试"), analyze, "primary-action btn-sm"),
+        ...(!useProxy()
+          ? [button(tr("检查服务配置"), () => openAIConfiguration(), "secondary-action btn-sm")]
+          : []),
+      );
+    if (saved.result) box.append(el("small", "", tr("以下保留上一次成功结果。")));
+    return box;
+  }
+  function startButton(text) {
+    const b = button(text, analyze, "primary-action start-reading");
+    b.prepend(icon("ai"));
+    b.disabled = !snapshot.source || !!scopeProblem();
+    return b;
+  }
+  function emptyCard() {
+    const box = el("div", "analysis-state analysis-empty");
+    box.append(
+      el("p", "page-kicker", tr("FROM SOURCE TO UNDERSTANDING")),
+      el("h2", "", tr("让每个判断，有据可查。")),
+      el(
+        "p",
+        "",
+        tr(
+          "研读会围绕这份资料提炼结构，区分资料陈述与 AI 推论。每条可靠引用都能带你回到原文。",
+        ),
+      ),
+      controls,
+      startButton(tr("开始 AI 研读")),
+      el("small", "", tr("先读原文也很好。你的资料已保存在本地。")),
+    );
+    return box;
+  }
+  function partialSection() {
+    const claims = partialClaims().sort(byPosition);
+    if (!claims.length) return null;
+    const box = el("section", "partial-preview");
+    box.append(
+      el("p", "partial-title", tr("已保存分段：") + partial.parts.length),
+      el(
+        "p",
+        "reader-muted",
+        tr(
+          "这是已完成部分的预览，不是全文结论。保持相同范围与语言重试，可继续未完成部分。",
+        ),
+      ),
+    );
+    for (const claim of claims) box.append(claimCard(claim, false));
+    return box;
+  }
+  function resultView() {
+    const frag = document.createDocumentFragment();
+    const result = saved.result;
+    const scope = result.scope;
     if (scope)
-      aiScroll.append(
+      frag.append(
         el(
           "p",
           "scope-notice",
@@ -748,14 +1013,22 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
             tr(" 个分段。概览基于分段判断整合，跨章节结论仍需核查。"),
         ),
       );
-    if (saved.result.overview) {
+    if (saved.stale)
+      frag.append(
+        el(
+          "p",
+          "reader-error-text",
+          tr("原文已变化，旧引用已标记为 stale，请重新研读。"),
+        ),
+      );
+    if (result.overview) {
       const overview = el("section", "reading-overview");
       overview.append(
         el("p", "page-kicker", tr("整体概览 · 请结合原文核查")),
         el("h2", "", tr("先抓住这份材料的重点")),
-        el("p", "", saved.result.overview.summary),
+        el("p", "", result.overview.summary),
       );
-      for (const point of saved.result.overview.points) {
+      for (const point of result.overview.points) {
         const row = el("div", "overview-point");
         row.append(el("p", "", point.text));
         for (const cid of point.claimIds)
@@ -765,7 +1038,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
               () => {
                 const n = claimNodes.get(cid);
                 if (n) {
-                  n.focus();
+                  n.focus({ preventScroll: true });
                   centerWithin(aiScroll, n);
                 }
               },
@@ -774,106 +1047,180 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
           );
         overview.append(row);
       }
-      aiScroll.append(overview);
+      frag.append(overview);
     }
+    const claims = resultClaims().sort(byPosition);
+    const covered = claims.filter((c) => c.reliable.length).length;
     const coverage = el("div", "evidence-coverage");
-    const claims = Object.values(saved.result.sections).flatMap(
-      (section) => section.items,
-    );
-    const matched = new Set(
-      saved.anchors
-        .filter((anchor) => anchor.validationStatus === "matched")
-        .map((anchor) => anchor.id),
-    );
-    const covered = claims.filter((claim) =>
-      claim.evidenceIds.some((id) => matched.has(id)),
-    ).length;
     coverage.append(
       el("strong", "", covered + " / " + claims.length + tr(" 有原文依据")),
       el("p", "", tr("原文依据可定位不代表 AI 推论必然成立，请结合原文核对。")),
     );
-    if (saved.stale)
-      coverage.append(
+    frag.append(coverage);
+    const toolbar = el("div", "notes-toolbar");
+    toolbar.setAttribute("role", "group");
+    toolbar.setAttribute("aria-label", l("筛选研读判断", "Filter notes"));
+    for (const [value, text] of [["all", l("全部", "All")], ...Object.entries(CLAIM_KINDS)]) {
+      const count = value === "all" ? claims.length : claims.filter((c) => c.kind === value).length;
+      const chip = button(text, () => {
+        kindFilter = value;
+        renderAI();
+      }, "filter-chip" + (kindFilter === value ? " active" : ""));
+      chip.append(el("i", "", String(count)));
+      chip.setAttribute("aria-pressed", String(kindFilter === value));
+      chip.disabled = !count;
+      toolbar.append(chip);
+    }
+    const follow = el("label", "notes-follow");
+    const followBox = el("input");
+    followBox.type = "checkbox";
+    followBox.checked = prefs.follow;
+    followBox.addEventListener("change", () => {
+      prefs.follow = followBox.checked;
+      savePrefs(prefs);
+    });
+    follow.append(followBox, document.createTextNode(l("跟随原文", "Follow reading")));
+    toolbar.append(follow);
+    frag.append(toolbar);
+    feedbackLine = el("p");
+    frag.append(feedbackLine);
+    const list = el("section", "reading-section");
+    list.setAttribute("aria-label", l("研读判断", "Study notes"));
+    const editable = !saved.stale;
+    for (const claim of claims.filter((c) => kindFilter === "all" || c.kind === kindFilter))
+      list.append(claimCard(claim, editable));
+    for (const [name, section] of Object.entries(result.sections))
+      if (section.status === "missing")
+        list.append(
+          el(
+            "p",
+            "section-missing",
+            tr("材料不足 · ") +
+              ((MODE_SECTIONS[item.readingMode] || {})[name] || name) +
+              l("：", ": ") +
+              section.missingReason,
+          ),
+        );
+    frag.append(list);
+    if (editable) frag.append(reviewSection(), nextSection());
+    else
+      frag.append(
         el(
           "p",
-          "reader-error-text",
-          tr("原文已变化，旧引用已标记为 stale，请重新研读。"),
+          "reader-muted",
+          tr("此研读版本的原文已变化，不能加入复习或沉淀知识点。"),
         ),
       );
-    aiScroll.append(coverage);
-    for (const [name, section] of Object.entries(saved.result.sections)) {
-      const block = el("section", "reading-section");
-      block.append(
-        el("h2", "", MODE_SECTIONS[item.readingMode]?.[name] || name),
-      );
-      if (section.status === "missing")
-        block.append(
-          el("p", "section-missing", tr("材料不足 · ") + section.missingReason),
-        );
-      for (const claim of section.items) {
-        const node = el("article", "reading-claim");
-        node.tabIndex = -1;
-        node.dataset.claimId = claim.id;
-        node.classList.toggle("claim-selected", claim.id === activeClaim);
-        node.append(
-          el("span", "claim-kind kind-" + claim.kind, CLAIM_KINDS[claim.kind]),
-          el("p", "claim-text", claim.text),
-        );
-        const actions = el("div", "claim-evidence");
-        const anchors = claim.evidenceIds
-          .map((id) => saved.anchors.find((anchor) => anchor.id === id))
-          .filter(Boolean);
-        const reliable = anchors.filter(
-          (anchor) => anchor.validationStatus === "matched",
-        );
-        reliable.forEach((anchor, index) => {
-          const action = button(
-            (reliable.length === 1 ? tr("查看依据 ") : tr("依据 ")) +
-              String.fromCodePoint(0x2460 + index),
-            () => locate(anchor, claim.id),
-            "evidence-action",
-          );
-          action.dataset.evidenceId = anchor.id;
-          action.setAttribute(
-            "aria-pressed",
-            String(anchor.id === selectedAnchor),
-          );
-          action.title =
-            (anchor.pageNumber
-              ? tr("第 ") + anchor.pageNumber + tr(" 页 · ")
-              : "") +
-            tr("第 ") +
-            (anchor.paragraphIndex + 1) +
-            tr(" 段");
-          actions.append(action);
-          actions.append(el("small", "evidence-location", action.title));
-        });
-        if (!reliable.length)
-          actions.append(
-            el("span", "evidence-unavailable", tr("暂无可靠原文依据")),
-          );
-        if (anchors.some((a) => a.validationStatus === "ambiguous"))
-          actions.append(
-            el("small", "evidence-note", tr("引文重复，无法唯一定位")),
-          );
-        else if (anchors.some((a) => a.validationStatus === "invalid"))
-          actions.append(
-            el("small", "evidence-note", tr("引用未通过原文核对")),
-          );
-        node.append(actions);
-        block.append(node);
-        claimNodes.set(claim.id, node);
-      }
-      aiScroll.append(block);
-    }
-    const foot = el(
-      "p",
-      "reading-footnote",
-      tr("研读结果保存在本地 · ") +
-        new Date(saved.result.createdAt).toLocaleString(getLocale()),
+    frag.append(
+      el(
+        "p",
+        "reading-footnote",
+        tr("研读结果保存在本地 · ") +
+          new Date(result.createdAt).toLocaleString(getLocale()),
+      ),
     );
-    aiScroll.append(foot);
-    appendLearningTools(aiScroll, db, snapshot, saved);
+    const other = el("details", "reading-setup");
+    other.append(el("summary", "", l("研读其他范围", "Read another range")), controls, startButton(l("按此范围研读", "Read this range")));
+    frag.append(other);
+    return frag;
+  }
+  function reviewSection() {
+    const box = el("section", "learning-tools");
+    box.append(el("h3", "", tr("值得回忆的问题")));
+    if (!saved.result.reviewQuestions.length)
+      box.append(el("p", "reader-muted", tr("本次研读没有建议问题。")));
+    for (const question of saved.result.reviewQuestions) {
+      const row = el("div", "learning-suggestion");
+      row.append(el("p", "", question.question));
+      const exists = cards.some(
+        (c) =>
+          c.documentId === snapshot.documentId &&
+          c.questionKey === normalizeQuestion(question.question),
+      );
+      const add = button(
+        exists ? tr("已在复习中") : tr("加入复习"),
+        async () => {
+          add.disabled = true;
+          try {
+            const card = await learning.addReview(snapshot, saved.result, question);
+            cards.push(card || { documentId: snapshot.documentId, questionKey: normalizeQuestion(question.question) });
+            add.textContent = tr("已在复习中");
+            message(feedbackLine, tr("题目已保存，可开始今日复习"));
+          } catch (e) {
+            message(feedbackLine, e.message, true);
+            add.disabled = false;
+          }
+        },
+        "secondary-action btn-sm",
+      );
+      add.disabled = exists;
+      row.append(add);
+      box.append(row);
+    }
+    box.append(link(tr("前往复习 →"), "/app/review"));
+    return box;
+  }
+  function nextSection() {
+    const box = el("section", "reader-next");
+    box.append(
+      el("p", "notes-kicker", l("下一步", "Next step")),
+      el("h3", "", l("读完了，试着用自己的话回答", "Now try answering in your own words")),
+    );
+    const course = courses.find((c) => c.documentIds?.includes(item.id));
+    box.append(
+      el(
+        "p",
+        "reader-muted",
+        course
+          ? l("在课程里用这份材料出一道练习题，先独立作答，再看反馈。", "Create a practice question from this source in your course, answer it yourself, then check the feedback.")
+          : l("先把这份材料加入一个课程，就能围绕它出题、作答和修订。", "Add this source to a course to practise with it: question, answer, revise."),
+      ),
+    );
+    const row = el("div", "reader-next-actions");
+    row.append(
+      course
+        ? link(l("去「" + short(course.title, 18) + "」出题练习", "Practise in “" + short(course.title, 18) + "”"), "/app/courses/" + encodeURIComponent(course.id), "primary-action")
+        : link(l("打开课程", "Open courses"), "/app/courses", "primary-action"),
+      link(tr("查看知识网络 →"), "/app/graph"),
+    );
+    box.append(row);
+    return box;
+  }
+  function renderAI() {
+    if (disposed) return;
+    const keep = aiScroll.scrollTop;
+    delete banner.dataset.for;
+    root.dataset.analysisState = status;
+    analyzeButton.textContent =
+      status === "analyzing"
+        ? tr("分析中…")
+        : saved.result
+          ? tr("重新研读")
+          : tr("开始研读");
+    analyzeButton.disabled =
+      status === "analyzing" || !snapshot.source || !!scopeProblem();
+    for (const input of controls.querySelectorAll("input,select"))
+      input.disabled = status === "analyzing";
+    aiScroll.replaceChildren();
+    claimNodes.clear();
+    if (status === "analyzing") aiScroll.append(progressCard());
+    else if (errorMessage) aiScroll.append(errorCard());
+    const preview = (status === "analyzing" || errorMessage || !saved.result) && partial?.parts?.length ? partialSection() : null;
+    if (!saved.result) {
+      if (status !== "analyzing" && !errorMessage) aiScroll.append(emptyCard());
+      else if (errorCode !== "no_configuration" && status !== "analyzing") {
+        const other = el("details", "reading-setup");
+        other.append(el("summary", "", l("调整研读范围", "Adjust the range")), controls);
+        aiScroll.append(other);
+      }
+      if (preview) aiScroll.append(preview);
+    } else {
+      if (preview) aiScroll.append(preview);
+      aiScroll.append(resultView());
+    }
+    renderMarks();
+    aiScroll.scrollTop = keep;
+    updatePosition();
   }
   async function analyze() {
     if (disposed || status === "analyzing" || !snapshot.source) return;
@@ -891,11 +1238,14 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     const run = ++runNumber;
     errorMessage = "";
     errorCode = "";
+    progress = null;
+    progressText = "";
     status = "analyzing";
     new TrainingRepository(db)
       .track("reading_started", { documentId: item.id })
       .catch(() => {});
     renderAI();
+    aiScroll.scrollTop = 0;
     try {
       const problem = scopeProblem();
       if (problem) throw new Error(problem);
@@ -918,13 +1268,14 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
           partial = value;
           renderAI();
         },
-        progress: (done, total, synthesizing) => {
+        progress: (done, totalChunks, synthesizing) => {
+          progress = { done, total: totalChunks, synth: !!synthesizing };
           progressText = synthesizing
             ? tr("分段已保存，正在整合整体概览…")
             : tr("正在核查分段：") +
-              Math.min(done + 1, total) +
+              Math.min(done + 1, totalChunks) +
               " / " +
-              total +
+              totalChunks +
               tr(" · 已完成：") +
               done;
           renderAI();
@@ -935,8 +1286,10 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       if (disposed || run !== runNumber) return;
       saved = { ...payload, stale: false };
       status = payload.result.status;
+      progress = null;
       activeClaim = null;
       selectedAnchor = null;
+      kindFilter = "all";
       returnButton.hidden = true;
       for (const paragraph of snapshot.paragraphs) {
         const nodes = paragraphNodes.get(paragraph.paragraphIndex);
@@ -952,6 +1305,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       renderRecords().catch(() => {});
     } catch (error) {
       if (disposed || run !== runNumber) return;
+      progress = null;
       if (error.name === "AbortError") {
         status = saved.result?.status || "idle";
       } else {
@@ -962,10 +1316,150 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     }
     renderAI();
   }
+
+  // ---------- Reading records ----------
+  async function renderRecords() {
+    const results = (await getAllRecords("readingResults", db))
+      .filter(
+        (r) =>
+          r.documentId === item.id &&
+          r.sourceRevision === snapshot.sourceRevision,
+      )
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    if (disposed) return;
+    records = results;
+    recordsBox.replaceChildren();
+    updatePosition();
+    if (results.length < 2) return;
+    const label = el("label", "", l("研读记录", "Readings"));
+    const select = el("select", "core-input");
+    for (const r of results) {
+      const o = el(
+        "option",
+        "",
+        short(
+          r.scope?.label ||
+            (r.scope?.partial
+              ? l("段落 " + (r.scope.start + 1) + "–" + (r.scope.end + 1), "Paragraphs " + (r.scope.start + 1) + "–" + (r.scope.end + 1))
+              : l("全文", "Whole text")),
+          30,
+        ) +
+          " · " +
+          new Date(r.createdAt).toLocaleDateString(getLocale()),
+      );
+      o.value = r.id;
+      select.append(o);
+    }
+    select.value = saved.result?.id || results[0].id;
+    select.addEventListener("change", () => openRecord(select.value));
+    label.append(select);
+    recordsBox.append(label, el("span", "reader-muted", results.length + l(" 次研读", " readings")));
+  }
+  function openRecord(id) {
+    const params = new URLSearchParams(location.search);
+    params.set("result", id);
+    params.delete("evidence");
+    params.delete("claim");
+    try {
+      sessionStorage.setItem("digest:reader-pos:" + item.id, String(currentIndex));
+    } catch {}
+    history.pushState({}, "", location.pathname + "?" + params);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }
+
+  // ---------- Live position: header, contents, notes follow, scope banner ----------
+  function pauseFollow() {
+    followPausedUntil = Date.now() + 1200;
+  }
+  function updatePosition() {
+    positionFrame = 0;
+    if (!wrappers.length || disposed) return;
+    const top = sourceScroll.getBoundingClientRect().top + 12;
+    let lo = 0,
+      hi = wrappers.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (wrappers[mid].getBoundingClientRect().bottom > top) hi = mid;
+      else lo = mid + 1;
+    }
+    currentIndex = Number(wrappers[lo].dataset.paragraphIndex);
+    const c = chapterAt(currentIndex);
+    position.textContent =
+      (c >= 0 ? short(chapterLabel(c), 28) + " · " : "") +
+      l("第 " + (currentIndex + 1) + " / " + total + " 段", "¶ " + (currentIndex + 1) + " / " + total);
+    updateBanner(c);
+    // Notes follow the paragraph being read: the nearest note at or above it lights up.
+    const nodes = [...claimNodes.values()].filter((n) => n.dataset.at !== undefined && n.isConnected);
+    // Only follow inside the range the shown notes cover.
+    const scope = saved.result?.scope;
+    const inside = !scope || !Number.isInteger(scope.start) || (currentIndex >= scope.start && currentIndex <= scope.end);
+    let near = null;
+    if (inside) for (const node of nodes) if (Number(node.dataset.at) <= currentIndex) near = node;
+    nodes.forEach((node) => node.classList.toggle("is-near", node === near));
+    if (near && prefs.follow && Date.now() > followPausedUntil && !aiScroll.matches(":hover, :focus-within"))
+      revealCard(near);
+  }
+  function updateBanner(c) {
+    const scope = saved.result?.scope;
+    const outside = scope && Number.isInteger(scope.start) && (currentIndex < scope.start || currentIndex > scope.end);
+    banner.hidden = !outside;
+    if (!outside || banner.dataset.for === String(c >= 0 ? c : -1)) return;
+    banner.dataset.for = String(c >= 0 ? c : -1);
+    banner.replaceChildren(
+      el(
+        "p",
+        "",
+        c >= 0
+          ? l("你正在读「" + short(chapterLabel(c), 24) + "」，这次研读不包括这一章。", "You are reading “" + short(chapterLabel(c), 24) + "”, which this reading does not cover.")
+          : l("你正在读的段落不在这次研读范围内。", "The paragraph you are reading is outside this reading."),
+      ),
+    );
+    if (c >= 0) {
+      const record = records.find((r) => r.scope && r.scope.start <= chapters[c].start && r.scope.end >= chapters[c].end);
+      if (record && record.id !== saved.result.id)
+        banner.append(button(l("打开本章的研读记录", "Open this chapter's reading"), () => openRecord(record.id), "secondary-action btn-sm"));
+      const study = button(l("研读这一章", "Read this chapter"), () => {
+        setScope(chapters[c].start, chapters[c].end);
+        updateScope();
+        analyze();
+      }, "primary-action btn-sm");
+      study.disabled = chunkCount(chapters[c].start, chapters[c].end) > MAX_CHUNKS;
+      banner.append(study);
+    }
+  }
+  sourceScroll.addEventListener(
+    "scroll",
+    () => {
+      if (!positionFrame) positionFrame = requestAnimationFrame(updatePosition);
+    },
+    { passive: true },
+  );
+  aiScroll.addEventListener("wheel", pauseFollow, { passive: true });
+  aiScroll.addEventListener("touchstart", pauseFollow, { passive: true });
+  const onKey = (event) => {
+    if (event.key !== "Escape") return;
+    if (!toc.hidden) closeToc();
+    else if (!prefsPanel.hidden) {
+      prefsPanel.hidden = true;
+      prefsButton.setAttribute("aria-expanded", "false");
+      prefsButton.focus();
+    }
+  };
+  const onClick = (event) => {
+    if (!prefsPanel.hidden && !prefsPanel.contains(event.target) && !prefsButton.contains(event.target)) {
+      prefsPanel.hidden = true;
+      prefsButton.setAttribute("aria-expanded", "false");
+    }
+  };
+  document.addEventListener("keydown", onKey);
+  document.addEventListener("click", onClick);
   return () => {
     disposed = true;
     runNumber++;
     session.cancel();
     if (positionFrame) cancelAnimationFrame(positionFrame);
+    document.removeEventListener("keydown", onKey);
+    document.removeEventListener("click", onClick);
+    delete document.documentElement.dataset.readerTheme;
   };
 }
