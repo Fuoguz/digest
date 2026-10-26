@@ -207,7 +207,7 @@ export function renderLibrary(state) {
     '<input type="search" data-library-search value="' +
     escapeHTML(state.filters.query) +
     th(
-      '" placeholder="搜索标题、正文或标签" aria-label="搜索资料"></label><select class="filter-select" data-source-filter aria-label="资料类型"><option value="all">全部类型</option><option value="pdf">PDF</option><option value="text">TXT</option><option value="markdown">Markdown</option><option value="legacy">旧版条目</option></select><select class="filter-select" data-mode-filter aria-label="研读模式"><option value="all">全部模式</option><option value="general">General</option><option value="academic_paper">Academic Paper</option><option value="legal_case">Legal Case</option><option value="policy_document">Policy Document</option></select></div><div class="filter-chips" role="group" aria-label="筛选">',
+      '" placeholder="搜索标题、正文或标签" aria-label="搜索资料"></label><select class="filter-select" data-source-filter aria-label="资料类型"><option value="all">全部类型</option><option value="pdf">PDF</option><option value="epub">EPUB</option><option value="text">TXT</option><option value="markdown">Markdown</option><option value="legacy">旧版条目</option></select><select class="filter-select" data-mode-filter aria-label="研读模式"><option value="all">全部模式</option><option value="general">General</option><option value="academic_paper">Academic Paper</option><option value="legal_case">Legal Case</option><option value="policy_document">Policy Document</option></select></div><div class="filter-chips" role="group" aria-label="筛选">',
     ) +
     tagButtons +
     chip(state.filters.favorite, "data-favorites", th("★ 收藏")) +
@@ -229,7 +229,7 @@ export function renderLibrary(state) {
           )
         : emptyState(
             tr("资料库还没有内容"),
-            tr("支持带文本层的 PDF、TXT、Markdown，也可以直接粘贴正文。"),
+            tr("支持带文本层的 PDF、无加密 EPUB、TXT、Markdown，也可以直接粘贴正文。"),
           )) +
     "</section>"
   );
@@ -243,8 +243,8 @@ export function renderComingSoon() {
 
 function importDialogHTML() {
   return th(
-    '<dialog id="import-dialog" aria-labelledby="import-heading"><div class="dialog-head"><div><h2 id="import-heading">导入资料</h2><p>文件只在当前浏览器中解析和保存。</p></div><button class="dialog-close" type="button" data-close-import aria-label="关闭">×</button></div><form class="import-form" id="import-form"><label class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="选择 PDF、TXT 或 Markdown 文件">' +
+    '<dialog id="import-dialog" aria-labelledby="import-heading"><div class="dialog-head"><div><h2 id="import-heading">导入资料</h2><p>文件只在当前浏览器中解析和保存。</p></div><button class="dialog-close" type="button" data-close-import aria-label="关闭">×</button></div><form class="import-form" id="import-form"><label class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="选择 PDF、EPUB、TXT 或 Markdown 文件">' +
       iconHTML("upload") +
-      '<strong>拖入 PDF、TXT 或 Markdown</strong><span>PDF 需包含文本层 · 最大 20 MB</span><input id="file-input" type="file" accept=".pdf,.txt,.md,.markdown,text/plain,text/markdown,application/pdf"></label><div class="file-status" id="file-status" role="status"></div><div class="or-divider">或者粘贴正文</div><div class="field"><label for="import-content">正文</label><textarea id="import-content" placeholder="粘贴课程资料、文章或其他文本…"></textarea></div><div class="field"><label for="import-title">标题</label><input id="import-title" maxlength="180" placeholder="资料标题"></div><div class="field-row"><div class="field"><label for="import-mode">研读模式</label><select id="import-mode"><option value="general">General</option><option value="academic_paper">Academic Paper</option><option value="legal_case">Legal Case</option><option value="policy_document">Policy Document</option></select></div><div class="field"><label for="import-tags">标签</label><input id="import-tags" placeholder="课程，主题"></div></div><div class="dialog-actions"><button class="secondary-action" type="button" data-close-import>取消</button><button class="primary-action" id="import-submit" type="submit">保存到资料库</button></div></form></dialog>',
+      '<strong>拖入 PDF、EPUB、TXT 或 Markdown</strong><span>PDF 需含文本层，最大 20 MB · EPUB 需无 DRM 加密，最大 50 MB</span><input id="file-input" type="file" accept=".pdf,.epub,.txt,.md,.markdown,text/plain,text/markdown,application/pdf,application/epub+zip"></label><div class="file-status" id="file-status" role="status"></div><div class="or-divider">或者粘贴正文</div><div class="field"><label for="import-content">正文</label><textarea id="import-content" placeholder="粘贴课程资料、文章或其他文本…"></textarea></div><div class="field"><label for="import-title">标题</label><input id="import-title" maxlength="180" placeholder="资料标题"></div><div class="field-row"><div class="field"><label for="import-mode">研读模式</label><select id="import-mode"><option value="general">General</option><option value="academic_paper">Academic Paper</option><option value="legal_case">Legal Case</option><option value="policy_document">Policy Document</option></select></div><div class="field"><label for="import-tags">标签</label><input id="import-tags" placeholder="课程，主题"></div></div><div class="dialog-actions"><button class="secondary-action" type="button" data-close-import>取消</button><button class="primary-action" id="import-submit" type="submit">保存到资料库</button></div></form></dialog>',
   );
 }

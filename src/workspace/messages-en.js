@@ -813,3 +813,24 @@ Object.assign(en, {
   "资料与答案只保存在你的浏览器中。": "Sources and answers stay in your browser.",
   "没有虚假的掌握率或自动评分。": "No fake mastery scores or automatic grades.",
 });
+// EPUB import.
+Object.assign(en, {
+  "这本 EPUB 受 DRM 加密保护，无法提取正文。请使用无加密版本，或复制需要的章节后粘贴。":
+    "This EPUB is DRM-protected, so its text cannot be extracted. Use a DRM-free copy, or copy the chapters you need and paste them.",
+  "这本 EPUB 未提取到可用正文，可能是图片版电子书。请复制需要的章节后粘贴。":
+    "No usable text was found in this EPUB; it may be image-based. Copy the chapters you need and paste them.",
+  "无法读取这个 EPUB 文件，文件可能已损坏。":
+    "This EPUB file could not be read. It may be damaged.",
+  "EPUB 解压后内容过大，请拆分后导入。":
+    "This EPUB is too large once unpacked. Import a smaller part.",
+  "EPUB 文件不能超过 50 MB": "EPUB files cannot exceed 50 MB",
+  "仅支持 PDF、EPUB、TXT 和 Markdown 文件":
+    "Only PDF, EPUB, TXT and Markdown files are supported",
+  "选择 PDF、EPUB、TXT 或 Markdown 文件":
+    "Choose a PDF, EPUB, TXT or Markdown file",
+  "拖入 PDF、EPUB、TXT 或 Markdown": "Drop a PDF, EPUB, TXT or Markdown file",
+  "PDF 需含文本层，最大 20 MB · EPUB 需无 DRM 加密，最大 50 MB":
+    "PDF: text layer, up to 20 MB · EPUB: DRM-free, up to 50 MB",
+  "支持带文本层的 PDF、无加密 EPUB、TXT、Markdown，也可以直接粘贴正文。":
+    "Supports PDFs with a text layer, DRM-free EPUB, TXT and Markdown, or paste the text directly.",
+});

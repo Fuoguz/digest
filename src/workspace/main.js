@@ -19,6 +19,7 @@ import {
 } from "../data/legacy-migration.js";
 import { extractTextFile, fileExtension } from "../importers/text.js";
 import { extractPdfFile } from "../importers/pdf.js";
+import { extractEpubFile } from "../importers/epub.js";
 import { shellHTML, renderLibrary, renderComingSoon } from "./views.js";
 import { mountReader } from "../reader/reader.js";
 import { mountReview } from "./review.js";
@@ -280,7 +281,9 @@ async function processFile(file) {
     const result =
       extension === "pdf" || file.type === "application/pdf"
         ? await extractPdfFile(file)
-        : await extractTextFile(file);
+        : extension === "epub" || file.type === "application/epub+zip"
+          ? await extractEpubFile(file)
+          : await extractTextFile(file);
     if (version !== importVersion) return;
     state.importData = result;
     document.querySelector("#import-title").value = result.title;

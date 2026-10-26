@@ -276,6 +276,7 @@ input[type="file"]::file-selector-button {
 .field { display: grid; gap: 6px; margin-bottom: var(--space-4); color: var(--ink-700); font-size: var(--text-sm); font-weight: 600; }
 .field label { color: var(--ink-700); font-size: var(--text-sm); font-weight: 600; }
 .field textarea { min-height: 120px; }
+.field input, .field textarea, .field select { font-weight: 400; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 
 /* ---------- Text roles ---------- */

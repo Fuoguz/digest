@@ -10,6 +10,7 @@ export const SOURCE_TYPES = Object.freeze({
   text: "Text",
   markdown: "Markdown",
   pdf: "PDF",
+  epub: "EPUB",
   legacy: "Legacy",
 });
 

@@ -21,7 +21,7 @@ export function stripMarkdown(markdown) {
 
 export async function extractTextFile(file) {
   const extension = fileExtension(file.name);
-  if (!['txt', ...MARKDOWN_EXTENSIONS].includes(extension)) throw new Error(tr('仅支持 PDF、TXT 和 Markdown 文件'));
+  if (!['txt', ...MARKDOWN_EXTENSIONS].includes(extension)) throw new Error(tr('仅支持 PDF、EPUB、TXT 和 Markdown 文件'));
   const original = await file.text();
   const rawContent = MARKDOWN_EXTENSIONS.has(extension) ? stripMarkdown(original) : original.trim();
   if (!rawContent) throw new Error(tr('文件中没有可导入的正文'));
