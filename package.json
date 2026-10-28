@@ -14,6 +14,7 @@
     "qa:quick": "node tests/browser/quick.mjs",
     "qa:ocr": "node tests/browser/ocr.mjs",
     "qa:selection": "node tests/browser/selection.mjs",
+    "qa:journey": "node tests/browser/journey.mjs",
     "qa:real-timing": "node tests/real-timing.mjs",
     "qa:real-selection": "node tests/real-selection.mjs"
   },

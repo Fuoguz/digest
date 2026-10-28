@@ -105,6 +105,8 @@ html[lang="zh-CN"] .reader { --read-leading: 2; }
 .reader-more summary { min-height: 38px; display: inline-flex; align-items: center; padding: 0 8px; border-radius: var(--radius-sm); white-space: nowrap; }
 .reader-more summary:hover { background: var(--surface-muted); }
 .reader-more-menu { position: absolute; right: 0; top: 44px; z-index: 35; width: 230px; display: grid; gap: 4px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-raised); box-shadow: var(--shadow-2); animation: rise-in var(--motion-fast); }
+.reader-more-menu a { display: flex; padding: 8px 10px; border-radius: var(--radius-sm); color: var(--ink-900); font-size: var(--text-sm); text-decoration: none; }
+.reader-more-menu a:hover { background: var(--surface-muted); }
 .reader-more-menu button { justify-content: flex-start; padding: 8px 10px; border-radius: var(--radius-sm); color: var(--ink-900); text-decoration: none; }
 .reader-more-menu button:hover { background: var(--surface-muted); }
 .reader-header-actions .language-control select { min-height: 38px; }

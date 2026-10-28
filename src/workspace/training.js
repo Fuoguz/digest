@@ -370,6 +370,8 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         docs,
         compact: !!next.childNodes.length,
         register: (fn) => loopCleanups.push(fn),
+        // Arriving from the Reader with ?practice=<material>.
+        material: new URLSearchParams(location.search).get("practice"),
       });
       if (next.childNodes.length) {
         header.after(next);

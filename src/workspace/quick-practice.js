@@ -18,7 +18,7 @@ const taskURL = (id, attempt, extra = "") =>
   encodeURIComponent(id) +
   (attempt ? "?attempt=" + encodeURIComponent(attempt) + extra : extra ? "?" + extra.slice(1) : "");
 
-export function quickPractice({ repo, db, docs, compact = false, register = () => {} }) {
+export function quickPractice({ repo, db, docs, compact = false, register = () => {}, material: initial = null }) {
   let material = null, // { doc, saved }
     controller = null;
   const box = el("section", "quick-practice" + (compact ? " is-compact" : ""));
@@ -191,6 +191,16 @@ export function quickPractice({ repo, db, docs, compact = false, register = () =
     );
     if (library) library.value = "";
   });
+
+  const preset = initial && docs.find((d) => d.id === initial);
+  if (preset) {
+    setMaterial(preset, true);
+    if (library) library.value = preset.id;
+    requestAnimationFrame(() => {
+      box.scrollIntoView({ block: "start" });
+      question.focus({ preventScroll: true });
+    });
+  }
 
   async function runSuggest() {
     if (controller) return;

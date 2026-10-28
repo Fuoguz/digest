@@ -166,7 +166,13 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   const more = el("details", "reader-more");
   more.append(el("summary", "", tr("更多 ···")));
   const menu = el("div", "reader-more-menu");
+  // From the material to practice and to everything already learned from it.
+  const practiceLink = link(l("用这份资料练一道题", "Practise a question on this"), "/app/?practice=" + encodeURIComponent(item.id));
+  const historyLink = link(l("这份资料的学习记录", "Learning from this material"), "/app/search?doc=" + encodeURIComponent(item.id));
+  for (const a of [practiceLink, historyLink]) a.addEventListener("click", () => (more.open = false));
   menu.append(
+    practiceLink,
+    historyLink,
     ...(!useProxy()
       ? [
           button("Developer AI Service", () => {
@@ -840,13 +846,29 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     locate(initialAnchor, initialClaim?.id || null);
     if (!initialClaim && returnPath)
       returnButton.textContent = tr("← 返回反馈");
+  } else if (initialClaim) {
+    // Opened from search or history: show that note next to its source.
+    const anchor = saved.anchors.find(
+      (a) => initialClaim.evidenceIds.includes(a.id) && a.validationStatus === "matched",
+    );
+    if (anchor) locate(anchor, initialClaim.id);
+    else
+      requestAnimationFrame(() => {
+        activeClaim = initialClaim.id;
+        setTab("ai");
+        claimNodes.get(initialClaim.id)?.classList.add("claim-selected");
+        focusCard(initialClaim.id);
+      });
   } else if (routeParams.has("result") && saved.result?.scope?.focus && !saved.stale) {
     requestAnimationFrame(() => showFocus(saved.result.scope.focus));
   } else {
     // Switching between readings keeps the reader where it was.
     const key = "digest:reader-pos:" + item.id;
-    const kept = Number(sessionStorage.getItem(key));
-    sessionStorage.removeItem(key);
+    let kept = 0;
+    try {
+      kept = Number(sessionStorage.getItem(key));
+      sessionStorage.removeItem(key);
+    } catch {}
     if (kept > 0)
       requestAnimationFrame(() => {
         const nodes = paragraphNodes.get(kept);
