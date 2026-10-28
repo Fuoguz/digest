@@ -1,3 +1,4 @@
+import { backupReminder, snoozeBackupReminder } from "../data/storage-guard.js";
 import {
   mountGapPanel,
   mountChallenge,
@@ -377,6 +378,36 @@ export async function mountTraining(container, db, isCurrent = () => true) {
         header.after(next);
         next.after(quick);
       } else header.after(quick);
+      // Learning lives only in this browser: nudge a backup when none covers recent work.
+      const reminder = await backupReminder(db, await repo.list("activities")).catch(() => null);
+      if (reminder?.due && current()) {
+        const nudge = el("section", "backup-nudge");
+        nudge.setAttribute("role", "note");
+        nudge.append(
+          el(
+            "p",
+            "",
+            l(
+              "你的学习记录只保存在这个浏览器里" +
+                (reminder.lastBackup
+                  ? "，上次备份是 " + new Date(reminder.lastBackup).toLocaleDateString("zh-CN") + "。"
+                  : "，还没有备份过。") +
+                "清理浏览器数据或换电脑都会丢失，建议现在导出一份。",
+              "Your learning is stored only in this browser" +
+                (reminder.lastBackup
+                  ? "; last backup " + new Date(reminder.lastBackup).toLocaleDateString("en") + ". "
+                  : " and has never been backed up. ") +
+                "Clearing browser data or switching computers loses it. Export a backup now.",
+            ),
+          ),
+          link(l("去导出备份", "Export a backup"), "/app/settings", "secondary-action btn-sm"),
+          button(l("7 天后再提醒", "Remind me in 7 days"), async () => {
+            await snoozeBackupReminder(db).catch(() => {});
+            nudge.remove();
+          }, "quiet-link"),
+        );
+        header.after(nudge);
+      }
       const main = el("div", "desk-main"),
         side = el("div", "desk-side"),
         layout = el("div", "desk-layout");

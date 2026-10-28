@@ -3,6 +3,9 @@ import { accessDialog, useProxy } from "../ai/proxy-transport.js";
 import { getAllRecords } from "../data/db.js";
 import { openAIConfiguration } from "../reader/config-dialog.js";
 import { exportBackup, restoreBackup } from "../data/backup.js";
+import { getSetting } from "../data/db.js";
+import { storageStatus, requestPersistence, recordBackup, LAST_BACKUP } from "../data/storage-guard.js";
+import { getLocale } from "./i18n.js";
 import {
   el,
   button,
@@ -24,9 +27,49 @@ export async function mountSettings(container, db, isCurrent) {
   root.dataset.view = "settings";
   container.replaceChildren(root);
   const data = el("section", "settings-section");
+  const l = (zh, en) => (getLocale() === "en" ? en : zh);
+  // How safe the local data is: whether the browser keeps it, and when it was last backed up.
+  const protection = el("div", "storage-protection");
+  async function renderProtection() {
+    const [status, last] = await Promise.all([storageStatus(), getSetting(LAST_BACKUP, db)]);
+    protection.replaceChildren(
+      el(
+        "p",
+        status.persisted ? "is-safe" : "is-risk",
+        status.persisted
+          ? l("浏览器已同意长期保存这里的数据，不会在空间不足时自动清理。", "The browser keeps this data and will not clear it when space runs low.")
+          : status.supported
+            ? l("浏览器可能在空间不足或长期未访问时清理这里的数据。", "The browser may clear this data when space runs low or after long inactivity.")
+            : l("这个浏览器无法确认是否会长期保存数据。", "This browser cannot confirm that it keeps this data."),
+      ),
+      el(
+        "p",
+        "",
+        last?.at
+          ? l("上次备份：", "Last backup: ") + new Date(last.at).toLocaleString(l("zh-CN", "en"))
+          : l("还没有导出过备份。", "No backup exported yet."),
+      ),
+    );
+    if (status.supported && !status.persisted)
+      protection.append(
+        button(l("请求浏览器长期保存", "Ask the browser to keep this data"), async () => {
+          const granted = await requestPersistence();
+          message(
+            feedback,
+            granted
+              ? l("浏览器已同意长期保存。", "The browser will keep this data.")
+              : l("浏览器没有同意。请定期导出备份。", "The browser declined. Export backups regularly."),
+            !granted,
+          );
+          renderProtection();
+        }, "secondary-action"),
+      );
+  }
+  renderProtection().catch(() => {});
   data.append(
     el("h2", "", tr("本地数据")),
     el("p", "", docs.length + tr(" 份资料 · IndexedDB")),
+    protection,
     button(
       tr("导出完整 JSON 备份"),
       async () => {
@@ -41,6 +84,8 @@ export async function mountSettings(container, db, isCurrent) {
             "digest-v02-" + new Date().toISOString().slice(0, 10) + ".json";
           a.click();
           setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+          await recordBackup(db);
+          renderProtection().catch(() => {});
           message(feedback, tr("备份已生成，不包含 API Key。"));
         } catch (e) {
           message(feedback, tr("备份失败：") + e.message, true);
@@ -72,7 +117,10 @@ export async function mountSettings(container, db, isCurrent) {
     if (!file) return;
     try {
       if (file.size > 50 * 1024 * 1024) throw new Error(tr("备份超过 50 MB"));
-      const count = await restoreBackup(db, JSON.parse(await file.text()));
+      const backup = JSON.parse(await file.text());
+      const count = await restoreBackup(db, backup);
+      // What was just restored is already in that backup file.
+      if (Date.parse(backup.createdAt)) await recordBackup(db, new Date(backup.createdAt));
       message(feedback, tr("已恢复 ") + count + tr(" 份资料，请打开资料库。"));
     } catch (e) {
       message(feedback, e.message, true);

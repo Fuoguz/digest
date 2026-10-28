@@ -10,6 +10,7 @@ import { prepareFeedbackContext } from "../domain/training.js";
 import { suggestTasks } from "../ai/task-suggestions.js";
 import { ocrOffer } from "./ocr-offer.js";
 import { createTransport } from "../ai/proxy-transport.js";
+import { requestPersistence } from "../data/storage-guard.js";
 
 const l = (zh, en) => (getLocale() === "en" ? en : zh);
 const QUICK_COURSE = "quick-practice-course";
@@ -310,6 +311,7 @@ export function quickPractice({ repo, db, docs, compact = false, register = () =
           });
         });
         material.saved = true;
+        requestPersistence();
       }
       const course = await quickCourse(doc.id);
       const titleText = (typeof suggestedTitle === "string" && suggestedTitle) || prompt.split("\n")[0];

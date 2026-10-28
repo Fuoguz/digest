@@ -25,6 +25,7 @@ import { mountReview } from "./review.js";
 import { mountGraph } from "./graph.js";
 import { mountSettings } from "./tools.js";
 import { mountSearch } from "./search.js";
+import { requestPersistence } from "../data/storage-guard.js";
 import { learningStats } from "../domain/learning.js";
 import { el, button, link } from "./components.js";
 import { sourceSignature } from "../domain/evidence.js";
@@ -493,6 +494,7 @@ async function saveImport(event) {
     });
     document.querySelector("#import-dialog").close();
     showToast("“" + item.title + tr("”已保存到资料库"));
+    requestPersistence();
     if (state.importCourseId) {
       const repo = new TrainingRepository(db),
         course = await repo.get("courses", state.importCourseId);

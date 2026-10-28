@@ -143,7 +143,28 @@ try {
   for (const label of ["我的作答", "反馈", "知识点"]) assert.ok(scoped.includes(label), label + " in " + scoped);
   pass("the Reader leads to every record learned from that material");
 
-  // 7. Phone width.
+  // 7. Days later the home page asks for a backup; exporting one clears the reminder.
+  await page.goto(base + "/app/");
+  await page.locator(".quick-practice").waitFor();
+  assert.equal(await page.locator(".backup-nudge").count(), 0, "no reminder on the first day");
+  await page.clock.setFixedTime(new Date(Date.now() + 5 * 86400000));
+  await page.goto(base + "/app/");
+  await page.locator(".backup-nudge").waitFor();
+  await settle();
+  await shot("backup-reminder");
+  await page.locator(".backup-nudge").getByRole("link", { name: "去导出备份" }).click();
+  await page.locator(".storage-protection").getByText("还没有导出过备份").waitFor();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "导出完整 JSON 备份" }).click();
+  const file = await download;
+  assert.match(file.suggestedFilename(), /^digest-v02-.*\.json$/);
+  await page.locator(".storage-protection").getByText(/上次备份/).waitFor();
+  await page.goto(base + "/app/");
+  await page.locator(".quick-practice").waitFor();
+  assert.equal(await page.locator(".backup-nudge").count(), 0);
+  pass("learning that no backup covers triggers a reminder; exporting a backup records it and clears the reminder");
+
+  // 8. Phone width.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(base + "/app/search?q=" + encodeURIComponent("态度"));
   await page.locator(".search-row").first().waitFor();
