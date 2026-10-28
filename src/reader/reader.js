@@ -1609,12 +1609,12 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
         nodes.wrapper.classList.remove("evidence-target");
         nodes.text.textContent = paragraph.text;
       }
-      // The new reading is now current; drop a pinned earlier reading from the URL.
+      // Keep the new reading on screen after a reload: a passage reading is pinned in
+      // the URL (it is not the material's default); any other reading is the default.
       const params = new URLSearchParams(location.search);
-      if (params.has("result")) {
-        params.delete("result");
-        history.replaceState({}, "", location.pathname + (params.size ? "?" + params : ""));
-      }
+      if (payload.result.scope?.focus) params.set("result", payload.result.id);
+      else params.delete("result");
+      history.replaceState({}, "", location.pathname + (params.size ? "?" + params : ""));
       renderRecords().catch(() => {});
     } else if (job.status === "cancelled") {
       status = saved.result ? saved.result.status : "idle";

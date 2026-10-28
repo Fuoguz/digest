@@ -121,3 +121,47 @@ test('a passage reading is saved with the document, reopens by id and logs no ma
   assert.ok(!JSON.stringify(activity).includes(focus.text.slice(0, 6)));
   db.close();
 });
+
+test('a passage reading survives backup and restore into an empty library, and stays searchable', async () => {
+  const { exportBackup, restoreBackup } = await import('../../src/data/backup.js');
+  const { buildHistoryIndex, searchHistory } = await import('../../src/domain/history.js');
+  const { snapshot, repository, db } = await setup();
+  const focus = focusOf(snapshot, 1, 4, 1, 30);
+  const service = new DigestAIService(recordingTransport());
+  service.options = { start: 0, end: 2, label: '选段', focus, provenance: { service: 'trial' } };
+  const payload = await new AnalysisSession(repository).run(snapshot, service);
+  const backup = JSON.parse(JSON.stringify(await exportBackup(db)));
+  db.close();
+  const fresh = await openDatabase(new IDBFactory());
+  await restoreBackup(fresh, backup);
+  const restored = await new ReadingRepository(fresh).load(snapshot, payload.result.id);
+  assert.deepEqual(restored.result.scope.focus, payload.result.scope.focus);
+  assert.deepEqual(restored.result.provenance, { service: 'trial' });
+  assert.ok(restored.anchors.every((a) => a.validationStatus === 'matched'));
+  const data = {};
+  for (const s of ['documents', 'readingResults']) data[s] = await getAllRecords(s, fresh);
+  const hits = searchHistory(buildHistoryIndex(data), 'QA 模拟', { type: 'reading' });
+  assert.ok(hits.length >= 1);
+  assert.match(hits[0].href, new RegExp('result=' + payload.result.id));
+  fresh.close();
+});
+test('a passage reading does not replace the material\'s main reading', async () => {
+  const { snapshot, repository, db } = await setup();
+  const session = new AnalysisSession(repository);
+  const whole = new DigestAIService(recordingTransport());
+  whole.options = { start: 0, end: 2 };
+  const main = await session.run(snapshot, whole);
+  const passage = new DigestAIService(recordingTransport());
+  passage.options = { start: 0, end: 2, focus: focusOf(snapshot, 1, 4, 1, 12) };
+  const focused = await session.run(snapshot, passage);
+  assert.equal((await repository.load(snapshot)).result.id, main.result.id, 'reopening shows the main reading');
+  assert.equal((await repository.load(snapshot, focused.result.id)).result.id, focused.result.id, 'the passage reading opens by id');
+  // A passage reading on a material with no reading yet becomes its default.
+  const other = await setup();
+  const first = new DigestAIService(recordingTransport());
+  first.options = { start: 0, end: 2, focus: focusOf(other.snapshot, 1, 4, 1, 12) };
+  const only = await new AnalysisSession(other.repository).run(other.snapshot, first);
+  assert.equal((await other.repository.load(other.snapshot)).result.id, only.result.id);
+  db.close();
+  other.db.close();
+});

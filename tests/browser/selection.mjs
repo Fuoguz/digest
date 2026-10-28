@@ -163,7 +163,15 @@ try {
   await retry.click();
   await page.locator(".focus-quote", { hasText: "主动回忆要求学习者" }).waitFor();
   assert.equal((await stored()).results.length, 3);
-  pass("a failed passage reading saves nothing; retry runs the same passage and saves it");  assert.deepEqual(errors, []);
+  pass("a failed passage reading saves nothing; retry runs the same passage and saves it");
+
+  // The passage reading stays on screen after a reload, but the material still opens on its main reading.
+  await page.reload();
+  await page.locator(".focus-quote", { hasText: "主动回忆要求学习者" }).waitFor();
+  await page.goto(readerURL);
+  await page.locator(".reading-claim").first().waitFor();
+  assert.equal(await page.locator(".focus-passage").count(), 0);
+  pass("a passage reading survives a reload without replacing the material's main reading");  assert.deepEqual(errors, []);
   pass("no page errors");
 } catch (e) {
   await page.screenshot({ path: out + "/failure.png", fullPage: true }).catch(() => {});

@@ -130,10 +130,13 @@ export class ReadingRepository {
         });
         for (const anchor of anchors)
           transaction.objectStore(STORES.evidenceAnchors).put(anchor);
+        // A passage reading does not replace the material's main reading; it is one
+        // of its reading records. It becomes the default only when there is none.
+        const keepMain = !!result.scope?.focus && !!current.digestResultId;
         transaction.objectStore(STORES.documents).put({
           ...current,
-          digestResultId: result.id,
-          evidenceAnchorIds: anchors.map((anchor) => anchor.id),
+          digestResultId: keepMain ? current.digestResultId : result.id,
+          evidenceAnchorIds: keepMain ? current.evidenceAnchorIds : anchors.map((anchor) => anchor.id),
           activeAnalysisRequestId: null,
           lastReadAt: result.createdAt,
         });
