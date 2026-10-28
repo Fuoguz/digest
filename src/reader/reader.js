@@ -352,7 +352,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     tr("← 返回 AI 判断"),
     () => {
       if (!activeClaim && returnPath) {
-        const target = headerActions.querySelector("a[data-route]");
+        const target = headerActions.querySelector("a.reader-return");
         if (target) {
           target.click();
           return;
