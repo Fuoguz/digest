@@ -82,7 +82,7 @@ const server = http.createServer(async (request, response) => {
     const prompt = JSON.parse(
       input.messages.find((message) => message.role === "user").content,
     );
-    const snapshot = { ...prompt.document, readingMode: prompt.readingMode };
+    const snapshot = { ...prompt.document, readingMode: prompt.readingMode, focus: prompt.focus };
     let output;
     if (prompt.workflow) {
       output = loopOutput(prompt);

@@ -1,9 +1,10 @@
 import { readingChunks, evidenceExcerpts } from "../domain/context.js";
-import { MODE_SECTIONS, parseReadingOutput } from "./schema.js";
-import { validateEvidence } from "../domain/evidence.js";
+import { MODE_SECTIONS, parseReadingOutput, AnalysisError } from "./schema.js";
+import { validateEvidence, validFocus } from "../domain/evidence.js";
 
 export function analysisMessages(snapshot) {
   const names = Object.keys(MODE_SECTIONS[snapshot.readingMode]);
+  const focus = snapshot.focus;
   return [
     {
       role: "system",
@@ -13,7 +14,20 @@ export function analysisMessages(snapshot) {
     {
       role: "user",
       content: JSON.stringify({
-        task: "研读给出的材料范围，不声称已阅读范围外内容。每节最多 2 条简短判断、每条最多 1 条引用，最多 2 道可回答的复习题。材料不足用 missing。",
+        task: focus
+          ? "学生在原文中选中了 focus.text，请围绕这段选文研读：它说了什么、关键概念的含义、它在上下文中的作用、学生容易误解的地方。其余段落只是理解选文所需的上下文，判断应聚焦选文。证据优先引用选文所在段落（focus.paragraphIndexes）中的原句。不声称已阅读范围外内容。每节最多 2 条简短判断、每条最多 1 条引用，最多 2 道可回答的复习题。选文不涉及某一节时用 missing。"
+          : "研读给出的材料范围，不声称已阅读范围外内容。每节最多 2 条简短判断、每条最多 1 条引用，最多 2 道可回答的复习题。材料不足用 missing。",
+        ...(focus
+          ? {
+              focus: {
+                text: focus.text,
+                paragraphIndexes: Array.from(
+                  { length: focus.end.paragraphIndex - focus.start.paragraphIndex + 1 },
+                  (_, i) => focus.start.paragraphIndex + i,
+                ),
+              },
+            }
+          : {}),
         outputLanguage: snapshot.outputLanguage || "zh-CN",
         readingMode: snapshot.readingMode,
         requiredSections: names,
@@ -65,6 +79,17 @@ export function analysisMessages(snapshot) {
   ];
 }
 
+// Which service produced a reading, kept with the result so a local developer or QA
+// endpoint is never presented as the trial service. Never includes keys.
+export function provenanceOf(value) {
+  if (value?.service === "trial") return { service: "trial" };
+  return {
+    service: "developer",
+    host: typeof value?.host === "string" ? value.host.slice(0, 200) : "",
+    model: typeof value?.model === "string" ? value.model.slice(0, 200) : "",
+  };
+}
+
 export class DigestAIService {
   constructor(transport) {
     this.transport = transport;
@@ -78,6 +103,18 @@ export class DigestAIService {
     );
     const chunks = readingChunks(paragraphs);
     if (!chunks.length) throw new Error("请选择有效的段落范围。");
+    const focus = options.focus || null;
+    // The selected passage must still be exactly the current source text.
+    if (
+      focus &&
+      (!validFocus(focus, paragraphs) ||
+        focus.start.paragraphIndex < paragraphs[0].paragraphIndex ||
+        focus.end.paragraphIndex > paragraphs.at(-1).paragraphIndex)
+    )
+      throw new AnalysisError(
+        "selection_changed",
+        "选中的文字与当前原文不一致，请重新选择后再研读。",
+      );
     if (chunks.length > 12)
       throw new Error(
         "本次研读最多处理 12 个分段，请选择较小的段落范围。原文完整保留。",
@@ -88,6 +125,7 @@ export class DigestAIService {
       options.end,
       options.language,
       "reading-chunks-v2",
+      ...(focus ? [{ start: focus.start, end: focus.end }] : []),
     ]);
     const checkpoint = await options.load?.();
     const parts = checkpoint?.key === key && Array.isArray(checkpoint.parts) ? checkpoint.parts : [];
@@ -99,6 +137,16 @@ export class DigestAIService {
         requestId: requestId + "-part-" + i,
         paragraphs: chunks[i],
         outputLanguage: options.language,
+        // Only sections that contain the selection are asked about it.
+        focus:
+          focus &&
+          chunks[i].some(
+            (p) =>
+              p.paragraphIndex >= focus.start.paragraphIndex &&
+              p.paragraphIndex <= focus.end.paragraphIndex,
+          )
+            ? focus
+            : null,
       });
       const ids = new Map();
       for (const section of Object.values(part.result.sections))
@@ -217,7 +265,11 @@ export class DigestAIService {
           totalParagraphs: snapshot.paragraphs.length,
           partial: paragraphs.length !== snapshot.paragraphs.length,
           label: typeof options.label === "string" ? options.label.slice(0, 200) : null,
+          ...(focus
+            ? { focus: { start: { ...focus.start }, end: { ...focus.end }, text: focus.text } }
+            : {}),
         },
+        ...(options.provenance ? { provenance: provenanceOf(options.provenance) } : {}),
         createdAt: new Date().toISOString(),
       },
     };
@@ -229,12 +281,14 @@ export class DigestAIService {
       requestId,
       paragraphs = snapshot.paragraphs,
       outputLanguage = "zh-CN",
+      focus = null,
     } = {},
   ) {
     const messages = analysisMessages({
       ...snapshot,
       paragraphs,
       outputLanguage,
+      focus,
     });
     let text = await this.transport.request(messages, { signal });
     signal?.throwIfAborted();

@@ -888,4 +888,8 @@ Object.assign(en, {
   " 页，请缩小页码范围。": " pages per run. Narrow the page range.",
   "没有识别出可用的文字。请确认扫描清晰，或换一个页码范围。":
     "No usable text was recognised. Check the scan quality or try another page range.",
+});// Reading a selected passage.
+Object.assign(en, {
+  "选中的文字与当前原文不一致，请重新选择后再研读。":
+    "The selected text no longer matches the source. Select it again before reading.",
 });

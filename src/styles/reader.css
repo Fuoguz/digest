@@ -403,3 +403,14 @@ html[lang="zh-CN"] .reader { --read-leading: 2; }
 @media (prefers-reduced-motion: reduce) {
   .note-mark, .evidence-highlight { animation: none !important; }
 }
+
+/* Selected passage → AI reading */
+.selection-action { position: fixed; z-index: 40; display: flex; align-items: center; gap: 8px; padding: 6px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-raised); box-shadow: 0 6px 20px rgb(0 0 0 / 0.16); }
+.selection-action[hidden] { display: none; }
+.selection-hint { max-width: 260px; padding: 0 6px; color: var(--ink-700); font-size: var(--text-xs); }
+::highlight(digest-focus) { background-color: var(--source-bg); text-decoration: underline 2px var(--source-rule); text-underline-offset: 3px; }
+.focus-passage { display: grid; gap: 8px; margin: 0 0 16px; }
+.focus-quote { margin: 0; max-height: 14em; overflow: auto; padding: 10px 14px; border-left: 3px solid var(--source-rule); background: var(--source-bg); color: var(--ink-950); white-space: pre-wrap; }
+.focus-passage .reader-link { justify-self: start; }
+.reading-provenance { margin-top: 6px; color: var(--ink-500); font-size: var(--text-xs); }
+.reading-provenance.is-developer { color: var(--ai); }

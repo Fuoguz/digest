@@ -1,7 +1,14 @@
 import { t as tr } from "../workspace/i18n.js";
-import { createTransport, useProxy } from "../ai/proxy-transport.js";
+import { createTransport, useProxy, ProxyTransport } from "../ai/proxy-transport.js";
 import { el, button, highlightQuote } from "./dom.js";
-import { documentSnapshot, restoreAnchor } from "../domain/evidence.js";
+import {
+  documentSnapshot,
+  restoreAnchor,
+  selectionText,
+  validFocus,
+  anchorInFocus,
+  MAX_FOCUS_CHARS,
+} from "../domain/evidence.js";
 import { getLocale, installLanguageControl } from "../workspace/i18n.js";
 import { readingChunks } from "../domain/context.js";
 import { getSetting, getRecord, getAllRecords } from "../data/db.js";
@@ -101,7 +108,9 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     currentIndex = 0,
     feedbackLine = null,
     positionFrame = 0,
-    followPausedUntil = 0;
+    followPausedUntil = 0,
+    retryScope = null,
+    selectionFrame = 0;
   const total = snapshot.paragraphs.length;
   const chapters = documentChapters(item, total);
   const chapterAt = (index) =>
@@ -145,7 +154,15 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   const prefsButton = tool(aa, l("阅读", "Reading"), l("阅读设置", "Reading settings"));
   prefsButton.setAttribute("aria-expanded", "false");
   const notesButton = tool("ai", l("笔记", "Notes"), l("研读笔记", "Study notes"));
-  const analyzeButton = button(tr("开始研读"), analyze, "primary-action");
+  // "Re-read" repeats what is on screen: a passage reading re-reads its passage.
+  const analyzeButton = button(
+    tr("开始研读"),
+    () => {
+      const focus = saved.result?.scope?.focus;
+      analyze(focus && !saved.stale && validFocus(focus, snapshot.paragraphs) ? selectionScope(focus) : null);
+    },
+    "primary-action",
+  );
   const more = el("details", "reader-more");
   more.append(el("summary", "", tr("更多 ···")));
   const menu = el("div", "reader-more-menu");
@@ -342,6 +359,174 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   );
   returnButton.hidden = true;
   sourcePanel.append(sourceScroll, returnButton);
+
+  // ---------- Selected passage → AI reading ----------
+  const selectionBar = el("div", "selection-action");
+  selectionBar.hidden = true;
+  selectionBar.setAttribute("role", "group");
+  selectionBar.setAttribute("aria-label", l("选中的原文", "Selected text"));
+  // Keep the text selection when the bar's buttons are pressed.
+  selectionBar.addEventListener("pointerdown", (event) => event.preventDefault());
+  const paragraphText = (i) => snapshot.paragraphs[i]?.text || "";
+  function textOffset(root, container, offset) {
+    const range = document.createRange();
+    range.setStart(root, 0);
+    range.setEnd(container, offset);
+    return range.toString().length;
+  }
+  function readSelection() {
+    const selection = document.getSelection();
+    if (!selection || selection.isCollapsed || !selection.rangeCount) return null;
+    const range = selection.getRangeAt(0);
+    if (!article.contains(range.commonAncestorContainer)) return null;
+    const texts = [...article.querySelectorAll(".paragraph-text")].filter((t) =>
+      range.intersectsNode(t),
+    );
+    if (!texts.length) return null;
+    const first = texts[0],
+      last = texts.at(-1);
+    const index = (t) => Number(t.closest(".source-paragraph").dataset.paragraphIndex);
+    let start = {
+      paragraphIndex: index(first),
+      offset: first.contains(range.startContainer)
+        ? textOffset(first, range.startContainer, range.startOffset)
+        : 0,
+    };
+    let end = {
+      paragraphIndex: index(last),
+      offset: last.contains(range.endContainer)
+        ? textOffset(last, range.endContainer, range.endOffset)
+        : paragraphText(index(last)).length,
+    };
+    // Drop whitespace and empty paragraph ends at the edges of the selection.
+    while (start.paragraphIndex < end.paragraphIndex && !paragraphText(start.paragraphIndex).slice(start.offset).trim())
+      start = { paragraphIndex: start.paragraphIndex + 1, offset: 0 };
+    while (end.paragraphIndex > start.paragraphIndex && !paragraphText(end.paragraphIndex).slice(0, end.offset).trim())
+      end = { paragraphIndex: end.paragraphIndex - 1, offset: paragraphText(end.paragraphIndex - 1).length };
+    const head = paragraphText(start.paragraphIndex).slice(start.offset);
+    start = { ...start, offset: start.offset + head.length - head.trimStart().length };
+    end = { ...end, offset: paragraphText(end.paragraphIndex).slice(0, end.offset).trimEnd().length };
+    const focus = { start, end, text: selectionText(snapshot.paragraphs, { start, end }) };
+    return focus.text && focus.text.trim().length >= 2 ? focus : null;
+  }
+  const sameFocus = (a, b) =>
+    !!a &&
+    a.start.paragraphIndex === b.start.paragraphIndex &&
+    a.start.offset === b.start.offset &&
+    a.end.paragraphIndex === b.end.paragraphIndex &&
+    a.end.offset === b.end.offset;
+  function selectionScope(focus) {
+    return {
+      // One paragraph on each side lets the model read the passage in context.
+      start: Math.max(0, focus.start.paragraphIndex - 1),
+      end: Math.min(total - 1, focus.end.paragraphIndex + 1),
+      label: l("选段 · ", "Passage · ") + "「" + short(focus.text.replace(/\s+/g, " "), 16) + "」",
+      focus,
+    };
+  }
+  function onSelection() {
+    if (!selectionFrame) selectionFrame = requestAnimationFrame(updateSelection);
+  }
+  function updateSelection() {
+    selectionFrame = 0;
+    if (disposed) return;
+    const focus = snapshot.source ? readSelection() : null;
+    if (!focus) {
+      selectionBar.hidden = true;
+      return;
+    }
+    selectionBar.replaceChildren();
+    if (focus.text.length > MAX_FOCUS_CHARS) {
+      selectionBar.append(
+        el(
+          "span",
+          "selection-hint",
+          l(
+            "选段超过 " + MAX_FOCUS_CHARS + " 字，请缩短，或改用章节研读。",
+            "Over " + MAX_FOCUS_CHARS + " characters. Select less, or read the chapter.",
+          ),
+        ),
+      );
+    } else {
+      // The same passage was read before: open that reading instead of paying for another.
+      const existing = records.find((r) => sameFocus(r.scope?.focus, focus));
+      if (existing && existing.id !== saved.result?.id)
+        selectionBar.append(
+          button(l("查看这段的研读", "Open this passage's reading"), () => {
+            document.getSelection()?.removeAllRanges();
+            selectionBar.hidden = true;
+            openRecord(existing.id);
+          }, "secondary-action btn-sm"),
+        );
+      const go = button(
+        existing ? l("重新研读这段", "Read this passage again") : l("AI 研读选段", "Study passage with AI"),
+        () => {
+          document.getSelection()?.removeAllRanges();
+          selectionBar.hidden = true;
+          analyze(selectionScope(focus));
+        },
+        "primary-action btn-sm",
+      );
+      go.prepend(icon("ai"));
+      go.disabled = !!runningJob(readingKey);
+      if (go.disabled) go.title = l("当前研读完成后再试", "Wait for the current reading to finish");
+      selectionBar.append(go);
+    }
+    selectionBar.hidden = false;
+    const rect = document.getSelection().getRangeAt(0).getBoundingClientRect();
+    const width = selectionBar.offsetWidth,
+      height = selectionBar.offsetHeight;
+    const below = rect.bottom + 8;
+    selectionBar.style.top =
+      (below + height > innerHeight - 8 ? Math.max(8, rect.top - height - 8) : below) + "px";
+    selectionBar.style.left =
+      Math.min(Math.max(8, rect.left), Math.max(8, innerWidth - width - 8)) + "px";
+  }
+  // Paint the passage a reading was made for, without touching the text nodes.
+  function rangeIn(root, from, to) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    let seen = 0,
+      started = false;
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const length = node.data.length;
+      if (!started && from <= seen + length) {
+        range.setStart(node, from - seen);
+        started = true;
+      }
+      if (started && to <= seen + length) {
+        range.setEnd(node, to - seen);
+        return range;
+      }
+      seen += length;
+    }
+    return null;
+  }
+  function paintFocus() {
+    const highlights = globalThis.CSS?.highlights;
+    if (!highlights || typeof Highlight === "undefined") return;
+    highlights.delete("digest-focus");
+    const focus = saved.result?.scope?.focus;
+    if (!focus || saved.stale || !validFocus(focus, snapshot.paragraphs)) return;
+    const ranges = [];
+    for (let i = focus.start.paragraphIndex; i <= focus.end.paragraphIndex; i++) {
+      const node = paragraphNodes.get(i)?.text;
+      if (!node) continue;
+      const from = i === focus.start.paragraphIndex ? focus.start.offset : 0;
+      const to = i === focus.end.paragraphIndex ? focus.end.offset : node.textContent.length;
+      const range = rangeIn(node, from, to);
+      if (range) ranges.push(range);
+    }
+    highlights.set("digest-focus", new Highlight(...ranges));
+  }
+  function showFocus(focus) {
+    if (disposed) return;
+    setTab("source");
+    pauseFollow();
+    paintFocus();
+    const nodes = paragraphNodes.get(focus.start.paragraphIndex);
+    if (nodes) centerWithin(sourceScroll, nodes.wrapper);
+  }
 
   // ---------- Notes panel ----------
   const aiPanel = el("section", "ai-panel");
@@ -623,12 +808,15 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   });
   toChapter.addEventListener("change", updateScope);
   if (partial?.parts?.length) {
-    const [, start, end, lang] = JSON.parse(partial.key);
+    const [, start, end, lang, , at] = JSON.parse(partial.key);
     language.value = lang || getLocale();
     setScope(start, end);
+    // An unfinished selection reading resumes with its passage.
+    const focus = at && { ...at, text: selectionText(snapshot.paragraphs, at) };
+    if (focus && validFocus(focus, snapshot.paragraphs)) retryScope = selectionScope(focus);
   }
 
-  root.append(header, prefsPanel, tabs, split, scrim, toc);
+  root.append(header, prefsPanel, tabs, split, scrim, toc, selectionBar);
   container.replaceChildren(root);
   applyPrefs();
   setTab("source");
@@ -652,6 +840,8 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     locate(initialAnchor, initialClaim?.id || null);
     if (!initialClaim && returnPath)
       returnButton.textContent = tr("← 返回反馈");
+  } else if (routeParams.has("result") && saved.result?.scope?.focus && !saved.stale) {
+    requestAnimationFrame(() => showFocus(saved.result.scope.focus));
   } else {
     // Switching between readings keeps the reader where it was.
     const key = "digest:reader-pos:" + item.id;
@@ -721,6 +911,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       nodes.wrapper.classList.toggle("evidence-target", selected);
       highlightQuote(nodes.text, paragraph.text, selected ? anchor : null);
     }
+    paintFocus();
     for (const [id, node] of claimNodes)
       node.classList.toggle("claim-selected", id === claimId);
     root
@@ -802,6 +993,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       nodes.wrapper.prepend(mark);
       nodes.mark = mark;
     }
+    paintFocus();
   }
   function toggleInline(index, mark) {
     const nodes = paragraphNodes.get(index);
@@ -860,7 +1052,12 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
         tr("第 ") +
         (anchor.paragraphIndex + 1) +
         tr(" 段");
-      const label = el("span", "evidence-location", l("原文 · ", "Source · ") + where);
+      const inFocus = !claim.partial && anchorInFocus(anchor, saved.result?.scope?.focus);
+      const label = el(
+        "span",
+        "evidence-location",
+        l("原文 · ", "Source · ") + where + (inFocus ? l(" · 出自选段", " · in your passage") : ""),
+      );
       label.prepend(icon("quote"));
       action.append(label, el("q", "evidence-quote", anchor.quote));
       action.title = where;
@@ -959,7 +1156,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       );
     else
       box.append(
-        button(tr("重试"), analyze, "primary-action btn-sm"),
+        button(tr("重试"), () => analyze(retryScope), "primary-action btn-sm"),
         ...(!useProxy()
           ? [button(tr("检查服务配置"), () => openAIConfiguration(), "secondary-action btn-sm")]
           : []),
@@ -1012,7 +1209,24 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     const frag = document.createDocumentFragment();
     const result = saved.result;
     const scope = result.scope;
-    if (scope)
+    if (scope?.focus) {
+      const f = scope.focus;
+      const box = el("section", "focus-passage");
+      box.append(
+        el(
+          "p",
+          "page-kicker",
+          l("选段研读 · 第 ", "Passage reading · ¶ ") +
+            (f.start.paragraphIndex + 1) +
+            (f.end.paragraphIndex > f.start.paragraphIndex ? "–" + (f.end.paragraphIndex + 1) : "") +
+            l(" 段 · 前后各一段作为上下文", " · one paragraph of context on each side"),
+        ),
+        el("blockquote", "focus-quote", f.text),
+      );
+      if (!saved.stale)
+        box.append(button(l("在原文中定位", "Show in the text"), () => showFocus(f), "reader-link"));
+      frag.append(box);
+    } else if (scope)
       frag.append(
         el(
           "p",
@@ -1072,6 +1286,22 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       el("strong", "", covered + " / " + claims.length + tr(" 有原文依据")),
       el("p", "", tr("原文依据可定位不代表 AI 推论必然成立，请结合原文核对。")),
     );
+    // Say which service wrote this reading; a developer or QA endpoint is never the trial service.
+    const source = result.provenance;
+    if (source)
+      coverage.append(
+        el(
+          "p",
+          "reading-provenance" + (source.service === "trial" ? "" : " is-developer"),
+          source.service === "trial"
+            ? l("由试用 AI 服务生成（服务器调用真实模型）。", "Written by the trial AI service (a real model, called from the server).")
+            : l("由开发者服务生成", "Written by a developer service") +
+                ([source.host, source.model].filter(Boolean).length
+                  ? "（" + [source.host, source.model].filter(Boolean).join(" · ") + "）"
+                  : "") +
+                l("，用于本地开发或测试，不是试用服务。", ", for local development or testing — not the trial service."),
+        ),
+      );
     frag.append(coverage);
     const toolbar = el("div", "notes-toolbar");
     toolbar.setAttribute("role", "group");
@@ -1239,8 +1469,10 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     updatePosition();
   }
   // AI reading runs as an app-level job, so leaving the Reader does not cancel it.
-  function analyze() {
+  // `override` is a selection scope; buttons pass their click event, which is ignored.
+  function analyze(override) {
     if (disposed || runningJob(readingKey) || !snapshot.source) return;
+    const chosen = override?.focus ? override : null;
     setTab("ai");
     const config = readDeveloperConfig();
     if (!useProxy() && (!config.endpoint || !config.model || !config.key)) {
@@ -1252,7 +1484,11 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       renderAI();
       return;
     }
-    const problem = scopeProblem();
+    const problem = chosen
+      ? chunkCount(chosen.start, chosen.end) > MAX_CHUNKS
+        ? l("选段所在段落过长，请改用章节研读。", "The paragraphs around this passage are too long. Use chapter reading instead.")
+        : ""
+      : scopeProblem();
     if (problem) {
       errorCode = "";
       errorMessage = problem;
@@ -1260,14 +1496,24 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       renderAI();
       return;
     }
-    const scope = currentScope();
+    const scope = chosen || currentScope();
+    retryScope = chosen;
     const lang = language.value;
+    const transport = createTransport("digest");
+    let host = "";
+    try {
+      host = new URL(config.endpoint).host;
+    } catch {}
+    const provenance =
+      transport instanceof ProxyTransport
+        ? { service: "trial" }
+        : { service: "developer", host, model: config.model };
     errorMessage = "";
     errorCode = "";
     progress = null;
     progressText = "";
     new TrainingRepository(db)
-      .track("reading_started", { documentId: item.id })
+      .track("reading_started", { documentId: item.id, ...(chosen ? { selection: true } : {}) })
       .catch(() => {});
     startJob(
       readingKey,
@@ -1282,11 +1528,13 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
       async (signal, update) => {
         const session = new AnalysisSession(repository);
         signal.addEventListener("abort", () => session.cancel(), { once: true });
-        const service = new DigestAIService(createTransport("digest"));
+        const service = new DigestAIService(transport);
         service.options = {
           start: scope.start,
           end: scope.end,
           label: scope.label,
+          focus: scope.focus || null,
+          provenance,
           language: lang,
           load: () => getSetting(checkpointKey, db),
           save: async (value, requestId, s) => {
@@ -1471,6 +1719,7 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
     "scroll",
     () => {
       if (!positionFrame) positionFrame = requestAnimationFrame(updatePosition);
+      if (!selectionBar.hidden) onSelection();
     },
     { passive: true },
   );
@@ -1493,12 +1742,16 @@ export async function mountReader(container, item, db, isCurrent = () => true) {
   };
   document.addEventListener("keydown", onKey);
   document.addEventListener("click", onClick);
+  document.addEventListener("selectionchange", onSelection);
   return () => {
     disposed = true;
     unwatchReading();
     if (positionFrame) cancelAnimationFrame(positionFrame);
     document.removeEventListener("keydown", onKey);
     document.removeEventListener("click", onClick);
+    document.removeEventListener("selectionchange", onSelection);
+    if (selectionFrame) cancelAnimationFrame(selectionFrame);
+    globalThis.CSS?.highlights?.delete("digest-focus");
     delete document.documentElement.dataset.readerTheme;
   };
 }

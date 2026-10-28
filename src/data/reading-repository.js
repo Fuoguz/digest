@@ -125,6 +125,8 @@ export class ReadingRepository {
           documentId: result.documentId,
           createdAt: result.createdAt,
           partial: !!result.scope?.partial,
+          // A flag only: local events never carry the selected text.
+          selection: !!result.scope?.focus,
         });
         for (const anchor of anchors)
           transaction.objectStore(STORES.evidenceAnchors).put(anchor);

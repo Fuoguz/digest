@@ -94,6 +94,48 @@ export function validateEvidence(proposal, snapshot, id) {
   };
 }
 
+// A passage the reader selected: paragraph-relative offsets plus the exact text.
+// Paragraph breaks inside a selection are joined with a blank line.
+export const MAX_FOCUS_CHARS = 3000;
+export function selectionText(paragraphs, focus) {
+  const parts = [];
+  for (let i = focus.start.paragraphIndex; i <= focus.end.paragraphIndex; i++) {
+    const paragraph = paragraphs.find((p) => p.paragraphIndex === i);
+    if (!paragraph) return null;
+    const from = i === focus.start.paragraphIndex ? focus.start.offset : 0;
+    const to = i === focus.end.paragraphIndex ? focus.end.offset : paragraph.text.length;
+    if (from < 0 || to > paragraph.text.length || from > to) return null;
+    parts.push(paragraph.text.slice(from, to));
+  }
+  return parts.join("\n\n");
+}
+export function validFocus(focus, paragraphs) {
+  const point = (p) =>
+    p && Number.isInteger(p.paragraphIndex) && Number.isInteger(p.offset);
+  if (
+    !focus ||
+    typeof focus.text !== "string" ||
+    !point(focus.start) ||
+    !point(focus.end) ||
+    focus.start.paragraphIndex > focus.end.paragraphIndex ||
+    (focus.start.paragraphIndex === focus.end.paragraphIndex &&
+      focus.start.offset >= focus.end.offset) ||
+    focus.text.trim().length < 2 ||
+    focus.text.length > MAX_FOCUS_CHARS
+  )
+    return false;
+  return selectionText(paragraphs, focus) === focus.text;
+}
+// Whether a matched evidence anchor lies inside the selected passage.
+export function anchorInFocus(anchor, focus) {
+  if (!focus || anchor.validationStatus !== "matched") return false;
+  const i = anchor.paragraphIndex;
+  if (i < focus.start.paragraphIndex || i > focus.end.paragraphIndex) return false;
+  const from = i === focus.start.paragraphIndex ? focus.start.offset : 0;
+  const to = i === focus.end.paragraphIndex ? focus.end.offset : Infinity;
+  return anchor.paragraphStartOffset < to && anchor.paragraphEndOffset > from;
+}
+
 export function restoreAnchor(anchor, snapshot) {
   if (
     anchor.documentId !== snapshot.documentId ||

@@ -3,7 +3,7 @@ import { MODE_SECTIONS } from "../../src/ai/schema.js";
 export function outputFor(snapshot, { invalid = false, long = false } = {}) {
   const paragraphs = snapshot.paragraphs;
   const names = Object.keys(MODE_SECTIONS[snapshot.readingMode]);
-  return {
+  const output = {
     readingMode: snapshot.readingMode,
     sections: Object.fromEntries(
       names.map((name, index) => {
@@ -57,4 +57,16 @@ export function outputFor(snapshot, { invalid = false, long = false } = {}) {
       },
     ],
   };
+  // A selected passage: the first claim quotes its opening words (simulated, QA only).
+  const focus = snapshot.focus;
+  if (focus) {
+    const quote = focus.text.split("\n\n")[0].trim().slice(0, 24);
+    output.sections[names[0]].items[0] = {
+      id: names[0] + "-0",
+      text: "QA 模拟 · 选段解读：" + quote,
+      kind: "source_statement",
+      evidence: [{ paragraphIndex: focus.paragraphIndexes[0], quote }],
+    };
+  }
+  return output;
 }
